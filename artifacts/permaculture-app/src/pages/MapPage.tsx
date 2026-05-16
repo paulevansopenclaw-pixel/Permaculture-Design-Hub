@@ -20,14 +20,21 @@ import {
 import { useAppStore, type Role } from "@/store/useAppStore";
 import { generateContours } from "@/lib/contourEngine";
 
-const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN as string;
-mapboxgl.accessToken = MAPBOX_TOKEN;
-
 const EMPTY_FC: GeoJSON.FeatureCollection = { type: "FeatureCollection", features: [] };
 
-// Geocoding search
-async function searchAddress(query: string) {
-  const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${MAPBOX_TOKEN}&types=address,place,locality,district,country&limit=5`;
+async function fetchMapboxToken(): Promise<string> {
+  try {
+    const res = await fetch("/api/config");
+    if (!res.ok) return "";
+    const data = await res.json();
+    return data.mapboxToken ?? "";
+  } catch {
+    return "";
+  }
+}
+
+async function searchAddress(query: string, token: string) {
+  const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${token}&types=address,place,locality,district,country&limit=5`;
   const res = await fetch(url);
   if (!res.ok) return [];
   const data = await res.json();
@@ -46,6 +53,7 @@ export default function MapPage() {
   const markersRef = useRef<mapboxgl.Marker[]>([]);
   const pendingPinMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const hoverPopupRef = useRef<mapboxgl.Popup | null>(null);
+  const [mapboxToken, setMapboxToken] = useState("");
   const [mapLoaded, setMapLoaded] = useState(false);
   const [webglError, setWebglError] = useState(false);
 
@@ -83,9 +91,17 @@ export default function MapPage() {
   const createComment = useCreateComment();
   const deleteComment = useDeleteComment();
 
+  // ─── FETCH MAPBOX TOKEN ───────────────────────────────────────────────────
+  useEffect(() => {
+    fetchMapboxToken().then((token) => {
+      setMapboxToken(token);
+      mapboxgl.accessToken = token;
+    });
+  }, []);
+
   // ─── MAP INITIALIZATION ───────────────────────────────────────────────────
   useEffect(() => {
-    if (!mapContainerRef.current) return;
+    if (!mapContainerRef.current || !mapboxToken) return;
 
     let map: mapboxgl.Map;
     let hoverPopup: mapboxgl.Popup;
@@ -164,7 +180,7 @@ export default function MapPage() {
       map.remove();
       mapRef.current = null;
     };
-  }, []);
+  }, [mapboxToken]);
 
   // ─── DRAW CONTROL (role-dependent) ────────────────────────────────────────
   useEffect(() => {
@@ -420,12 +436,12 @@ export default function MapPage() {
       return;
     }
     const timer = setTimeout(async () => {
-      const results = await searchAddress(searchQuery);
+      const results = await searchAddress(searchQuery, mapboxToken);
       setSearchResults(results);
       setShowDropdown(results.length > 0);
     }, 350);
     return () => clearTimeout(timer);
-  }, [searchQuery]);
+  }, [searchQuery, mapboxToken]);
 
   function flyToResult(result: any) {
     const map = mapRef.current;
