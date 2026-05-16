@@ -3,20 +3,24 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Collaborative Permaculture Design API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: properties
+    description: Property boundary management
+  - name: comments
+    description: Feedback pins and comments
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,13 +28,279 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /properties:
+    get:
+      operationId: listProperties
+      tags: [properties]
+      summary: List all properties
+      responses:
+        "200":
+          description: List of properties
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Property"
+
+    post:
+      operationId: createProperty
+      tags: [properties]
+      summary: Create a new property
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PropertyInput"
+      responses:
+        "201":
+          description: Created property
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Property"
+
+  /properties/{id}:
+    get:
+      operationId: getProperty
+      tags: [properties]
+      summary: Get a single property
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Property found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Property"
+        "404":
+          description: Not found
+
+    put:
+      operationId: updateProperty
+      tags: [properties]
+      summary: Update a property
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PropertyUpdate"
+      responses:
+        "200":
+          description: Updated property
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Property"
+        "404":
+          description: Not found
+
+    delete:
+      operationId: deleteProperty
+      tags: [properties]
+      summary: Delete a property
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
+  /properties/{id}/stats:
+    get:
+      operationId: getPropertyStats
+      tags: [properties]
+      summary: Get stats for a property (area, comment count)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Property stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PropertyStats"
+
+  /properties/{propertyId}/comments:
+    get:
+      operationId: listComments
+      tags: [comments]
+      summary: List all feedback pins for a property
+      parameters:
+        - name: propertyId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of comments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Comment"
+
+    post:
+      operationId: createComment
+      tags: [comments]
+      summary: Add a feedback pin to a property
+      parameters:
+        - name: propertyId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CommentInput"
+      responses:
+        "201":
+          description: Created comment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Comment"
+
+  /properties/{propertyId}/comments/{commentId}:
+    delete:
+      operationId: deleteComment
+      tags: [comments]
+      summary: Delete a feedback pin
+      parameters:
+        - name: propertyId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: commentId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
 components:
   schemas:
     HealthStatus:
       type: object
+      required: [status]
       properties:
         status:
           type: string
-      required:
-        - status
 
+    Property:
+      type: object
+      required: [id, name, createdAt]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        boundaryGeojson:
+          type: ["object", "null"]
+        areaHectares:
+          type: ["number", "null"]
+        areaAcres:
+          type: ["number", "null"]
+        createdAt:
+          type: string
+
+    PropertyInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        boundaryGeojson:
+          type: ["object", "null"]
+        areaHectares:
+          type: ["number", "null"]
+        areaAcres:
+          type: ["number", "null"]
+
+    PropertyUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        boundaryGeojson:
+          type: ["object", "null"]
+        areaHectares:
+          type: ["number", "null"]
+        areaAcres:
+          type: ["number", "null"]
+
+    PropertyStats:
+      type: object
+      required: [propertyId, commentCount]
+      properties:
+        propertyId:
+          type: string
+        areaHectares:
+          type: ["number", "null"]
+        areaAcres:
+          type: ["number", "null"]
+        commentCount:
+          type: integer
+
+    Comment:
+      type: object
+      required: [id, propertyId, lng, lat, text, authorRole, createdAt]
+      properties:
+        id:
+          type: string
+        propertyId:
+          type: string
+        lng:
+          type: number
+        lat:
+          type: number
+        text:
+          type: string
+        authorRole:
+          type: string
+        createdAt:
+          type: string
+
+    CommentInput:
+      type: object
+      required: [lng, lat, text, authorRole]
+      properties:
+        lng:
+          type: number
+        lat:
+          type: number
+        text:
+          type: string
+        authorRole:
+          type: string

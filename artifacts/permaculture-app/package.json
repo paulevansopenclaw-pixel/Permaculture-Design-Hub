@@ -73,5 +73,13 @@
     "vite": "catalog:",
     "wouter": "^3.3.5",
     "zod": "catalog:"
+  },
+  "dependencies": {
+    "@mapbox/mapbox-gl-draw": "^1.5.1",
+    "@turf/turf": "^7.3.5",
+    "d3-array": "^3.2.4",
+    "d3-contour": "^4.0.2",
+    "mapbox-gl": "^3.23.1",
+    "zustand": "^5.0.13"
   }
 }
