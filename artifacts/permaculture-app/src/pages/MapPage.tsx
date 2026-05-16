@@ -1,8 +1,11 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useLocation } from "wouter";
-import mapboxgl from "mapbox-gl";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 // @ts-ignore
-import MapboxDraw from "@mapbox/mapbox-gl-draw";
+import "leaflet-draw/dist/leaflet.draw.css";
+// @ts-ignore
+import "leaflet-draw";
 import * as turf from "@turf/turf";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -19,8 +22,6 @@ import {
 } from "@workspace/api-client-react";
 import { useAppStore, type Role } from "@/store/useAppStore";
 import { generateContours } from "@/lib/contourEngine";
-
-const EMPTY_FC: GeoJSON.FeatureCollection = { type: "FeatureCollection", features: [] };
 
 async function fetchMapboxToken(): Promise<string> {
   try {
@@ -41,24 +42,41 @@ async function searchAddress(query: string, token: string) {
   return data.features ?? [];
 }
 
+function pinIcon(color: string) {
+  return L.divIcon({
+    className: "",
+    html: `<div style="width:22px;height:22px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:${color};border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.45);"></div>`,
+    iconSize: [22, 22],
+    iconAnchor: [11, 22],
+  });
+}
+
+function pendingPinIcon() {
+  return L.divIcon({
+    className: "",
+    html: `<div style="width:18px;height:18px;border-radius:50%;background:#d97706;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.45);"></div>`,
+    iconSize: [18, 18],
+    iconAnchor: [9, 9],
+  });
+}
+
 export default function MapPage() {
   const [, navigate] = useLocation();
   const { role, setRole, activePropertyId, setActivePropertyId } = useAppStore();
   const queryClient = useQueryClient();
 
-  // Map refs
   const mapContainerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<mapboxgl.Map | null>(null);
-  const drawRef = useRef<InstanceType<typeof MapboxDraw> | null>(null);
-  const markersRef = useRef<mapboxgl.Marker[]>([]);
-  const pendingPinMarkerRef = useRef<mapboxgl.Marker | null>(null);
-  const hoverPopupRef = useRef<mapboxgl.Popup | null>(null);
+  const mapRef = useRef<L.Map | null>(null);
+  const boundaryLayerRef = useRef<L.GeoJSON | null>(null);
+  const contourLayerRef = useRef<L.GeoJSON | null>(null);
+  const drawnItemsRef = useRef<L.FeatureGroup | null>(null);
+  const drawPolygonHandlerRef = useRef<any>(null);
+  const markersRef = useRef<L.Marker[]>([]);
+  const pendingPinMarkerRef = useRef<L.Marker | null>(null);
+
   const [mapboxToken, setMapboxToken] = useState("");
   const [mapLoaded, setMapLoaded] = useState(false);
-  const [webglError, setWebglError] = useState(false);
-  const [mapError, setMapError] = useState<string | null>(null);
 
-  // UI state
   const [showContours, setShowContours] = useState(false);
   const [isGeneratingContours, setIsGeneratingContours] = useState(false);
   const [dropPinMode, setDropPinMode] = useState(false);
@@ -73,7 +91,6 @@ export default function MapPage() {
   const [showNewPropForm, setShowNewPropForm] = useState(false);
   const [newPropName, setNewPropName] = useState("");
 
-  // API
   const { data: properties = [] } = useListProperties();
   const { data: activeProperty, refetch: refetchProperty } = useGetProperty(
     activePropertyId ?? "",
@@ -92,183 +109,76 @@ export default function MapPage() {
   const createComment = useCreateComment();
   const deleteComment = useDeleteComment();
 
-  // ─── FETCH MAPBOX TOKEN ───────────────────────────────────────────────────
+  // ─── FETCH TOKEN ──────────────────────────────────────────────────────────
   useEffect(() => {
-    fetchMapboxToken().then((token) => {
-      setMapboxToken(token);
-      mapboxgl.accessToken = token;
-    });
+    fetchMapboxToken().then(setMapboxToken);
   }, []);
 
   // ─── MAP INITIALIZATION ───────────────────────────────────────────────────
   useEffect(() => {
-    if (!mapContainerRef.current || !mapboxToken) return;
+    if (!mapContainerRef.current || !mapboxToken || mapRef.current) return;
 
-    let map: mapboxgl.Map;
-    let hoverPopup: mapboxgl.Popup;
-
-    try {
-      map = new mapboxgl.Map({
-        container: mapContainerRef.current,
-        style: "mapbox://styles/mapbox/satellite-streets-v12",
-        center: [147, -33],
-        zoom: 4,
-        attributionControl: false,
-      });
-    } catch {
-      setWebglError(true);
-      return;
-    }
-
-    map.addControl(new mapboxgl.AttributionControl({ compact: true }), "bottom-right");
-    map.addControl(new mapboxgl.NavigationControl(), "bottom-right");
-    map.addControl(new mapboxgl.ScaleControl({ unit: "metric" }), "bottom-left");
-
-    hoverPopup = new mapboxgl.Popup({
-      closeButton: false,
-      closeOnClick: false,
-      offset: 5,
-    });
-    hoverPopupRef.current = hoverPopup;
-
-    map.on("error", (e) => {
-      const msg = (e.error as any)?.message ?? String(e.error ?? "Unknown map error");
-      console.error("[Mapbox]", msg, e);
-      setMapError(msg);
+    const map = L.map(mapContainerRef.current, {
+      center: [-33, 147],
+      zoom: 4,
+      zoomControl: false,
     });
 
-    map.on("load", () => {
-      map.addSource("boundary", { type: "geojson", data: EMPTY_FC });
-      map.addLayer({
-        id: "boundary-fill",
-        type: "fill",
-        source: "boundary",
-        paint: { "fill-color": "#2D6A1A", "fill-opacity": 0.12 },
-      });
-      map.addLayer({
-        id: "boundary-line",
-        type: "line",
-        source: "boundary",
-        paint: { "line-color": "#2D6A1A", "line-width": 2, "line-opacity": 0.9 },
-      });
+    // Mapbox satellite raster tiles — no WebGL required
+    L.tileLayer(
+      `https://api.mapbox.com/styles/v1/mapbox/satellite-streets-v12/tiles/{z}/{x}/{y}?access_token=${mapboxToken}`,
+      {
+        tileSize: 512,
+        zoomOffset: -1,
+        maxZoom: 20,
+        attribution: '© <a href="https://www.mapbox.com">Mapbox</a> © <a href="https://www.openstreetmap.org">OpenStreetMap</a>',
+      }
+    ).addTo(map);
 
-      map.addSource("contours", { type: "geojson", data: EMPTY_FC });
-      map.addLayer({
-        id: "contour-lines",
-        type: "line",
-        source: "contours",
-        paint: { "line-color": "#8B6914", "line-width": 0.7, "line-opacity": 0.55 },
-      });
+    L.control.zoom({ position: "bottomright" }).addTo(map);
+    L.control.scale({ metric: true, imperial: false, position: "bottomleft" }).addTo(map);
 
-      map.on("mousemove", "contour-lines", (e) => {
-        map.getCanvas().style.cursor = "pointer";
-        const features = e.features;
-        if (features && features.length > 0) {
-          const elev = features[0].properties?.elevation;
-          if (elev != null) {
-            hoverPopup
-              .setLngLat(e.lngLat)
-              .setHTML(`<div style="font-size:12px;font-weight:500">${Math.round(elev)} m</div>`)
-              .addTo(map);
-          }
-        }
-      });
-      map.on("mouseleave", "contour-lines", () => {
-        map.getCanvas().style.cursor = "";
-        hoverPopup.remove();
-      });
+    // Feature group for drawn polygons
+    const drawnItems = new L.FeatureGroup();
+    map.addLayer(drawnItems);
+    drawnItemsRef.current = drawnItems;
 
-      setMapLoaded(true);
+    // Polygon draw handler — activated programmatically by sidebar button
+    const PolygonHandler = (L as any).Draw.Polygon;
+    const polygonHandler = new PolygonHandler(map, {
+      shapeOptions: { color: "#2D6A1A", weight: 2, fillColor: "#2D6A1A", fillOpacity: 0.12 },
+      allowIntersection: false,
+    });
+    drawPolygonHandlerRef.current = polygonHandler;
+
+    map.on((L as any).Draw.Event.CREATED, (e: any) => {
+      const layer = e.layer as L.Polygon;
+      drawnItems.clearLayers();
+      drawnItems.addLayer(layer);
+      const feature = layer.toGeoJSON();
+      const geometry = feature.geometry as GeoJSON.Polygon;
+      setPendingBoundary(geometry);
+      const ha = turf.area(feature) / 10000;
+      setPendingAreaHa(ha);
+      setPendingAreaAc(ha * 2.47105);
     });
 
     mapRef.current = map;
+    setMapLoaded(true);
+
     return () => {
-      hoverPopup?.remove();
       map.remove();
       mapRef.current = null;
+      drawnItemsRef.current = null;
+      drawPolygonHandlerRef.current = null;
+      setMapLoaded(false);
     };
   }, [mapboxToken]);
 
-  // ─── DRAW CONTROL (role-dependent) ────────────────────────────────────────
+  // ─── ROLE CHANGE — disable draw in client mode ─────────────────────────────
   useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !mapLoaded) return;
-
-    if (role === "designer") {
-      const draw = new MapboxDraw({
-        displayControlsDefault: false,
-        controls: { polygon: true, trash: true },
-        styles: [
-          {
-            id: "gl-draw-polygon-fill",
-            type: "fill",
-            filter: ["all", ["==", "$type", "Polygon"], ["!=", "mode", "static"]],
-            paint: { "fill-color": "#2D6A1A", "fill-opacity": 0.15 },
-          },
-          {
-            id: "gl-draw-polygon-stroke",
-            type: "line",
-            filter: ["all", ["==", "$type", "Polygon"], ["!=", "mode", "static"]],
-            paint: { "line-color": "#2D6A1A", "line-width": 2 },
-          },
-          {
-            id: "gl-draw-point",
-            type: "circle",
-            filter: ["all", ["==", "$type", "Point"], ["==", "meta", "vertex"]],
-            paint: { "circle-radius": 5, "circle-color": "#2D6A1A" },
-          },
-        ],
-      });
-
-      map.addControl(draw, "top-right");
-      drawRef.current = draw;
-
-      const handleDrawCreate = (e: any) => {
-        const feature = e.features[0];
-        if (!feature || feature.geometry.type !== "Polygon") return;
-        const areaM2 = turf.area(feature);
-        const ha = areaM2 / 10000;
-        const ac = areaM2 / 4046.856;
-        setPendingBoundary(feature.geometry as GeoJSON.Polygon);
-        setPendingAreaHa(Math.round(ha * 100) / 100);
-        setPendingAreaAc(Math.round(ac * 100) / 100);
-      };
-
-      const handleDrawUpdate = (e: any) => {
-        const feature = e.features[0];
-        if (!feature || feature.geometry.type !== "Polygon") return;
-        const areaM2 = turf.area(feature);
-        const ha = areaM2 / 10000;
-        const ac = areaM2 / 4046.856;
-        setPendingBoundary(feature.geometry as GeoJSON.Polygon);
-        setPendingAreaHa(Math.round(ha * 100) / 100);
-        setPendingAreaAc(Math.round(ac * 100) / 100);
-      };
-
-      const handleDrawDelete = () => {
-        setPendingBoundary(null);
-        setPendingAreaHa(null);
-        setPendingAreaAc(null);
-      };
-
-      map.on("draw.create", handleDrawCreate);
-      map.on("draw.update", handleDrawUpdate);
-      map.on("draw.delete", handleDrawDelete);
-
-      return () => {
-        map.off("draw.create", handleDrawCreate);
-        map.off("draw.update", handleDrawUpdate);
-        map.off("draw.delete", handleDrawDelete);
-        if (drawRef.current) {
-          try { map.removeControl(draw); } catch { /* already removed */ }
-          drawRef.current = null;
-        }
-        setPendingBoundary(null);
-        setPendingAreaHa(null);
-        setPendingAreaAc(null);
-      };
-    }
-    return;
+    if (!mapLoaded) return;
+    if (role !== "designer") drawPolygonHandlerRef.current?.disable();
   }, [role, mapLoaded]);
 
   // ─── BOUNDARY LAYER ───────────────────────────────────────────────────────
@@ -276,8 +186,10 @@ export default function MapPage() {
     const map = mapRef.current;
     if (!map || !mapLoaded) return;
 
-    const source = map.getSource("boundary") as mapboxgl.GeoJSONSource | undefined;
-    if (!source) return;
+    if (boundaryLayerRef.current) {
+      map.removeLayer(boundaryLayerRef.current);
+      boundaryLayerRef.current = null;
+    }
 
     const geojson = activeProperty?.boundaryGeojson;
     if (geojson) {
@@ -285,13 +197,14 @@ export default function MapPage() {
         type: "FeatureCollection",
         features: [{ type: "Feature", geometry: geojson as unknown as GeoJSON.Geometry, properties: {} }],
       };
-      source.setData(fc);
+      const layer = L.geoJSON(fc as any, {
+        style: () => ({ color: "#2D6A1A", weight: 2, opacity: 0.9, fillColor: "#2D6A1A", fillOpacity: 0.12 }),
+      }).addTo(map);
       try {
-        const bbox = turf.bbox(geojson as unknown as turf.AllGeoJSON);
-        map.fitBounds([bbox[0], bbox[1], bbox[2], bbox[3]], { padding: 80, maxZoom: 16 });
-      } catch { /* bad geometry */ }
-    } else {
-      source.setData(EMPTY_FC);
+        const bounds = layer.getBounds();
+        if (bounds.isValid()) map.fitBounds(bounds, { padding: [80, 80] });
+      } catch { /* invalid geometry */ }
+      boundaryLayerRef.current = layer;
     }
   }, [activeProperty, mapLoaded]);
 
@@ -300,13 +213,12 @@ export default function MapPage() {
     const map = mapRef.current;
     if (!map || !mapLoaded) return;
 
-    const source = map.getSource("contours") as mapboxgl.GeoJSONSource | undefined;
-    if (!source) return;
-
-    if (!showContours || !activeProperty?.boundaryGeojson) {
-      source.setData(EMPTY_FC);
-      return;
+    if (contourLayerRef.current) {
+      map.removeLayer(contourLayerRef.current);
+      contourLayerRef.current = null;
     }
+
+    if (!showContours || !activeProperty?.boundaryGeojson || !mapboxToken) return;
 
     setIsGeneratingContours(true);
     generateContours(
@@ -314,79 +226,51 @@ export default function MapPage() {
       mapboxToken,
     )
       .then((fc) => {
-        const s = mapRef.current?.getSource("contours") as mapboxgl.GeoJSONSource | undefined;
-        if (s) s.setData(fc);
+        const m = mapRef.current;
+        if (!m) return;
+        const layer = L.geoJSON(fc as any, {
+          style: () => ({ color: "#8B6914", weight: 0.8, opacity: 0.6, fill: false }),
+        }).addTo(m);
+        contourLayerRef.current = layer;
       })
       .catch(console.error)
       .finally(() => setIsGeneratingContours(false));
-    return;
   }, [showContours, activeProperty?.id, activeProperty?.boundaryGeojson, mapLoaded, mapboxToken]);
 
-  // ─── DROP-PIN CURSOR ──────────────────────────────────────────────────────
+  // ─── DROP-PIN CLICK HANDLER ───────────────────────────────────────────────
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !mapLoaded) return;
+    if (!map || !mapLoaded || role !== "client" || !dropPinMode) return;
 
-    if (role === "client" && dropPinMode) {
-      const canvas = map.getCanvas();
-      canvas.style.cursor = "crosshair";
+    const container = map.getContainer();
+    container.style.cursor = "crosshair";
 
-      const handleClick = (e: mapboxgl.MapMouseEvent) => {
-        setPendingPin({ lng: e.lngLat.lng, lat: e.lngLat.lat });
-        setPinText("");
-        setDropPinMode(false);
-      };
-
-      map.once("click", handleClick);
-      return () => {
-        canvas.style.cursor = "";
-        map.off("click", handleClick);
-      };
-    }
-    return;
-  }, [role, dropPinMode, mapLoaded]);
-
-  // ─── PENDING PIN MARKER ────────────────────────────────────────────────────
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !mapLoaded) return;
-
-    if (pendingPinMarkerRef.current) {
-      pendingPinMarkerRef.current.remove();
-      pendingPinMarkerRef.current = null;
-    }
-
-    if (pendingPin) {
-      const el = document.createElement("div");
-      el.className = "comment-marker-el";
-      el.style.background = "#f59e0b";
-      const marker = new mapboxgl.Marker({ element: el })
-        .setLngLat([pendingPin.lng, pendingPin.lat])
-        .addTo(map);
-      pendingPinMarkerRef.current = marker;
-    }
-
-    return () => {
+    const handleClick = (e: L.LeafletMouseEvent) => {
+      const { lat, lng } = e.latlng;
       if (pendingPinMarkerRef.current) {
-        pendingPinMarkerRef.current.remove();
+        map.removeLayer(pendingPinMarkerRef.current);
         pendingPinMarkerRef.current = null;
       }
+      const marker = L.marker([lat, lng], { icon: pendingPinIcon() }).addTo(map);
+      pendingPinMarkerRef.current = marker;
+      setPendingPin({ lng, lat });
+      setDropPinMode(false);
     };
-  }, [pendingPin, mapLoaded]);
 
-  // ─── COMMENT MARKERS ──────────────────────────────────────────────────────
+    map.on("click", handleClick);
+    return () => {
+      map.off("click", handleClick);
+      container.style.cursor = "";
+    };
+  }, [role, dropPinMode, mapLoaded]);
+
+  // ─── COMMENT MARKERS ─────────────────────────────────────────────────────
   const handleDeleteComment = useCallback(
     (commentId: string) => {
       if (!activePropertyId) return;
       deleteComment.mutate(
         { propertyId: activePropertyId, commentId },
-        {
-          onSuccess: () => {
-            queryClient.invalidateQueries({
-              queryKey: getListCommentsQueryKey(activePropertyId),
-            });
-          },
-        },
+        { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListCommentsQueryKey(activePropertyId) }) },
       );
     },
     [activePropertyId, deleteComment, queryClient],
@@ -396,43 +280,40 @@ export default function MapPage() {
     const map = mapRef.current;
     if (!map || !mapLoaded) return;
 
-    // Remove old markers
-    markersRef.current.forEach((m) => m.remove());
+    markersRef.current.forEach((m) => map.removeLayer(m));
     markersRef.current = [];
+    if (pendingPinMarkerRef.current) {
+      map.removeLayer(pendingPinMarkerRef.current);
+      pendingPinMarkerRef.current = null;
+    }
 
-    if (!activePropertyId || !comments.length) return;
+    if (!activePropertyId) return;
 
-    const newMarkers = comments.map((comment) => {
+    markersRef.current = comments.map((comment) => {
+      const isBoundaryReq = comment.text.startsWith("[Boundary request]");
+      const color = isBoundaryReq ? "#4a6f3c" : "#d97706";
+      const marker = L.marker([comment.lat, comment.lng], { icon: pinIcon(color) });
+
+      const displayText = isBoundaryReq
+        ? comment.text.replace("[Boundary request] ", "")
+        : comment.text;
+
       const el = document.createElement("div");
-      el.className = "comment-marker-el";
-
-      const deleteBtn =
-        role === "designer"
-          ? `<button id="del-${comment.id}" style="display:block;margin-top:8px;color:#dc2626;background:none;border:none;cursor:pointer;font-size:11px;padding:0;">Delete pin</button>`
-          : "";
-
-      const popup = new mapboxgl.Popup({ offset: 18, maxWidth: "220px" }).setHTML(
-        `<div style="font-family:system-ui,sans-serif">
-          <div style="font-size:10px;color:#888;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px">${comment.authorRole}</div>
-          <div style="font-size:13px;line-height:1.4">${comment.text}</div>
-          ${deleteBtn}
-        </div>`,
-      );
-
-      popup.on("open", () => {
-        const btn = document.getElementById(`del-${comment.id}`);
-        if (btn) btn.onclick = () => handleDeleteComment(comment.id);
+      el.style.cssText = "font-size:12px;padding:2px 4px;min-width:150px;max-width:220px;";
+      el.innerHTML = `
+        <div style="font-weight:600;margin-bottom:3px;color:#111;">${isBoundaryReq ? "Boundary Request" : "Feedback"}</div>
+        <div style="color:#333;line-height:1.4;margin-bottom:4px;">${displayText}</div>
+        <div style="font-size:10px;color:#888;">${comment.authorRole}</div>
+        ${role === "designer" ? `<button class="del-btn" style="margin-top:6px;padding:2px 8px;border:1px solid #c00;color:#c00;border-radius:3px;cursor:pointer;font-size:10px;background:none;">Delete</button>` : ""}
+      `;
+      el.querySelector(".del-btn")?.addEventListener("click", () => {
+        handleDeleteComment(comment.id);
+        marker.closePopup();
       });
 
-      const marker = new mapboxgl.Marker({ element: el })
-        .setLngLat([comment.lng, comment.lat])
-        .setPopup(popup)
-        .addTo(map);
-
+      marker.bindPopup(el).addTo(map);
       return marker;
     });
-
-    markersRef.current = newMarkers;
   }, [comments, activePropertyId, mapLoaded, role, handleDeleteComment]);
 
   // ─── GEOCODING SEARCH ────────────────────────────────────────────────────
@@ -454,7 +335,7 @@ export default function MapPage() {
     const map = mapRef.current;
     if (!map) return;
     const [lng, lat] = result.center;
-    map.flyTo({ center: [lng, lat], zoom: 14, duration: 1500 });
+    map.flyTo([lat, lng], 14);
     setSearchQuery(result.place_name ?? "");
     setShowDropdown(false);
     setSearchResults([]);
@@ -479,7 +360,7 @@ export default function MapPage() {
           setPendingBoundary(null);
           setPendingAreaHa(null);
           setPendingAreaAc(null);
-          if (drawRef.current) drawRef.current.deleteAll();
+          drawnItemsRef.current?.clearLayers();
           refetchProperty();
         },
       },
@@ -508,18 +389,15 @@ export default function MapPage() {
     createComment.mutate(
       {
         propertyId: activePropertyId,
-        data: {
-          lng: pendingPin.lng,
-          lat: pendingPin.lat,
-          text: pinText.trim(),
-          authorRole: "client",
-        },
+        data: { lng: pendingPin.lng, lat: pendingPin.lat, text: pinText.trim(), authorRole: "client" },
       },
       {
         onSuccess: () => {
-          queryClient.invalidateQueries({
-            queryKey: getListCommentsQueryKey(activePropertyId),
-          });
+          queryClient.invalidateQueries({ queryKey: getListCommentsQueryKey(activePropertyId) });
+          if (pendingPinMarkerRef.current) {
+            mapRef.current?.removeLayer(pendingPinMarkerRef.current);
+            pendingPinMarkerRef.current = null;
+          }
           setPendingPin(null);
           setPinText("");
         },
@@ -527,7 +405,7 @@ export default function MapPage() {
     );
   }
 
-  // ─── SEND BOUNDARY REQUEST (CLIENT) ───────────────────────────────────────
+  // ─── BOUNDARY REQUEST (CLIENT) ────────────────────────────────────────────
   function handleBoundaryRequest(text: string) {
     if (!activePropertyId || !text.trim()) return;
     createComment.mutate(
@@ -535,28 +413,23 @@ export default function MapPage() {
         propertyId: activePropertyId,
         data: {
           lng: activeProperty?.boundaryGeojson
-            ? (turf.centroid(activeProperty.boundaryGeojson as unknown as turf.AllGeoJSON).geometry.coordinates[0])
+            ? turf.centroid(activeProperty.boundaryGeojson as unknown as turf.AllGeoJSON).geometry.coordinates[0]
             : 0,
           lat: activeProperty?.boundaryGeojson
-            ? (turf.centroid(activeProperty.boundaryGeojson as unknown as turf.AllGeoJSON).geometry.coordinates[1])
+            ? turf.centroid(activeProperty.boundaryGeojson as unknown as turf.AllGeoJSON).geometry.coordinates[1]
             : 0,
           text: `[Boundary request] ${text}`,
           authorRole: "client",
         },
       },
-      {
-        onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: getListCommentsQueryKey(activePropertyId) });
-        },
-      },
+      { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListCommentsQueryKey(activePropertyId) }) },
     );
   }
-
-  // ─── RENDER ───────────────────────────────────────────────────────────────
 
   const displayAreaHa = pendingAreaHa ?? activeProperty?.areaHectares;
   const displayAreaAc = pendingAreaAc ?? activeProperty?.areaAcres;
 
+  // ─── RENDER ───────────────────────────────────────────────────────────────
   return (
     <div className="flex h-screen w-screen overflow-hidden">
       {/* ── SIDEBAR ── */}
@@ -564,16 +437,12 @@ export default function MapPage() {
         className="w-72 flex-shrink-0 flex flex-col overflow-y-auto"
         style={{ background: "hsl(103, 48%, 11%)", borderRight: "1px solid hsl(103, 35%, 18%)" }}
       >
-        {/* App header */}
+        {/* Header */}
         <div className="px-4 py-3 border-b" style={{ borderColor: "hsl(103, 35%, 18%)" }}>
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-sm font-semibold tracking-tight" style={{ color: "hsl(42, 28%, 90%)" }}>
-                PermaMap
-              </h1>
-              <p className="text-[10px] mt-0.5" style={{ color: "hsl(42, 15%, 55%)" }}>
-                Permaculture Design Studio
-              </p>
+              <h1 className="text-sm font-semibold tracking-tight" style={{ color: "hsl(42, 28%, 90%)" }}>PermaMap</h1>
+              <p className="text-[10px] mt-0.5" style={{ color: "hsl(42, 15%, 55%)" }}>Permaculture Design Studio</p>
             </div>
             <button
               onClick={() => navigate("/properties")}
@@ -588,7 +457,6 @@ export default function MapPage() {
             </button>
           </div>
 
-          {/* Role toggle */}
           <div className="mt-3 flex rounded-md overflow-hidden border" style={{ borderColor: "hsl(103, 35%, 20%)" }}>
             {(["designer", "client"] as Role[]).map((r) => (
               <button
@@ -622,20 +490,8 @@ export default function MapPage() {
                 onKeyDown={(e) => e.key === "Enter" && handleCreateProperty()}
                 autoFocus
               />
-              <button
-                onClick={handleCreateProperty}
-                className="px-2 py-1 rounded text-xs font-medium"
-                style={{ background: "hsl(84, 38%, 42%)", color: "#fff" }}
-              >
-                Add
-              </button>
-              <button
-                onClick={() => setShowNewPropForm(false)}
-                className="px-2 py-1 rounded text-xs"
-                style={{ color: "hsl(42, 15%, 55%)" }}
-              >
-                Cancel
-              </button>
+              <button onClick={handleCreateProperty} className="px-2 py-1 rounded text-xs font-medium" style={{ background: "hsl(84, 38%, 42%)", color: "#fff" }}>Add</button>
+              <button onClick={() => setShowNewPropForm(false)} className="px-2 py-1 rounded text-xs" style={{ color: "hsl(42, 15%, 55%)" }}>Cancel</button>
             </div>
           ) : (
             <div className="flex gap-1.5">
@@ -654,10 +510,8 @@ export default function MapPage() {
                 onClick={() => setShowNewPropForm(true)}
                 title="New property"
                 className="px-2 py-1 rounded text-xs font-medium"
-                style={{ background: "hsl(103, 35%, 17%)", borderColor: "hsl(103, 30%, 22%)", color: "hsl(42, 28%, 88%)", border: "1px solid hsl(103, 30%, 22%)" }}
-              >
-                +
-              </button>
+                style={{ background: "hsl(103, 35%, 17%)", border: "1px solid hsl(103, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
+              >+</button>
             </div>
           )}
         </div>
@@ -700,13 +554,11 @@ export default function MapPage() {
         {/* ── LAYER 1: BOUNDARY ── */}
         <SidebarSection label="Layer 1 — Property Boundary">
           {!activePropertyId ? (
-            <p className="text-[11px]" style={{ color: "hsl(42, 15%, 50%)" }}>
-              Select a property to manage its boundary.
-            </p>
+            <p className="text-[11px]" style={{ color: "hsl(42, 15%, 50%)" }}>Select a property to manage its boundary.</p>
           ) : role === "designer" ? (
             <div className="space-y-2.5">
               <button
-                onClick={() => drawRef.current?.changeMode("draw_polygon")}
+                onClick={() => drawPolygonHandlerRef.current?.enable()}
                 className="w-full text-xs px-3 py-2 rounded font-medium text-left transition-colors"
                 style={{ background: "hsl(103, 35%, 17%)", border: "1px solid hsl(103, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
               >
@@ -714,19 +566,10 @@ export default function MapPage() {
               </button>
 
               {(displayAreaHa || displayAreaAc) && (
-                <div
-                  className="rounded p-2.5"
-                  style={{ background: "hsl(103, 35%, 14%)", border: "1px solid hsl(84, 35%, 28%)" }}
-                >
-                  <div className="text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: "hsl(84, 35%, 55%)" }}>
-                    Area
-                  </div>
-                  <div className="text-sm font-bold" style={{ color: "hsl(42, 28%, 90%)" }}>
-                    {displayAreaHa?.toFixed(2)} ha
-                  </div>
-                  <div className="text-xs mt-0.5" style={{ color: "hsl(42, 15%, 55%)" }}>
-                    {displayAreaAc?.toFixed(2)} acres
-                  </div>
+                <div className="rounded p-2.5" style={{ background: "hsl(103, 35%, 14%)", border: "1px solid hsl(84, 35%, 28%)" }}>
+                  <div className="text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: "hsl(84, 35%, 55%)" }}>Area</div>
+                  <div className="text-sm font-bold" style={{ color: "hsl(42, 28%, 90%)" }}>{displayAreaHa?.toFixed(2)} ha</div>
+                  <div className="text-xs mt-0.5" style={{ color: "hsl(42, 15%, 55%)" }}>{displayAreaAc?.toFixed(2)} acres</div>
                 </div>
               )}
 
@@ -760,63 +603,42 @@ export default function MapPage() {
         {/* ── LAYER 2: CONTOURS ── */}
         <SidebarSection label="Layer 2 — Terrain Contours">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[11px]" style={{ color: "hsl(42, 28%, 80%)" }}>
-              Generate 1m Contours
-            </span>
+            <span className="text-[11px]" style={{ color: "hsl(42, 28%, 80%)" }}>Generate 1m Contours</span>
             <button
               onClick={() => setShowContours((v) => !v)}
               disabled={!activeProperty?.boundaryGeojson}
               className="relative w-9 h-5 rounded-full transition-colors flex-shrink-0"
-              style={{
-                background: showContours ? "hsl(84, 38%, 42%)" : "hsl(103, 30%, 20%)",
-                opacity: !activeProperty?.boundaryGeojson ? 0.4 : 1,
-              }}
+              style={{ background: showContours ? "hsl(84, 38%, 42%)" : "hsl(103, 30%, 20%)", opacity: !activeProperty?.boundaryGeojson ? 0.4 : 1 }}
             >
-              <span
-                className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all"
-                style={{ left: showContours ? "18px" : "2px" }}
-              />
+              <span className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all" style={{ left: showContours ? "18px" : "2px" }} />
             </button>
           </div>
-
           {!activeProperty?.boundaryGeojson && (
-            <p className="text-[10px]" style={{ color: "hsl(42, 15%, 45%)" }}>
-              Set a property boundary first to enable contours.
-            </p>
+            <p className="text-[10px]" style={{ color: "hsl(42, 15%, 45%)" }}>Set a property boundary first to enable contours.</p>
           )}
-
           {isGeneratingContours && (
             <div className="flex items-center gap-2 mt-1.5">
               <div className="w-3 h-3 border border-t-transparent rounded-full animate-spin" style={{ borderColor: "hsl(84, 38%, 42%)" }} />
-              <span className="text-[10px]" style={{ color: "hsl(42, 15%, 55%)" }}>
-                Fetching elevation tiles...
-              </span>
+              <span className="text-[10px]" style={{ color: "hsl(42, 15%, 55%)" }}>Fetching elevation tiles...</span>
             </div>
           )}
-
           {showContours && !isGeneratingContours && (
             <div className="mt-1.5 flex items-center gap-1.5">
               <div className="w-6 h-0.5 rounded" style={{ background: "hsl(35, 55%, 35%)" }} />
-              <span className="text-[10px]" style={{ color: "hsl(42, 15%, 55%)" }}>
-                1m interval contours (hover for elevation)
-              </span>
+              <span className="text-[10px]" style={{ color: "hsl(42, 15%, 55%)" }}>1m interval contours</span>
             </div>
           )}
         </SidebarSection>
 
-        {/* ── LAYER 3: COLLABORATION ── */}
+        {/* ── LAYER 3: FEEDBACK PINS ── */}
         <SidebarSection label="Layer 3 — Feedback Pins">
           {!activePropertyId ? (
-            <p className="text-[11px]" style={{ color: "hsl(42, 15%, 50%)" }}>
-              Select a property to manage feedback.
-            </p>
+            <p className="text-[11px]" style={{ color: "hsl(42, 15%, 50%)" }}>Select a property to manage feedback.</p>
           ) : role === "client" ? (
             <div className="space-y-2.5">
               {pendingPin ? (
                 <div className="space-y-2">
-                  <p className="text-[11px]" style={{ color: "hsl(42, 28%, 80%)" }}>
-                    Pin placed. Add your feedback:
-                  </p>
+                  <p className="text-[11px]" style={{ color: "hsl(42, 28%, 80%)" }}>Pin placed. Add your feedback:</p>
                   <textarea
                     className="w-full text-xs px-2.5 py-2 rounded border outline-none resize-none"
                     style={{ background: "hsl(103, 35%, 17%)", borderColor: "hsl(103, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
@@ -857,14 +679,13 @@ export default function MapPage() {
                   {dropPinMode ? "Click on the map to drop a pin" : "Drop Feedback Pin"}
                 </button>
               )}
-
               {comments.length > 0 && !pendingPin && (
                 <div>
                   <div className="text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: "hsl(42, 15%, 50%)" }}>
-                    Your Feedback ({comments.filter(c => c.authorRole === "client").length})
+                    Your Feedback ({comments.filter((c) => c.authorRole === "client").length})
                   </div>
                   <div className="space-y-1.5 max-h-40 overflow-y-auto">
-                    {comments.filter(c => c.authorRole === "client").map((c) => (
+                    {comments.filter((c) => c.authorRole === "client").map((c) => (
                       <div key={c.id} className="text-[11px] px-2 py-1.5 rounded" style={{ background: "hsl(103, 35%, 14%)", color: "hsl(42, 25%, 78%)" }}>
                         {c.text}
                       </div>
@@ -876,9 +697,7 @@ export default function MapPage() {
           ) : (
             <div>
               {comments.length === 0 ? (
-                <p className="text-[11px]" style={{ color: "hsl(42, 15%, 50%)" }}>
-                  No feedback pins yet. Client pins will appear here.
-                </p>
+                <p className="text-[11px]" style={{ color: "hsl(42, 15%, 50%)" }}>No feedback pins yet. Client pins will appear here.</p>
               ) : (
                 <div>
                   <div className="text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: "hsl(42, 15%, 50%)" }}>
@@ -886,21 +705,13 @@ export default function MapPage() {
                   </div>
                   <div className="space-y-1.5 max-h-48 overflow-y-auto">
                     {comments.map((c) => (
-                      <div
-                        key={c.id}
-                        className="flex items-start gap-2 px-2 py-2 rounded"
-                        style={{ background: "hsl(103, 35%, 14%)" }}
-                      >
-                        <div className="w-2 h-2 rounded-full mt-0.5 flex-shrink-0" style={{ background: "#dc2626" }} />
+                      <div key={c.id} className="flex items-start gap-2 px-2 py-2 rounded" style={{ background: "hsl(103, 35%, 14%)" }}>
+                        <div className="w-2 h-2 rounded-full mt-0.5 flex-shrink-0" style={{ background: "#d97706" }} />
                         <div className="flex-1 min-w-0">
                           <div className="text-[10px] mb-0.5" style={{ color: "hsl(42, 15%, 50%)" }}>{c.authorRole}</div>
                           <div className="text-[11px] leading-snug" style={{ color: "hsl(42, 25%, 80%)" }}>{c.text}</div>
                         </div>
-                        <button
-                          onClick={() => handleDeleteComment(c.id)}
-                          className="flex-shrink-0 text-[10px] transition-colors"
-                          style={{ color: "hsl(0, 55%, 50%)" }}
-                        >
+                        <button onClick={() => handleDeleteComment(c.id)} className="flex-shrink-0 text-[10px] transition-colors" style={{ color: "hsl(0, 55%, 50%)" }}>
                           Delete
                         </button>
                       </div>
@@ -918,30 +729,7 @@ export default function MapPage() {
       {/* ── MAP ── */}
       <div className="flex-1 relative">
         <div ref={mapContainerRef} className="absolute inset-0" />
-        {webglError && (
-          <div className="absolute inset-0 flex items-center justify-center" style={{ background: "hsl(103, 18%, 8%)" }}>
-            <div className="flex flex-col items-center gap-4 max-w-sm text-center px-6">
-              <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ background: "hsl(103, 30%, 16%)" }}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ color: "hsl(84, 38%, 52%)" }}>
-                  <polygon points="1,6 1,22 8,18 16,22 23,18 23,2 16,6 8,2"/>
-                  <line x1="12" y1="8" x2="12" y2="14"/><line x1="12" y1="17" x2="12.01" y2="17"/>
-                </svg>
-              </div>
-              <div>
-                <h3 className="font-semibold mb-1.5" style={{ color: "hsl(42, 28%, 88%)" }}>
-                  WebGL Not Available
-                </h3>
-                <p className="text-sm leading-relaxed" style={{ color: "hsl(42, 15%, 55%)" }}>
-                  The Mapbox map requires WebGL, which isn't supported in this preview environment. Open the app in a real browser tab to use the full map interface.
-                </p>
-              </div>
-              <div className="text-xs px-3 py-2 rounded" style={{ background: "hsl(103, 30%, 14%)", color: "hsl(84, 35%, 52%)", border: "1px solid hsl(103, 25%, 20%)" }}>
-                The sidebar, property management, and all API features remain fully functional.
-              </div>
-            </div>
-          </div>
-        )}
-        {!mapLoaded && !webglError && (
+        {!mapLoaded && (
           <div className="absolute inset-0 flex items-center justify-center" style={{ background: "hsl(103, 18%, 8%)" }}>
             <div className="flex flex-col items-center gap-3">
               <div className="w-7 h-7 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: "hsl(84, 38%, 42%)" }} />
@@ -998,17 +786,11 @@ function ClientBoundaryRequest({
           <div className="text-xs mt-0.5" style={{ color: "hsl(42, 15%, 55%)" }}>{areaAc?.toFixed(2)} acres</div>
         </div>
       )}
-
       {!hasExistingBoundary && (
-        <p className="text-[11px]" style={{ color: "hsl(42, 15%, 50%)" }}>
-          No boundary set yet. Request a change below.
-        </p>
+        <p className="text-[11px]" style={{ color: "hsl(42, 15%, 50%)" }}>No boundary set yet. Request a change below.</p>
       )}
-
       <div>
-        <div className="text-[10px] mb-1" style={{ color: "hsl(42, 15%, 55%)" }}>
-          Request Boundary Change
-        </div>
+        <div className="text-[10px] mb-1" style={{ color: "hsl(42, 15%, 55%)" }}>Request Boundary Change</div>
         <textarea
           className="w-full text-xs px-2.5 py-2 rounded border outline-none resize-none"
           style={{ background: "hsl(103, 35%, 17%)", borderColor: "hsl(103, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
