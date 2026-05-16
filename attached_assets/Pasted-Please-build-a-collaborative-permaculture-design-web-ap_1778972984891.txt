@@ -1,0 +1,39 @@
+Please build a collaborative permaculture design web application based on the following complete technical specification. 
+
+ENVIRONMENT & STACK:
+- Frontend: React (Vite), Mapbox GL JS, @mapbox/mapbox-gl-draw, and Turf.js.
+- Backend: Express.js (Node.js) using the built-in Replit PostgreSQL database.
+- Security: Access the Mapbox token strictly via process.env.MAPBOX_TOKEN.
+
+1. DATABASE & USER SCHEMAS
+- Create a 'properties' table in PostgreSQL. Fields: id (UUID), name (TEXT), boundary_geojson (JSONB), created_at (TIMESTAMP).
+- Create a 'comments' table. Fields: id (UUID), property_id (UUID), coordinates (POINT/JSONB), text (TEXT), author_role (TEXT).
+- Implement a simple persistent header dropdown to toggle the user's current session role: [Designer Mode] or [Client Mode].
+
+2. LAYER 1: PROPERTY BOUNDARY TOOL
+- On the sidebar, add a section called "Layer 1: Property Boundary".
+- Include an Address Search bar using Mapbox Geocoding so users can find their land.
+- Add a button "Draw Property Boundary". When clicked, enable the Mapbox Draw polygon tool.
+- When the user finishes drawing:
+  a. Use Turf.js (turf.area) to calculate the property area. Display this prominently in Hectares and Acres in the sidebar.
+  b. If in [Designer Mode], show a "Save Property Boundary" button that sends the GeoJSON and area calculations to the PostgreSQL database.
+  c. If in [Client Mode], disable the ability to draw or overwrite the boundary, but show a "Request Boundary Change" text comment box.
+
+3. LAYER 2: DYNAMIC 1M CONTOUR ENGINE
+- Add a toggle switch in the sidebar called "Generate 1m Contours".
+- When toggled ON:
+  a. Use the current property's GeoJSON boundary as a bounding box mask.
+  b. Fetch the elevation data using Mapbox Terrain-RGB tiles for that specific bounding box area.
+  c. Implement a client-side JavaScript Marching Squares algorithm (or use an optimized client-side canvas processing loop) to extract elevation slices at strict 1-meter intervals (e.g., 101m, 102m, 103m).
+  d. Render these calculated 1m lines as a custom GeoJSON Vector Layer directly on top of the Mapbox map.
+  e. Ensure these lines are restricted/clipped so they ONLY render inside the property boundary polygon.
+  f. Make the lines fine, a subtle brown color, and display a tiny text elevation label on hover.
+
+4. COLLABORATION & FEEDBACK LAYER
+- When the session role is [Client Mode]:
+  a. Disable all drawing/editing tools for the boundary.
+  b. Enable a "Drop Feedback Pin" tool. When the client clicks anywhere on the map (such as on a specific contour line), drop a red marker pin.
+  c. Open a small popup text box allowing them to type feedback (e.g., "Water pools heavily here in winter" or "Move the access gate here").
+  d. Save this marker's coordinates and text instantly to the 'comments' database via WebSockets or a clean API route so the Designer sees it automatically without reloading.
+
+Please build this step-by-step, starting with the database setup and basic map rendering, then moving to the drawing tools, and finally the contour generation. Inform me when you need me to test the drawing functionality.
