@@ -56,6 +56,7 @@ export default function MapPage() {
   const [mapboxToken, setMapboxToken] = useState("");
   const [mapLoaded, setMapLoaded] = useState(false);
   const [webglError, setWebglError] = useState(false);
+  const [mapError, setMapError] = useState<string | null>(null);
 
   // UI state
   const [showContours, setShowContours] = useState(false);
@@ -110,8 +111,8 @@ export default function MapPage() {
       map = new mapboxgl.Map({
         container: mapContainerRef.current,
         style: "mapbox://styles/mapbox/satellite-streets-v12",
-        center: [0, 20],
-        zoom: 2,
+        center: [147, -33],
+        zoom: 4,
         attributionControl: false,
       });
     } catch {
@@ -129,6 +130,12 @@ export default function MapPage() {
       offset: 5,
     });
     hoverPopupRef.current = hoverPopup;
+
+    map.on("error", (e) => {
+      const msg = (e.error as any)?.message ?? String(e.error ?? "Unknown map error");
+      console.error("[Mapbox]", msg, e);
+      setMapError(msg);
+    });
 
     map.on("load", () => {
       map.addSource("boundary", { type: "geojson", data: EMPTY_FC });
@@ -304,7 +311,7 @@ export default function MapPage() {
     setIsGeneratingContours(true);
     generateContours(
       { type: "Feature", geometry: activeProperty.boundaryGeojson as unknown as GeoJSON.Geometry, properties: {} },
-      MAPBOX_TOKEN,
+      mapboxToken,
     )
       .then((fc) => {
         const s = mapRef.current?.getSource("contours") as mapboxgl.GeoJSONSource | undefined;
@@ -313,7 +320,7 @@ export default function MapPage() {
       .catch(console.error)
       .finally(() => setIsGeneratingContours(false));
     return;
-  }, [showContours, activeProperty?.id, activeProperty?.boundaryGeojson, mapLoaded]);
+  }, [showContours, activeProperty?.id, activeProperty?.boundaryGeojson, mapLoaded, mapboxToken]);
 
   // ─── DROP-PIN CURSOR ──────────────────────────────────────────────────────
   useEffect(() => {
