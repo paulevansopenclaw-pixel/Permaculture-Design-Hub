@@ -45,12 +45,14 @@ import {
   useBulkReplaceZones,
   useDeleteZone,
   getListZonesQueryKey,
+  useUpsertClientBrief,
 } from "@workspace/api-client-react";
 import { useAppStore, type Role } from "@/store/useAppStore";
 import { generateContours } from "@/lib/contourEngine";
 import { analyzeWaterPaths, type WaterAnalysisResult, type AnalyzedSwale } from "@/lib/keylineEngine";
 import { OnboardingModal } from "@/components/OnboardingModal";
 import { AiAnalysisPanel } from "@/components/AiAnalysisPanel";
+import { fetchClimateBaseline } from "@/lib/fetchClimateBaseline";
 
 async function fetchMapboxToken(): Promise<string> {
   try {
@@ -250,6 +252,8 @@ export default function MapPage() {
   const [editingSectorId, setEditingSectorId] = useState<string | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [show3D, setShow3D] = useState(false);
+  const [isSyncingSiteData, setIsSyncingSiteData] = useState(false);
+  const [syncSiteDataStatus, setSyncSiteDataStatus] = useState<"idle" | "ok" | "error">("idle");
   const [showWater, setShowWater] = useState(true);
   const [waterAnalysis, setWaterAnalysis] = useState<WaterAnalysisResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -293,6 +297,7 @@ export default function MapPage() {
 
   const createProperty = useCreateProperty();
   const updateProperty = useUpdateProperty();
+  const upsertClientBrief = useUpsertClientBrief();
   const createComment = useCreateComment();
   const deleteComment = useDeleteComment();
   const createStructure = useCreateStructure();
@@ -1780,6 +1785,65 @@ export default function MapPage() {
     );
   }
 
+  // ─── SYNC SITE DATA ───────────────────────────────────────────────────────
+  async function handleSyncSiteData() {
+    if (!activePropertyId || !activeProperty?.boundaryGeojson) return;
+    setIsSyncingSiteData(true);
+    setSyncSiteDataStatus("idle");
+    try {
+      const boundaryGeo = typeof activeProperty.boundaryGeojson === "string"
+        ? JSON.parse(activeProperty.boundaryGeojson)
+        : activeProperty.boundaryGeojson;
+      const centroid = turf.centroid({ type: "Feature", geometry: boundaryGeo, properties: {} });
+      const [lng, lat] = centroid.geometry.coordinates;
+      const baseline = await fetchClimateBaseline(lat, lng);
+      await upsertClientBrief.mutateAsync({
+        propertyId: activePropertyId,
+        data: {
+          // Only overwrite the auto-fetched fields; preserve user-entered ones from existing brief
+          annualRainfallMm: baseline.annualRainfallMm,
+          estimatedSoilType: baseline.estimatedSoilType,
+          climateZone: baseline.climateZone,
+          meanAnnualTempC: baseline.meanAnnualTempC,
+          summerMaxTempC: baseline.summerMaxTempC,
+          winterMinTempC: baseline.winterMinTempC,
+          frostDaysPerYear: baseline.frostDaysPerYear,
+          solarIrradianceKwhM2: baseline.solarIrradianceKwhM2,
+          prevailingWindDir: baseline.prevailingWindDir,
+          meanWindSpeedMs: baseline.meanWindSpeedMs,
+          annualHumidityPct: baseline.annualHumidityPct,
+          elevationM: baseline.elevationM,
+          soilClay: baseline.soilClay,
+          soilSand: baseline.soilSand,
+          soilSilt: baseline.soilSilt,
+          soilPH: baseline.soilPH,
+          soilOrganicCarbonGkg: baseline.soilOrganicCarbonGkg,
+          soilTextureClass: baseline.soilTextureClass,
+          // Preserve existing user-entered fields
+          machineryWidthM: clientBrief?.machineryWidthM ?? 3.0,
+          utilitiesOverheadPower: clientBrief?.utilitiesOverheadPower ?? false,
+          utilitiesBuriedPipes: clientBrief?.utilitiesBuriedPipes ?? false,
+          utilitiesLegalEasements: clientBrief?.utilitiesLegalEasements ?? false,
+          utilitiesActiveWell: clientBrief?.utilitiesActiveWell ?? false,
+          challengeSevereErosion: clientBrief?.challengeSevereErosion ?? false,
+          challengeWinterFlooding: clientBrief?.challengeWinterFlooding ?? false,
+          challengeHighWind: clientBrief?.challengeHighWind ?? false,
+          challengeWildlifePressure: clientBrief?.challengeWildlifePressure ?? false,
+          primaryGoal: clientBrief?.primaryGoal ?? null,
+          maintenanceCapacity: clientBrief?.maintenanceCapacity ?? null,
+        },
+      });
+      queryClient.invalidateQueries({ queryKey: getGetClientBriefQueryKey(activePropertyId) });
+      setSyncSiteDataStatus("ok");
+      setTimeout(() => setSyncSiteDataStatus("idle"), 4000);
+    } catch {
+      setSyncSiteDataStatus("error");
+      setTimeout(() => setSyncSiteDataStatus("idle"), 6000);
+    } finally {
+      setIsSyncingSiteData(false);
+    }
+  }
+
   // ─── CREATE PROPERTY ──────────────────────────────────────────────────────
   function handleCreateProperty() {
     if (!newPropName.trim()) return;
@@ -2246,13 +2310,37 @@ export default function MapPage() {
                 </DetailGroup>
               )}
 
-              <button
-                onClick={() => setShowOnboarding(true)}
-                className="w-full py-1.5 rounded text-[11px] font-medium transition-all mt-1"
-                style={{ background: "hsl(103, 22%, 14%)", color: "hsl(103, 30%, 55%)", border: "1px solid hsl(103, 22%, 22%)" }}
-              >
-                Edit Survey →
-              </button>
+              <div className="flex gap-2 mt-1">
+                <button
+                  onClick={() => setShowOnboarding(true)}
+                  className="flex-1 py-1.5 rounded text-[11px] font-medium transition-all"
+                  style={{ background: "hsl(103, 22%, 14%)", color: "hsl(103, 30%, 55%)", border: "1px solid hsl(103, 22%, 22%)" }}
+                >
+                  Edit Survey →
+                </button>
+                <button
+                  onClick={handleSyncSiteData}
+                  disabled={isSyncingSiteData}
+                  title="Re-fetch climate, elevation & soil data from external APIs"
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded text-[11px] font-medium transition-all"
+                  style={{
+                    background: syncSiteDataStatus === "ok" ? "hsl(103, 30%, 14%)" : syncSiteDataStatus === "error" ? "hsl(0, 25%, 14%)" : "hsl(103, 22%, 14%)",
+                    color: syncSiteDataStatus === "ok" ? "#4a9a28" : syncSiteDataStatus === "error" ? "#f87171" : "hsl(42, 20%, 60%)",
+                    border: `1px solid ${syncSiteDataStatus === "ok" ? "hsl(103, 30%, 22%)" : syncSiteDataStatus === "error" ? "hsl(0, 25%, 22%)" : "hsl(103, 22%, 22%)"}`,
+                    opacity: isSyncingSiteData ? 0.7 : 1,
+                  }}
+                >
+                  {isSyncingSiteData ? (
+                    <><div className="w-3 h-3 border border-t-transparent rounded-full animate-spin" style={{ borderColor: "hsl(42, 20%, 60%)" }} /> Syncing…</>
+                  ) : syncSiteDataStatus === "ok" ? (
+                    "✓ Synced"
+                  ) : syncSiteDataStatus === "error" ? (
+                    "✗ Failed"
+                  ) : (
+                    "⟳ Sync Data"
+                  )}
+                </button>
+              </div>
             </div>
           </SidebarSection>
         )}
