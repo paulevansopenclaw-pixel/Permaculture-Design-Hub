@@ -880,6 +880,26 @@ export default function MapPage() {
     });
   }, [structures, activePropertyId, mapLoaded, showStructures]);
 
+  // ─── AUTO-SCALE SECTOR RADIUS ON ZOOM ────────────────────────────────────
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapLoaded) return;
+    const computeRadius = () => {
+      const zoom = map.getZoom();
+      const { lat } = map.getCenter();
+      // Ground resolution at this zoom level and latitude (metres per pixel)
+      const mpp = 156543.03392 * Math.cos((lat * Math.PI) / 180) / Math.pow(2, zoom);
+      // Use ~22% of the visible map width (approx 800 px) as the sector radius
+      const raw = (mpp * 800) / 1000 * 0.22;
+      // Snap to nearest 0.05 km, clamp to [0.05, 50]
+      const radiusKm = Math.max(0.05, Math.min(50, Math.round(raw / 0.05) * 0.05));
+      setSectorDraft((d) => ({ ...d, radiusKm }));
+    };
+    computeRadius();
+    map.on("zoomend", computeRadius);
+    return () => { map.off("zoomend", computeRadius); };
+  }, [mapLoaded]);
+
   // ─── SECTOR CENTER CLICK HANDLER ─────────────────────────────────────────
   useEffect(() => {
     const map = mapRef.current;
@@ -1761,7 +1781,7 @@ export default function MapPage() {
                 <label className="text-[10px] font-medium mb-1 flex justify-between" style={{ color: "hsl(42, 15%, 55%)" }}>
                   <span>Radius</span><span style={{ color: "hsl(42, 28%, 80%)" }}>{sectorDraft.radiusKm} km</span>
                 </label>
-                <input type="range" min="0.05" max="5" step="0.05"
+                <input type="range" min="0.05" max="50" step="0.05"
                   className="w-full h-1.5 rounded appearance-none"
                   style={{ accentColor: "#84cc16" }}
                   value={sectorDraft.radiusKm}
