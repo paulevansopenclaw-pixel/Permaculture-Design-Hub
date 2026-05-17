@@ -110,10 +110,47 @@ function computeSolarArc(
   return points;
 }
 
+/**
+ * Build a filled annular band polygon for a solar arc.
+ * The band spans from outerRadiusKm to innerRadiusKm at the computed
+ * sunrise→sunset azimuth range for the given solar declination.
+ */
+function computeSolarArcBand(
+  centerLng: number,
+  centerLat: number,
+  outerRadiusKm: number,
+  innerRadiusKm: number,
+  declinationDeg: number,
+): GeoJSON.Polygon | null {
+  const outer = computeSolarArc(centerLng, centerLat, outerRadiusKm, declinationDeg);
+  const inner = computeSolarArc(centerLng, centerLat, innerRadiusKm, declinationDeg);
+  if (outer.length < 2 || inner.length < 2) return null;
+  // Ring: outer arc sunrise→sunset, then inner arc sunset→sunrise, close
+  const ring: [number, number][] = [...outer, ...inner.slice().reverse(), outer[0]];
+  return { type: "Polygon", coordinates: [ring] };
+}
+
+// Summer Sun = outer golden band, Winter Sun = inner blue-gray band.
+// bandOuter / bandInner are fractions of the sector radius.
 const SOLAR_ARCS = [
-  { key: "summer", label: "Summer Solstice", declination:  23.45, color: "#FBBF24", dash: undefined          },
-  { key: "equinox", label: "Equinox",        declination:   0,    color: "#FB923C", dash: "8 5"              },
-  { key: "winter", label: "Winter Solstice", declination: -23.45, color: "#EF4444", dash: "4 6"              },
+  {
+    key: "summer",
+    label: "Summer Sun",
+    declination:  23.45,
+    fillColor:   "rgba(228,190, 95,0.38)",
+    borderColor: "#C8A43C",
+    bandOuter: 1.00,
+    bandInner: 0.82,
+  },
+  {
+    key: "winter",
+    label: "Winter Sun",
+    declination: -23.45,
+    fillColor:   "rgba(148,163,184,0.32)",
+    borderColor: "#94A3B8",
+    bandOuter: 0.82,
+    bandInner: 0.66,
+  },
 ];
 
 function sectorWedge(centerLng: number, centerLat: number, radiusKm: number, startAngle: number, endAngle: number) {
@@ -212,7 +249,7 @@ export default function MapPage() {
   const sectorLayersRef = useRef<Map<string, L.GeoJSON>>(new Map());
   const sectorPreviewLayerRef = useRef<L.GeoJSON | null>(null);
   const sectorCenterMarkerRef = useRef<L.Marker | null>(null);
-  const solarArcLayersRef = useRef<L.Polyline[]>([]);
+  const solarArcLayersRef = useRef<L.Layer[]>([]);
   const contourDataRef = useRef<GeoJSON.FeatureCollection | null>(null);
   const damMarkerRef = useRef<L.Marker | null>(null);
   const longestSwaleLayersRef = useRef<L.GeoJSON[]>([]);
@@ -810,17 +847,26 @@ export default function MapPage() {
     solarArcLayersRef.current = [];
     if (!sectorCenter || !showSolarArcs) return;
     const { radiusKm } = sectorDraft;
-    SOLAR_ARCS.forEach(({ declination, color, dash }) => {
-      const pts = computeSolarArc(sectorCenter.lng, sectorCenter.lat, radiusKm, declination);
-      if (pts.length < 2) return;
-      const latlngs = pts.map(([lng, lat]) => [lat, lng] as [number, number]);
-      const line = L.polyline(latlngs, {
-        color,
-        weight: 2,
-        opacity: 0.9,
-        dashArray: dash,
+    SOLAR_ARCS.forEach(({ declination, fillColor, borderColor, bandOuter, bandInner }) => {
+      const polygon = computeSolarArcBand(
+        sectorCenter.lng,
+        sectorCenter.lat,
+        radiusKm * bandOuter,
+        radiusKm * bandInner,
+        declination,
+      );
+      if (!polygon) return;
+      const feature: GeoJSON.Feature = { type: "Feature", geometry: polygon, properties: {} };
+      const layer = L.geoJSON(feature as any, {
+        style: () => ({
+          color: borderColor,
+          weight: 1,
+          opacity: 0.7,
+          fillColor,
+          fillOpacity: 1,
+        }),
       }).addTo(map);
-      solarArcLayersRef.current.push(line);
+      solarArcLayersRef.current.push(layer);
     });
   }, [sectorCenter, sectorDraft.radiusKm, showSolarArcs, mapLoaded]);
 
@@ -1681,16 +1727,17 @@ export default function MapPage() {
                   {showSolarArcs ? "Visible" : "Hidden"}
                 </button>
               </div>
-              {SOLAR_ARCS.map(({ key, label, color, dash }) => (
+              {SOLAR_ARCS.map(({ key, label, fillColor, borderColor }) => (
                 <div key={key} className="flex items-center gap-2">
-                  <svg width="24" height="8" viewBox="0 0 24 8" style={{ flexShrink: 0 }}>
-                    <line
-                      x1="0" y1="4" x2="24" y2="4"
-                      stroke={color}
-                      strokeWidth="2"
-                      strokeDasharray={dash ?? ""}
-                    />
-                  </svg>
+                  <span style={{
+                    display: "inline-block",
+                    width: 20,
+                    height: 12,
+                    background: fillColor,
+                    border: `1.5px solid ${borderColor}`,
+                    borderRadius: 3,
+                    flexShrink: 0,
+                  }} />
                   <span className="text-[10px]" style={{ color: "hsl(42, 15%, 65%)" }}>{label}</span>
                 </div>
               ))}
