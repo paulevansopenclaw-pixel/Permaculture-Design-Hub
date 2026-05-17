@@ -879,6 +879,32 @@ components:
           type: number
           description: Approximate years to reach functional maturity
 
+    ComprehensivePlant:
+      type: object
+      required: [layer, role, commonName, scientificName, heightM, spreadM, yearsToMaturity, notes]
+      properties:
+        layer:
+          type: string
+          description: Forest garden layer — Canopy | Sub-Canopy | Shrub | Herbaceous | Ground Cover | Climber | Root Zone
+        role:
+          type: string
+        commonName:
+          type: string
+        scientificName:
+          type: string
+        heightM:
+          type: number
+          description: Mature height in metres
+        spreadM:
+          type: number
+          description: Mature canopy or ground-cover spread radius in metres
+        yearsToMaturity:
+          type: number
+          description: Approximate years to reach functional maturity
+        notes:
+          type: string
+          description: Brief note on uses, benefits, or planting considerations
+
     SpatialRecommendation:
       type: object
       required: [element, placement, rationale]
@@ -892,7 +918,7 @@ components:
 
     SiteAnalysisReport:
       type: object
-      required: [propertyId, plant_palette, spatial_recommendations, generatedAt, rawJson]
+      required: [propertyId, plant_palette, comprehensive_plant_list, spatial_recommendations, generatedAt, rawJson]
       properties:
         propertyId:
           type: string
@@ -900,6 +926,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/PlantGuild"
+        comprehensive_plant_list:
+          type: array
+          items:
+            $ref: "#/components/schemas/ComprehensivePlant"
         spatial_recommendations:
           type: array
           items:

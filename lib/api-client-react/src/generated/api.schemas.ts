@@ -140,6 +140,22 @@ export interface PlantGuild {
   yearsToMaturity: number;
 }
 
+export interface ComprehensivePlant {
+  /** Forest garden layer — Canopy | Sub-Canopy | Shrub | Herbaceous | Ground Cover | Climber | Root Zone */
+  layer: string;
+  role: string;
+  commonName: string;
+  scientificName: string;
+  /** Mature height in metres */
+  heightM: number;
+  /** Mature canopy or ground-cover spread radius in metres */
+  spreadM: number;
+  /** Approximate years to reach functional maturity */
+  yearsToMaturity: number;
+  /** Brief note on uses, benefits, or planting considerations */
+  notes: string;
+}
+
 export interface SpatialRecommendation {
   element: string;
   placement: string;
@@ -149,6 +165,7 @@ export interface SpatialRecommendation {
 export interface SiteAnalysisReport {
   propertyId: string;
   plant_palette: PlantGuild[];
+  comprehensive_plant_list: ComprehensivePlant[];
   spatial_recommendations: SpatialRecommendation[];
   generatedAt: string;
   rawJson: string;

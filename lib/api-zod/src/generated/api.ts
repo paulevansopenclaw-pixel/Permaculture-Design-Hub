@@ -297,6 +297,16 @@ export const AnalyzeSiteResponse = zod.object({
   "spreadM": zod.number().describe('Mature canopy or ground-cover spread radius in metres'),
   "yearsToMaturity": zod.number().describe('Approximate years to reach functional maturity')
 })),
+  "comprehensive_plant_list": zod.array(zod.object({
+  "layer": zod.string().describe('Forest garden layer — Canopy | Sub-Canopy | Shrub | Herbaceous | Ground Cover | Climber | Root Zone'),
+  "role": zod.string(),
+  "commonName": zod.string(),
+  "scientificName": zod.string(),
+  "heightM": zod.number().describe('Mature height in metres'),
+  "spreadM": zod.number().describe('Mature canopy or ground-cover spread radius in metres'),
+  "yearsToMaturity": zod.number().describe('Approximate years to reach functional maturity'),
+  "notes": zod.string().describe('Brief note on uses, benefits, or planting considerations')
+})),
   "spatial_recommendations": zod.array(zod.object({
   "element": zod.string(),
   "placement": zod.string(),

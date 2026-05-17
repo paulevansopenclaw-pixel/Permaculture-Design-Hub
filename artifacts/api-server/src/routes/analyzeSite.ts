@@ -157,6 +157,18 @@ Return ONLY a valid JSON object — no markdown, no explanation, no code fences.
       "yearsToMaturity": <approximate years to reach functional/productive maturity, as a number>
     }
   ],
+  "comprehensive_plant_list": [
+    {
+      "layer": "Canopy" | "Sub-Canopy" | "Shrub" | "Herbaceous" | "Ground Cover" | "Climber" | "Root Zone",
+      "role": "Overstory Tree" | "Fruit Tree" | "Nitrogen Fixer" | "Dynamic Accumulator" | "Insectary" | "Ground Cover" | "Root Crop" | "Windbreak" | "Coppice" | "Medicinal" | "Edible Foliage",
+      "commonName": "string — locally recognised name for the geographic region",
+      "scientificName": "string",
+      "heightM": <number>,
+      "spreadM": <number>,
+      "yearsToMaturity": <number>,
+      "notes": "One sentence on key uses, benefits, or important planting notes"
+    }
+  ],
   "spatial_recommendations": [
     {
       "element": "Windbreak" | "Vegetable Beds" | "Chicken Coop" | "Fencing" | "Swale" | "Water Storage" | "Orchard" | "Nursery Area",
@@ -167,12 +179,13 @@ Return ONLY a valid JSON object — no markdown, no explanation, no code fences.
 }
 
 Rules:
-- Include 8–12 plants covering at least 4 different roles.
+- plant_palette: 8–12 curated guild species (the best integrated picks for THIS site's conditions).
+- comprehensive_plant_list: 30–45 species covering ALL 7 layers — aim for: Canopy 6–8, Sub-Canopy 6–8, Shrub 5–7, Herbaceous 5–6, Ground Cover 4–5, Climber 3–4, Root Zone 3–4. Prioritise edible, medicinal, nitrogen-fixing, and multi-function species. Include both productive staples and ecological support species.
 - Include 5–8 spatial recommendations.
-- CRITICAL — Regional flora: All species MUST be native to, endemic to, or long-proven non-invasive cultivars for the specified geographic region. Do NOT recommend plants from other continents when suitable local alternatives exist. Examples for Eastern Australia: use Acacia species (not Robinia/Black Locust), Allocasuarina/Casuarina (not Alder), Eucalyptus/Angophora/Corymbia (not foreign oaks), Lomandra/Microlaena (not foreign grasses), native Kennedia/Hardenbergia (not exotic legume vines). For other regions, apply the same principle — always prefer locally native or well-adapted species.
+- CRITICAL — Regional flora: All species in BOTH lists MUST be native to, endemic to, or long-proven non-invasive cultivars for the specified geographic region. Do NOT recommend plants from other continents when suitable local alternatives exist. Examples for Eastern Australia: use Acacia species (not Robinia/Black Locust), Allocasuarina/Casuarina (not Alder), Eucalyptus/Angophora/Corymbia (not foreign oaks), Lomandra/Microlaena (not foreign grasses), native Kennedia/Hardenbergia (not exotic legume vines). For other regions, apply the same principle — always prefer locally native or well-adapted species.
 - heightM, spreadM, and yearsToMaturity must be realistic numeric values for the specific species and local growing conditions.
 - All species must be suited to the identified climate zone and hardiness conditions.
-- Reference actual sector bearings and challenges in your reasoning.
+- Reference actual sector bearings and challenges in your reasoning (plant_palette rationale + spatial_recommendations).
 - Do not include any text outside the JSON object.`;
 }
 
@@ -218,7 +231,7 @@ router.post(
     const result = await model.generateContent(prompt);
     const rawJson = result.response.text().trim();
 
-    let parsed: { plant_palette: unknown[]; spatial_recommendations: unknown[] };
+    let parsed: { plant_palette: unknown[]; comprehensive_plant_list: unknown[]; spatial_recommendations: unknown[] };
     try {
       parsed = JSON.parse(rawJson);
     } catch {
@@ -237,6 +250,7 @@ router.post(
     res.json({
       propertyId,
       plant_palette: parsed.plant_palette ?? [],
+      comprehensive_plant_list: parsed.comprehensive_plant_list ?? [],
       spatial_recommendations: parsed.spatial_recommendations ?? [],
       generatedAt: generatedAt.toISOString(),
       rawJson,

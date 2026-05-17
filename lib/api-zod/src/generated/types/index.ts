@@ -10,6 +10,7 @@ export * from './clientBrief';
 export * from './clientBriefInput';
 export * from './comment';
 export * from './commentInput';
+export * from './comprehensivePlant';
 export * from './designedSwale';
 export * from './designedSwaleInput';
 export * from './healthStatus';

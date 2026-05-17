@@ -5,12 +5,14 @@
  * Collaborative Permaculture Design API
  * OpenAPI spec version: 0.1.0
  */
+import type { ComprehensivePlant } from './comprehensivePlant';
 import type { PlantGuild } from './plantGuild';
 import type { SpatialRecommendation } from './spatialRecommendation';
 
 export interface SiteAnalysisReport {
   propertyId: string;
   plant_palette: PlantGuild[];
+  comprehensive_plant_list: ComprehensivePlant[];
   spatial_recommendations: SpatialRecommendation[];
   generatedAt: string;
   rawJson: string;
