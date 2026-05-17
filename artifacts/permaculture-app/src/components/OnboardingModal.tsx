@@ -87,6 +87,7 @@ function CheckboxField({
         background: checked ? "hsl(103, 30%, 14%)" : "hsl(103, 20%, 10%)",
         border: `1px solid ${checked ? "#4a9a28" : "hsl(103, 20%, 18%)"}`,
       }}
+      onClick={() => onChange(!checked)}
     >
       <div
         className="w-4 h-4 rounded flex items-center justify-center shrink-0 transition-all"
