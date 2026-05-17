@@ -4,6 +4,7 @@ import { z } from "zod/v4";
 
 export const propertiesTable = pgTable("properties", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  ownerId: text("owner_id"),
   name: text("name").notNull(),
   boundaryGeojson: text("boundary_geojson"),
   areaHectares: real("area_hectares"),

@@ -12,134 +12,86 @@ import {
 
 const router: IRouter = Router();
 
-router.get("/properties", async (_req, res): Promise<void> => {
+router.get("/properties", async (req, res): Promise<void> => {
+  if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
   const rows = await db
     .select()
     .from(propertiesTable)
+    .where(eq(propertiesTable.ownerId, req.user.id))
     .orderBy(propertiesTable.createdAt);
-  res.json(
-    rows.map((p) => ({
-      ...p,
-      boundaryGeojson: p.boundaryGeojson ? JSON.parse(p.boundaryGeojson) : null,
-    })),
-  );
+  res.json(rows.map((p) => ({
+    ...p,
+    boundaryGeojson: p.boundaryGeojson ? JSON.parse(p.boundaryGeojson) : null,
+  })));
 });
 
 router.post("/properties", async (req, res): Promise<void> => {
+  if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
   const parsed = CreatePropertyBody.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.message });
-    return;
-  }
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
   const { boundaryGeojson, ...rest } = parsed.data;
   const [property] = await db
     .insert(propertiesTable)
-    .values({
-      ...rest,
-      boundaryGeojson: boundaryGeojson ? JSON.stringify(boundaryGeojson) : null,
-    })
+    .values({ ...rest, ownerId: req.user.id, boundaryGeojson: boundaryGeojson ? JSON.stringify(boundaryGeojson) : null })
     .returning();
   res.status(201).json({
     ...property,
-    boundaryGeojson: property.boundaryGeojson
-      ? JSON.parse(property.boundaryGeojson)
-      : null,
+    boundaryGeojson: property.boundaryGeojson ? JSON.parse(property.boundaryGeojson) : null,
   });
 });
 
 router.get("/properties/:id", async (req, res): Promise<void> => {
+  if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
   const params = GetPropertyParams.safeParse(req.params);
-  if (!params.success) {
-    res.status(400).json({ error: params.error.message });
-    return;
-  }
+  if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
   const [property] = await db
     .select()
     .from(propertiesTable)
-    .where(eq(propertiesTable.id, params.data.id));
-  if (!property) {
-    res.status(404).json({ error: "Property not found" });
-    return;
-  }
-  res.json({
-    ...property,
-    boundaryGeojson: property.boundaryGeojson
-      ? JSON.parse(property.boundaryGeojson)
-      : null,
-  });
+    .where(and(eq(propertiesTable.id, params.data.id), eq(propertiesTable.ownerId, req.user.id)));
+  if (!property) { res.status(404).json({ error: "Property not found" }); return; }
+  res.json({ ...property, boundaryGeojson: property.boundaryGeojson ? JSON.parse(property.boundaryGeojson) : null });
 });
 
 router.put("/properties/:id", async (req, res): Promise<void> => {
+  if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
   const params = UpdatePropertyParams.safeParse(req.params);
-  if (!params.success) {
-    res.status(400).json({ error: params.error.message });
-    return;
-  }
+  if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
   const parsed = UpdatePropertyBody.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.message });
-    return;
-  }
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
   const { boundaryGeojson, ...rest } = parsed.data;
   const updateData: Record<string, unknown> = { ...rest };
   if (boundaryGeojson !== undefined) {
-    updateData.boundaryGeojson = boundaryGeojson
-      ? JSON.stringify(boundaryGeojson)
-      : null;
+    updateData.boundaryGeojson = boundaryGeojson ? JSON.stringify(boundaryGeojson) : null;
   }
   const [property] = await db
     .update(propertiesTable)
     .set(updateData)
-    .where(eq(propertiesTable.id, params.data.id))
+    .where(and(eq(propertiesTable.id, params.data.id), eq(propertiesTable.ownerId, req.user.id)))
     .returning();
-  if (!property) {
-    res.status(404).json({ error: "Property not found" });
-    return;
-  }
-  res.json({
-    ...property,
-    boundaryGeojson: property.boundaryGeojson
-      ? JSON.parse(property.boundaryGeojson)
-      : null,
-  });
+  if (!property) { res.status(404).json({ error: "Property not found" }); return; }
+  res.json({ ...property, boundaryGeojson: property.boundaryGeojson ? JSON.parse(property.boundaryGeojson) : null });
 });
 
 router.delete("/properties/:id", async (req, res): Promise<void> => {
+  if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
   const params = DeletePropertyParams.safeParse(req.params);
-  if (!params.success) {
-    res.status(400).json({ error: params.error.message });
-    return;
-  }
-  await db
-    .delete(propertiesTable)
-    .where(eq(propertiesTable.id, params.data.id));
+  if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
+  await db.delete(propertiesTable)
+    .where(and(eq(propertiesTable.id, params.data.id), eq(propertiesTable.ownerId, req.user.id)));
   res.sendStatus(204);
 });
 
 router.get("/properties/:id/stats", async (req, res): Promise<void> => {
+  if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
   const params = GetPropertyStatsParams.safeParse(req.params);
-  if (!params.success) {
-    res.status(400).json({ error: params.error.message });
-    return;
-  }
+  if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
   const [property] = await db
     .select()
     .from(propertiesTable)
-    .where(eq(propertiesTable.id, params.data.id));
-  if (!property) {
-    res.status(404).json({ error: "Property not found" });
-    return;
-  }
-  const commentRows = await db
-    .select()
-    .from(commentsTable)
-    .where(eq(commentsTable.propertyId, params.data.id));
-  res.json({
-    propertyId: params.data.id,
-    areaHectares: property.areaHectares ?? null,
-    areaAcres: property.areaAcres ?? null,
-    commentCount: commentRows.length,
-  });
+    .where(and(eq(propertiesTable.id, params.data.id), eq(propertiesTable.ownerId, req.user.id)));
+  if (!property) { res.status(404).json({ error: "Property not found" }); return; }
+  const commentRows = await db.select().from(commentsTable).where(eq(commentsTable.propertyId, params.data.id));
+  res.json({ propertyId: params.data.id, areaHectares: property.areaHectares ?? null, areaAcres: property.areaAcres ?? null, commentCount: commentRows.length });
 });
 
 export default router;

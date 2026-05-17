@@ -1,5 +1,6 @@
 import { Router, type IRouter } from "express";
-import { eq } from "drizzle-orm";
+import rateLimit from "express-rate-limit";
+import { eq, and } from "drizzle-orm";
 import {
   db,
   clientBriefsTable,
@@ -189,10 +190,21 @@ Rules:
 - Do not include any text outside the JSON object.`;
 }
 
+const analyzeRateLimit = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many analysis requests — please wait before running another analysis." },
+});
+
 router.post(
   "/properties/:propertyId/analyze-site",
+  analyzeRateLimit,
   async (req, res): Promise<void> => {
-    const { propertyId } = req.params;
+    if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
+
+    const propertyId = req.params.propertyId as string;
     if (!propertyId) { res.status(400).json({ error: "propertyId required" }); return; }
 
     const apiKey = process.env.GEMINI_API_KEY;
@@ -201,7 +213,7 @@ router.post(
     const [property] = await db
       .select()
       .from(propertiesTable)
-      .where(eq(propertiesTable.id, propertyId));
+      .where(and(eq(propertiesTable.id, propertyId), eq(propertiesTable.ownerId, req.user.id)));
     if (!property) { res.status(404).json({ error: "Property not found" }); return; }
 
     const [brief] = await db
