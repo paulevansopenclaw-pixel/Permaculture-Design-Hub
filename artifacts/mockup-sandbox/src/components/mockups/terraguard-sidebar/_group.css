@@ -1,0 +1,38 @@
+@keyframes tactical-pulse-ring {
+  0% {
+    transform: scale(0.5);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(3);
+    opacity: 0;
+  }
+}
+
+.tactical-marker {
+  position: relative;
+  width: 8px;
+  height: 8px;
+  background-color: #00d4ff;
+  border-radius: 50%;
+  box-shadow: 0 0 8px #00d4ff;
+}
+
+.tactical-marker::before {
+  content: '';
+  position: absolute;
+  top: -100%;
+  left: -100%;
+  right: -100%;
+  bottom: -100%;
+  border-radius: 50%;
+  border: 1px solid #00d4ff;
+  animation: tactical-pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+}
+
+.tactical-bg-grid {
+  background-size: 40px 40px;
+  background-image: 
+    linear-gradient(to right, rgba(0, 212, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 212, 255, 0.05) 1px, transparent 1px);
+}
