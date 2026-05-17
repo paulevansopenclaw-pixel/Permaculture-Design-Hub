@@ -859,7 +859,7 @@ components:
 
     PlantGuild:
       type: object
-      required: [role, commonName, scientificName, rationale]
+      required: [role, commonName, scientificName, rationale, heightM, spreadM, yearsToMaturity]
       properties:
         role:
           type: string
@@ -869,6 +869,15 @@ components:
           type: string
         rationale:
           type: string
+        heightM:
+          type: number
+          description: Mature height in metres
+        spreadM:
+          type: number
+          description: Mature canopy or ground-cover spread radius in metres
+        yearsToMaturity:
+          type: number
+          description: Approximate years to reach functional maturity
 
     SpatialRecommendation:
       type: object

@@ -178,6 +178,7 @@ function ReportSection({ icon, title, children }: { icon: string; title: string;
 function PlantCard({ plant }: { plant: PlantGuild }) {
   const bg = ROLE_COLORS[plant.role] ?? "hsl(103, 22%, 16%)";
   const icon = ROLE_ICONS[plant.role] ?? "🌱";
+  const hasSize = plant.heightM != null || plant.spreadM != null || plant.yearsToMaturity != null;
   return (
     <div className="rounded-xl p-3 space-y-1.5" style={{ background: "hsl(103, 22%, 10%)", border: "1px solid hsl(103, 22%, 19%)" }}>
       <div className="flex items-start gap-2">
@@ -195,6 +196,25 @@ function PlantCard({ plant }: { plant: PlantGuild }) {
           <div className="text-[10px] italic mt-0.5" style={{ color: "hsl(42, 15%, 50%)" }}>{plant.scientificName}</div>
         </div>
       </div>
+      {hasSize && (
+        <div className="flex flex-wrap gap-x-3 gap-y-0.5 pl-7">
+          {plant.heightM != null && (
+            <span className="text-[10px]" style={{ color: "hsl(103, 35%, 52%)" }}>
+              ↕ {plant.heightM} m tall
+            </span>
+          )}
+          {plant.spreadM != null && (
+            <span className="text-[10px]" style={{ color: "hsl(103, 35%, 52%)" }}>
+              ↔ {plant.spreadM} m wide
+            </span>
+          )}
+          {plant.yearsToMaturity != null && (
+            <span className="text-[10px]" style={{ color: "hsl(42, 20%, 45%)" }}>
+              ⏱ {plant.yearsToMaturity} yr{plant.yearsToMaturity !== 1 ? "s" : ""} to maturity
+            </span>
+          )}
+        </div>
+      )}
       <p className="text-[11px] leading-relaxed pl-7" style={{ color: "hsl(42, 20%, 68%)" }}>{plant.rationale}</p>
     </div>
   );

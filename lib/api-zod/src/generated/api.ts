@@ -292,7 +292,10 @@ export const AnalyzeSiteResponse = zod.object({
   "role": zod.string(),
   "commonName": zod.string(),
   "scientificName": zod.string(),
-  "rationale": zod.string()
+  "rationale": zod.string(),
+  "heightM": zod.number().describe('Mature height in metres'),
+  "spreadM": zod.number().describe('Mature canopy or ground-cover spread radius in metres'),
+  "yearsToMaturity": zod.number().describe('Approximate years to reach functional maturity')
 })),
   "spatial_recommendations": zod.array(zod.object({
   "element": zod.string(),

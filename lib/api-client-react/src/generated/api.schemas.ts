@@ -132,6 +132,12 @@ export interface PlantGuild {
   commonName: string;
   scientificName: string;
   rationale: string;
+  /** Mature height in metres */
+  heightM: number;
+  /** Mature canopy or ground-cover spread radius in metres */
+  spreadM: number;
+  /** Approximate years to reach functional maturity */
+  yearsToMaturity: number;
 }
 
 export interface SpatialRecommendation {
