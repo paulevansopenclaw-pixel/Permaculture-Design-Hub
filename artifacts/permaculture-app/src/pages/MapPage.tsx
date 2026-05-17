@@ -7,6 +7,7 @@ import "leaflet-draw/dist/leaflet.draw.css";
 // @ts-ignore
 import "leaflet-draw";
 import * as turf from "@turf/turf";
+import SunCalc from "suncalc";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useListProperties,
@@ -72,90 +73,7 @@ const SECTOR_TYPES = [
   { value: "winter_solar", label: "Winter Solar Arc",     emoji: "☀️",  color: "rgba(249,115,22,0.3)",  border: "#f97316" },
 ];
 
-/**
- * Compute the sun's arc across the sky for a given solar declination.
- * Returns an ordered array of [lng, lat] points tracing the sun's path
- * from sunrise to sunset at the given radius from the center.
- *
- * @param declinationDeg  Solar declination in degrees:
- *   +23.45 = summer solstice, 0 = equinox, -23.45 = winter solstice
- */
-function computeSolarArc(
-  centerLng: number,
-  centerLat: number,
-  radiusKm: number,
-  declinationDeg: number,
-): [number, number][] {
-  const φ = (centerLat * Math.PI) / 180;
-  const δ = (declinationDeg * Math.PI) / 180;
-  // Hour angle at sunrise/sunset: cos(H₀) = −tan(φ)·tan(δ)
-  const cosH0 = -Math.tan(φ) * Math.tan(δ);
-  if (cosH0 > 1) return []; // sun never rises at this declination/latitude
-  const H0 = cosH0 < -1 ? Math.PI : Math.acos(cosH0);
-  if (H0 < 0.01) return []; // degenerate (near-polar momentary sunrise)
-  const center = turf.point([centerLng, centerLat]);
-  const points: [number, number][] = [];
-  const STEPS = 120;
-  for (let i = 0; i <= STEPS; i++) {
-    const H = -H0 + (2 * H0 * i) / STEPS; // hour angle: −H₀ (sunrise) → +H₀ (sunset)
-    const sinAlt =
-      Math.sin(φ) * Math.sin(δ) + Math.cos(φ) * Math.cos(δ) * Math.cos(H);
-    if (sinAlt < -0.01) continue; // below horizon
-    const cosAlt = Math.sqrt(Math.max(0, 1 - sinAlt * sinAlt));
-    const rawCosAz =
-      cosAlt < 1e-9
-        ? 0
-        : (Math.sin(δ) - sinAlt * Math.sin(φ)) / (cosAlt * Math.cos(φ));
-    let azDeg = Math.acos(Math.max(-1, Math.min(1, rawCosAz))) * (180 / Math.PI);
-    if (H > 0) azDeg = 360 - azDeg; // afternoon: mirror east→west
-    const pt = turf.destination(center, radiusKm, azDeg, { units: "kilometers" });
-    points.push(pt.geometry.coordinates as [number, number]);
-  }
-  return points;
-}
-
-/**
- * Build a filled annular band polygon for a solar arc.
- * The band spans from outerRadiusKm to innerRadiusKm at the computed
- * sunrise→sunset azimuth range for the given solar declination.
- */
-function computeSolarArcBand(
-  centerLng: number,
-  centerLat: number,
-  outerRadiusKm: number,
-  innerRadiusKm: number,
-  declinationDeg: number,
-): GeoJSON.Polygon | null {
-  const outer = computeSolarArc(centerLng, centerLat, outerRadiusKm, declinationDeg);
-  const inner = computeSolarArc(centerLng, centerLat, innerRadiusKm, declinationDeg);
-  if (outer.length < 2 || inner.length < 2) return null;
-  // Ring: outer arc sunrise→sunset, then inner arc sunset→sunrise, close
-  const ring: [number, number][] = [...outer, ...inner.slice().reverse(), outer[0]];
-  return { type: "Polygon", coordinates: [ring] };
-}
-
-// Summer Sun = outer golden band, Winter Sun = inner blue-gray band.
-// bandOuter / bandInner are fractions of the sector radius.
-const SOLAR_ARCS = [
-  {
-    key: "summer",
-    label: "Summer Sun",
-    declination:  23.45,
-    fillColor:   "rgba(228,190, 95,0.38)",
-    borderColor: "#C8A43C",
-    bandOuter: 1.00,
-    bandInner: 0.82,
-  },
-  {
-    key: "winter",
-    label: "Winter Sun",
-    declination: -23.45,
-    fillColor:   "rgba(148,163,184,0.32)",
-    borderColor: "#94A3B8",
-    bandOuter: 0.82,
-    bandInner: 0.66,
-  },
-];
+// (solar arc geometry is now computed inline via suncalc in the SVG overlay effect)
 
 function sectorWedge(centerLng: number, centerLat: number, radiusKm: number, startAngle: number, endAngle: number) {
   try {
@@ -264,13 +182,13 @@ export default function MapPage() {
   const pendingPinMarkerRef = useRef<L.Marker | null>(null);
   const structureMarkersRef = useRef<L.Marker[]>([]);
   const pendingStructureMarkerRef = useRef<L.Marker | null>(null);
-  const sectorLayersRef = useRef<Map<string, L.GeoJSON>>(new Map());
+  const sectorSVGDivRef = useRef<HTMLDivElement | null>(null);
   const sectorPreviewLayerRef = useRef<L.GeoJSON | null>(null);
   const sectorCenterMarkerRef = useRef<L.Marker | null>(null);
   const sectorArmStartRef = useRef<L.Marker | null>(null);
   const sectorArmEndRef = useRef<L.Marker | null>(null);
   const isDraggingArmRef = useRef(false);
-  const solarArcLayersRef = useRef<L.Layer[]>([]);
+  // (solarArcLayersRef removed — solar arcs now rendered via SVG overlay)
   const contourDataRef = useRef<GeoJSON.FeatureCollection | null>(null);
   const damMarkerRef = useRef<L.Marker | null>(null);
   const longestSwaleLayersRef = useRef<L.GeoJSON[]>([]);
@@ -1143,38 +1061,7 @@ export default function MapPage() {
     return () => { if (sectorPreviewLayerRef.current) { map.removeLayer(sectorPreviewLayerRef.current); sectorPreviewLayerRef.current = null; } };
   }, [sectorCenter, sectorDraft, mapLoaded]);
 
-  // ─── SOLAR ARCS (Summer Solstice / Equinox / Winter Solstice) ───────────
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !mapLoaded) return;
-    solarArcLayersRef.current.forEach((l) => map.removeLayer(l));
-    solarArcLayersRef.current = [];
-    if (!sectorCenter || !showSolarArcs) return;
-    const { radiusKm } = sectorDraft;
-    SOLAR_ARCS.forEach(({ declination, fillColor, borderColor, bandOuter, bandInner }) => {
-      const polygon = computeSolarArcBand(
-        sectorCenter.lng,
-        sectorCenter.lat,
-        radiusKm * bandOuter,
-        radiusKm * bandInner,
-        declination,
-      );
-      if (!polygon) return;
-      const feature: GeoJSON.Feature = { type: "Feature", geometry: polygon, properties: {} };
-      const layer = L.geoJSON(feature as any, {
-        style: () => ({
-          color: borderColor,
-          weight: 1,
-          opacity: 0.7,
-          fillColor,
-          fillOpacity: 1,
-        }),
-      }).addTo(map);
-      solarArcLayersRef.current.push(layer);
-    });
-  }, [sectorCenter, sectorDraft.radiusKm, showSolarArcs, mapLoaded]);
-
-  // ─── SAVED SECTORS RENDERING ──────────────────────────────────────────────
+  // ─── SAVED SECTORS ─────────────────────────────────────────────────────────
   const handleDeleteSector = useCallback(
     (sectorId: string) => {
       if (!activePropertyId) return;
@@ -1186,32 +1073,247 @@ export default function MapPage() {
     [activePropertyId, deleteSector, queryClient],
   );
 
+  // ─── SVG SECTOR DIAGRAM OVERLAY ────────────────────────────────────────────
+  // Renders solar arc ribbons (via suncalc) and custom sector wedges as concentric
+  // translucent SVG paths with arc-following text labels. Updates every map move/zoom.
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapLoaded) return;
-    sectorLayersRef.current.forEach((layer) => map.removeLayer(layer));
-    sectorLayersRef.current.clear();
-    if (!activePropertyId || !showSectors) return;
-    sectors.forEach((s) => {
-      const feature = sectorWedge(s.centerLng, s.centerLat, s.radiusKm, s.startAngle, s.endAngle);
-      if (!feature) return;
-      const st = SECTOR_TYPES.find((t) => t.value === s.sectorType) ?? SECTOR_TYPES[0];
-      const el = document.createElement("div");
-      el.innerHTML = `
-        <div style="font-size:12px;padding:2px 4px;min-width:140px;max-width:220px;">
-          <div style="font-weight:700;color:#111;margin-bottom:2px;">${st.emoji} ${s.label || st.label}</div>
-          <div style="font-size:10px;color:#555;margin-bottom:2px;">${st.label} · R=${s.radiusKm}km · ${s.startAngle}°→${s.endAngle}°</div>
-          ${role === "designer" ? `<button class="del-btn" style="margin-top:4px;padding:2px 8px;border:1px solid #c00;color:#c00;border-radius:3px;cursor:pointer;font-size:10px;background:none;">Delete</button>` : ""}
-        </div>`;
-      const layer = L.geoJSON(feature as any, {
-        style: () => ({ color: st.border, weight: 1.5, fillColor: st.border, fillOpacity: 0.28, opacity: 0.8 }),
-      });
-      layer.bindPopup(el);
-      el.querySelector(".del-btn")?.addEventListener("click", () => { handleDeleteSector(s.id); layer.closePopup(); });
-      layer.addTo(map);
-      sectorLayersRef.current.set(s.id, layer);
-    });
-  }, [sectors, activePropertyId, mapLoaded, role, showSectors, handleDeleteSector]);
+
+    // Tear down previous overlay
+    if (sectorSVGDivRef.current) {
+      sectorSVGDivRef.current.remove();
+      sectorSVGDivRef.current = null;
+    }
+    if (!sectorCenter) return;
+    if (!showSectors && !showSolarArcs) return;
+
+    const SVG_NS = "http://www.w3.org/2000/svg";
+    const mapContainer = map.getContainer();
+
+    const div = document.createElement("div");
+    div.style.cssText =
+      "position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:450;overflow:hidden;";
+    mapContainer.appendChild(div);
+    sectorSVGDivRef.current = div;
+
+    const svgEl = document.createElementNS(SVG_NS, "svg") as SVGSVGElement;
+    svgEl.style.cssText = "position:absolute;top:0;left:0;overflow:visible;";
+    div.appendChild(svgEl);
+
+    const fmt = (n: number) => n.toFixed(1);
+    const cPt = (lng: number, lat: number) => map.latLngToContainerPoint(L.latLng(lat, lng));
+
+    // Build a filled ribbon path from two parallel arc arrays ([lng,lat] each).
+    function ribbonPath(outer: [number, number][], inner: [number, number][]): string {
+      if (outer.length < 2 || inner.length < 2) return "";
+      const op = outer.map(([lng, lat]) => cPt(lng, lat));
+      const ip = inner.map(([lng, lat]) => cPt(lng, lat));
+      let d = `M ${fmt(op[0].x)} ${fmt(op[0].y)}`;
+      for (let i = 1; i < op.length; i++) d += ` L ${fmt(op[i].x)} ${fmt(op[i].y)}`;
+      d += ` L ${fmt(ip[ip.length - 1].x)} ${fmt(ip[ip.length - 1].y)}`;
+      for (let i = ip.length - 2; i >= 0; i--) d += ` L ${fmt(ip[i].x)} ${fmt(ip[i].y)}`;
+      return d + " Z";
+    }
+
+    // Build outer + inner arc arrays for a compass-bearing wedge.
+    function wedgeArcs(
+      cLng: number, cLat: number, radiusKm: number, innerFrac: number,
+      startAz: number, endAz: number,
+    ): { outer: [number, number][]; inner: [number, number][] } {
+      const c = turf.point([cLng, cLat]);
+      const outer: [number, number][] = [];
+      const inner: [number, number][] = [];
+      let span = ((endAz - startAz) + 360) % 360;
+      if (span < 1) span = 360;
+      const steps = Math.max(32, Math.round(span));
+      for (let i = 0; i <= steps; i++) {
+        const a = startAz + (span * i) / steps;
+        outer.push(turf.destination(c, radiusKm, a, { units: "kilometers" }).geometry.coordinates as [number, number]);
+        inner.push(turf.destination(c, radiusKm * innerFrac, a, { units: "kilometers" }).geometry.coordinates as [number, number]);
+      }
+      return { outer, inner };
+    }
+
+    // Append an SVG ribbon path with optional click handler.
+    function addRibbon(
+      d: string, fill: string, stroke: string, strokeW: number,
+      clickCb?: () => void,
+    ): SVGPathElement | undefined {
+      if (!d) return;
+      const el = document.createElementNS(SVG_NS, "path");
+      el.setAttribute("d", d);
+      el.setAttribute("fill", fill);
+      el.setAttribute("stroke", stroke);
+      el.setAttribute("stroke-width", String(strokeW));
+      el.setAttribute("stroke-opacity", "0.72");
+      if (clickCb) {
+        el.style.pointerEvents = "all";
+        el.style.cursor = "pointer";
+        el.addEventListener("click", clickCb);
+      }
+      svgEl.appendChild(el);
+      return el;
+    }
+
+    // Append an arc-following text label (dark outline + colour fill, two-pass render).
+    function addArcLabel(
+      text: string, lLng: number, lLat: number,
+      midAzDeg: number, fontSize: number, color: string,
+    ) {
+      const p = cPt(lLng, lLat);
+      // Rotate text tangent to arc; clamp to (−90°, 90°] so it's never upside-down.
+      let rot = midAzDeg % 180;
+      if (rot > 90) rot -= 180;
+
+      for (let pass = 0; pass < 2; pass++) {
+        const t = document.createElementNS(SVG_NS, "text");
+        t.setAttribute("x", fmt(p.x));
+        t.setAttribute("y", fmt(p.y));
+        t.setAttribute("text-anchor", "middle");
+        t.setAttribute("dominant-baseline", "middle");
+        t.setAttribute("transform", `rotate(${rot.toFixed(1)},${fmt(p.x)},${fmt(p.y)})`);
+        t.setAttribute("font-size", `${fontSize}px`);
+        t.setAttribute("font-family", "ui-sans-serif,system-ui,-apple-system,sans-serif");
+        t.setAttribute("font-weight", "500");
+        t.setAttribute("letter-spacing", "0.05em");
+        t.setAttribute("pointer-events", "none");
+        if (pass === 0) {
+          // Dark outline for map readability
+          t.setAttribute("fill", "none");
+          t.setAttribute("stroke", "rgba(0,0,0,0.78)");
+          t.setAttribute("stroke-width", "3");
+          t.setAttribute("stroke-linejoin", "round");
+        } else {
+          t.setAttribute("fill", color);
+        }
+        t.textContent = text;
+        svgEl.appendChild(t);
+      }
+    }
+
+    // ── Main draw — called on every map move/zoom ───────────────────────────
+    function draw() {
+      while (svgEl.firstChild) svgEl.removeChild(svgEl.firstChild);
+      const size = map!.getSize();
+      svgEl.setAttribute("width", String(size.x));
+      svgEl.setAttribute("height", String(size.y));
+
+      const { lng: cLng, lat: cLat } = sectorCenter!;
+      const { radiusKm } = sectorDraft;
+      const year = new Date().getFullYear();
+
+      // ── Solar arc ribbons (outermost two concentric bands) ───────────────
+      if (showSolarArcs) {
+        const SOLAR_SPECS = [
+          {
+            month: 5, day: 21,            // June 21 — summer solstice
+            outerFrac: 1.00, innerFrac: 0.80,
+            fill: "rgba(245,175,25,0.18)", stroke: "#C8A43C",
+            label: "Summer Sun", color: "#E8C44A", fs: 10,
+          },
+          {
+            month: 11, day: 21,           // Dec 21 — winter solstice
+            outerFrac: 0.80, innerFrac: 0.60,
+            fill: "rgba(148,185,220,0.18)", stroke: "#8BAFC8",
+            label: "Winter Sun", color: "#A8C8DC", fs: 9.5,
+          },
+        ] as const;
+
+        SOLAR_SPECS.forEach(({ month, day, outerFrac, innerFrac, fill, stroke, label, color, fs }) => {
+          const date = new Date(year, month, day, 12, 0, 0);
+          const times = SunCalc.getTimes(date, cLat, cLng);
+          const srMs = times.sunrise?.getTime();
+          const ssMs = times.sunset?.getTime();
+          if (!srMs || !ssMs || !isFinite(srMs) || !isFinite(ssMs) || ssMs <= srMs) return;
+
+          const STEPS = 120;
+          const c = turf.point([cLng, cLat]);
+          const outerPts: [number, number][] = [];
+          const innerPts: [number, number][] = [];
+
+          for (let i = 0; i <= STEPS; i++) {
+            const t = new Date(srMs + ((ssMs - srMs) * i) / STEPS);
+            const pos = SunCalc.getPosition(t, cLat, cLng);
+            if (pos.altitude < 0.005) continue;
+            // suncalc azimuth: 0=south, +π/2=west → compass bearing (0=N, CW)
+            const bearing = ((pos.azimuth * 180 / Math.PI) + 180 + 360) % 360;
+            outerPts.push(turf.destination(c, radiusKm * outerFrac, bearing, { units: "kilometers" }).geometry.coordinates as [number, number]);
+            innerPts.push(turf.destination(c, radiusKm * innerFrac, bearing, { units: "kilometers" }).geometry.coordinates as [number, number]);
+          }
+          if (outerPts.length < 2) return;
+
+          addRibbon(ribbonPath(outerPts, innerPts), fill, stroke, 1.2);
+
+          // Label at geometric midpoint of the arc
+          const mi = Math.floor(outerPts.length / 2);
+          const mOuter = outerPts[mi];
+          const mInner = innerPts[Math.min(mi, innerPts.length - 1)];
+          const lLng = (mOuter[0] + mInner[0]) / 2;
+          const lLat = (mOuter[1] + mInner[1]) / 2;
+          const centerPx = cPt(cLng, cLat);
+          const midPx = cPt(mOuter[0], mOuter[1]);
+          const midAz = ((Math.atan2(midPx.x - centerPx.x, -(midPx.y - centerPx.y)) * 180 / Math.PI) + 360) % 360;
+          addArcLabel(label, lLng, lLat, midAz, fs, color);
+        });
+      }
+
+      // ── Custom sector wedge ribbons ──────────────────────────────────────
+      if (showSectors && sectors.length > 0) {
+        sectors.forEach((s) => {
+          const st = SECTOR_TYPES.find((t) => t.value === s.sectorType) ?? SECTOR_TYPES[0];
+          const hx = st.border.replace("#", "");
+          const r = parseInt(hx.slice(0, 2), 16);
+          const g = parseInt(hx.slice(2, 4), 16);
+          const b = parseInt(hx.slice(4, 6), 16);
+          const fill = `rgba(${r},${g},${b},0.18)`;
+
+          const { outer, inner } = wedgeArcs(s.centerLng, s.centerLat, s.radiusKm, 0.08, s.startAngle, s.endAngle);
+          const span = ((s.endAngle - s.startAngle) + 360) % 360;
+          const midAz = (s.startAngle + span / 2) % 360;
+
+          addRibbon(ribbonPath(outer, inner), fill, st.border, 1.5, () => {
+            const lPt = turf.destination(
+              turf.point([s.centerLng, s.centerLat]),
+              s.radiusKm * 0.5, midAz, { units: "kilometers" },
+            );
+            const popup = L.popup({ closeButton: true })
+              .setLatLng(L.latLng(lPt.geometry.coordinates[1], lPt.geometry.coordinates[0]))
+              .setContent(() => {
+                const el = document.createElement("div");
+                el.style.cssText = "font-size:12px;padding:4px 6px;min-width:140px;";
+                el.innerHTML = `
+                  <div style="font-weight:700;margin-bottom:3px;">${st.emoji} ${s.label || st.label}</div>
+                  <div style="font-size:10px;color:#666;margin-bottom:6px;">${st.label} · R=${s.radiusKm}km · ${s.startAngle}°→${s.endAngle}°</div>
+                  ${role === "designer" ? `<button class="delbtn" style="padding:2px 8px;border:1px solid #c00;color:#c00;border-radius:3px;cursor:pointer;font-size:10px;background:none;">Delete</button>` : ""}
+                `;
+                el.querySelector(".delbtn")?.addEventListener("click", () => { handleDeleteSector(s.id); map!.closePopup(); });
+                return el;
+              });
+            popup.openOn(map!);
+          });
+
+          // Arc label at midpoint
+          const lPt = turf.destination(
+            turf.point([s.centerLng, s.centerLat]),
+            s.radiusKm * 0.54, midAz, { units: "kilometers" },
+          );
+          addArcLabel(s.label || st.label, lPt.geometry.coordinates[0], lPt.geometry.coordinates[1], midAz, 10, st.border);
+        });
+      }
+    }
+
+    map.on("move zoom", draw);
+    draw();
+
+    return () => {
+      map.off("move zoom", draw);
+      if (sectorSVGDivRef.current) {
+        sectorSVGDivRef.current.remove();
+        sectorSVGDivRef.current = null;
+      }
+    };
+  }, [sectorCenter, sectors, sectorDraft.radiusKm, showSectors, showSolarArcs, mapLoaded, role, handleDeleteSector]);
 
   // ─── SAVE SECTOR ─────────────────────────────────────────────────────────
   function handleSaveSector() {
@@ -2068,7 +2170,10 @@ export default function MapPage() {
                   {showSolarArcs ? "Visible" : "Hidden"}
                 </button>
               </div>
-              {SOLAR_ARCS.map(({ key, label, fillColor, borderColor }) => (
+              {[
+                { key: "summer", label: "Summer Sun", fillColor: "rgba(245,175,25,0.35)", borderColor: "#C8A43C" },
+                { key: "winter", label: "Winter Sun",  fillColor: "rgba(148,185,220,0.35)", borderColor: "#8BAFC8" },
+              ].map(({ key, label, fillColor, borderColor }) => (
                 <div key={key} className="flex items-center gap-2">
                   <span style={{
                     display: "inline-block",
