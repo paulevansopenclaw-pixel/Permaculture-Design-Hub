@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 
 export default function Blueprint() {
-  const [mode, setMode]] = useState<'engineer' | 'client'>('engineer');
+  const [mode, setMode] = useState<'engineer' | 'client'>('engineer');
   const [layersOpen, setLayersOpen] = useState(true);
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     'I — CLIENT BRIEF': true,
