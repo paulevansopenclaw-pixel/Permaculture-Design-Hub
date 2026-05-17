@@ -1356,12 +1356,22 @@ export default function MapPage() {
   // ─── ZONE HANDLERS ────────────────────────────────────────────────────────
   function handleGenerateZones() {
     if (!activePropertyId || !sectorCenter) return;
-    const zoneInputs = DEFAULT_ZONE_RADII_KM.map((r, i) => ({
-      zoneNumber: i + 1,
-      zoneGeojson: JSON.stringify(
-        turf.circle([sectorCenter.lng, sectorCenter.lat], r, { units: "kilometers", steps: 64 }).geometry,
-      ),
-    }));
+    const boundary = activeProperty?.boundaryGeojson as unknown as GeoJSON.Polygon | null;
+    const zoneInputs = DEFAULT_ZONE_RADII_KM.map((r, i) => {
+      const circle = turf.circle(
+        [sectorCenter.lng, sectorCenter.lat], r,
+        { units: "kilometers", steps: 64 },
+      );
+      let geometry: GeoJSON.Geometry = circle.geometry;
+      if (boundary) {
+        try {
+          const boundaryFeature = turf.feature(boundary);
+          const clipped = turf.intersect(turf.featureCollection([circle, boundaryFeature]));
+          if (clipped) geometry = clipped.geometry;
+        } catch { /* fall back to full circle */ }
+      }
+      return { zoneNumber: i + 1, zoneGeojson: JSON.stringify(geometry) };
+    });
     bulkReplaceZones.mutate(
       { propertyId: activePropertyId, data: zoneInputs },
       { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListZonesQueryKey(activePropertyId) }) },
