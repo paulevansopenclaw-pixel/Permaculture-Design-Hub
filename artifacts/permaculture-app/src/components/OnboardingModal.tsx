@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import * as turf from "@turf/turf";
 import { useUpsertClientBrief } from "@workspace/api-client-react";
-import { fetchClimateBaseline, type ClimateBaseline } from "@/lib/fetchClimateBaseline";
+import { fetchClimateBaseline, type SiteBaseline } from "@/lib/fetchClimateBaseline";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -130,7 +130,7 @@ export function OnboardingModal({ propertyId, propertyName, boundaryGeojson, onC
   const [saving, setSaving] = useState(false);
 
   // Step 1 — baseline (auto-populated)
-  const [baseline, setBaseline] = useState<ClimateBaseline | null>(null);
+  const [baseline, setBaseline] = useState<SiteBaseline | null>(null);
   const [baselineLoading, setBaselineLoading] = useState(true);
   const [baselineError, setBaselineError] = useState<string | null>(null);
 
@@ -188,14 +188,35 @@ export function OnboardingModal({ propertyId, propertyName, boundaryGeojson, onC
       await upsert.mutateAsync({
         propertyId,
         data: {
+          // Climate (Open-Meteo)
           annualRainfallMm: baseline?.annualRainfallMm ?? null,
           estimatedSoilType: baseline?.estimatedSoilType ?? null,
           climateZone: baseline?.climateZone ?? null,
+          meanAnnualTempC: baseline?.meanAnnualTempC ?? null,
+          summerMaxTempC: baseline?.summerMaxTempC ?? null,
+          winterMinTempC: baseline?.winterMinTempC ?? null,
+          frostDaysPerYear: baseline?.frostDaysPerYear ?? null,
+          // Solar & Wind (NASA POWER)
+          solarIrradianceKwhM2: baseline?.solarIrradianceKwhM2 ?? null,
+          prevailingWindDir: baseline?.prevailingWindDir ?? null,
+          meanWindSpeedMs: baseline?.meanWindSpeedMs ?? null,
+          annualHumidityPct: baseline?.annualHumidityPct ?? null,
+          // Elevation (OpenTopoData)
+          elevationM: baseline?.elevationM ?? null,
+          // Soil (ISRIC SoilGrids)
+          soilClay: baseline?.soilClay ?? null,
+          soilSand: baseline?.soilSand ?? null,
+          soilSilt: baseline?.soilSilt ?? null,
+          soilPH: baseline?.soilPH ?? null,
+          soilOrganicCarbonGkg: baseline?.soilOrganicCarbonGkg ?? null,
+          soilTextureClass: baseline?.soilTextureClass ?? null,
+          // Infrastructure
           machineryWidthM,
           utilitiesOverheadPower: utilities.overheadPower,
           utilitiesBuriedPipes: utilities.buriedPipes,
           utilitiesLegalEasements: utilities.legalEasements,
           utilitiesActiveWell: utilities.activeWell,
+          // Challenges
           challengeSevereErosion: challenges.severeErosion,
           challengeWinterFlooding: challenges.winterFlooding,
           challengeHighWind: challenges.highWind,
@@ -220,13 +241,14 @@ export function OnboardingModal({ propertyId, propertyName, boundaryGeojson, onC
         return (
           <div className="space-y-3">
             <p className="text-[12px] leading-relaxed" style={{ color: "hsl(42, 15%, 55%)" }}>
-              These values are automatically derived from your property's location using 3-year climate normals. They will inform your design recommendations.
+              Automatically fetched from four open data sources — Open-Meteo, NASA POWER, OpenTopoData, and ISRIC SoilGrids. Global coverage including Australia.
             </p>
 
             {baselineLoading && (
-              <div className="flex items-center gap-2.5 py-6 justify-center">
+              <div className="flex flex-col items-center gap-2.5 py-6 justify-center">
                 <div className="w-5 h-5 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: "#4a9a28" }} />
-                <span className="text-[12px]" style={{ color: "hsl(42, 15%, 55%)" }}>Fetching climate data for this location…</span>
+                <span className="text-[12px]" style={{ color: "hsl(42, 15%, 55%)" }}>Fetching site data from 4 sources…</span>
+                <span className="text-[10px]" style={{ color: "hsl(42, 15%, 40%)" }}>Open-Meteo · NASA POWER · OpenTopoData · ISRIC SoilGrids</span>
               </div>
             )}
 
@@ -240,25 +262,76 @@ export function OnboardingModal({ propertyId, propertyName, boundaryGeojson, onC
             )}
 
             {baseline && (
-              <div className="space-y-2.5">
-                <BaselineCard
-                  icon="🌧"
-                  label="Annual Rainfall"
-                  value={`${baseline.annualRainfallMm.toLocaleString()} mm / year`}
-                  sublabel="3-year average via Open-Meteo"
-                />
-                <BaselineCard
-                  icon="🌍"
-                  label="Estimated Climate Zone"
-                  value={baseline.climateZone}
-                  sublabel="Köppen–Geiger classification"
-                />
-                <BaselineCard
-                  icon="🪱"
-                  label="Estimated Soil Type"
-                  value={baseline.estimatedSoilType}
-                  sublabel="Inferred from climate and rainfall patterns"
-                />
+              <div className="space-y-4">
+                {/* Climate & Rainfall */}
+                <BaselineSection label="Climate & Rainfall">
+                  <BaselineCard icon="🌧" label="Annual Rainfall" value={`${baseline.annualRainfallMm.toLocaleString()} mm / yr`} sublabel="3-yr average · Open-Meteo" />
+                  <BaselineCard icon="🌍" label="Climate Zone" value={baseline.climateZone} sublabel="Köppen–Geiger · Open-Meteo" />
+                  {baseline.annualHumidityPct !== null && (
+                    <BaselineCard icon="💧" label="Mean Humidity" value={`${baseline.annualHumidityPct}%`} sublabel="Annual average · NASA POWER" />
+                  )}
+                </BaselineSection>
+
+                {/* Temperature */}
+                <BaselineSection label="Temperature">
+                  <BaselineCard icon="🌡" label="Mean Annual Temp" value={`${baseline.meanAnnualTempC} °C`} sublabel="3-yr average · Open-Meteo" />
+                  <BaselineCard icon="🔆" label="Summer Max (avg)" value={`${baseline.summerMaxTempC} °C`} sublabel="Hottest 3-month block" />
+                  <BaselineCard icon="❄️" label="Winter Min (avg)" value={`${baseline.winterMinTempC} °C`} sublabel="Coldest 3-month block" />
+                  <BaselineCard icon="🧊" label="Frost Days" value={`${baseline.frostDaysPerYear} days / yr`} sublabel="Days below 0 °C" />
+                </BaselineSection>
+
+                {/* Solar & Wind */}
+                <BaselineSection label="Solar & Wind">
+                  {baseline.solarIrradianceKwhM2 !== null && (
+                    <BaselineCard icon="☀️" label="Solar Irradiance" value={`${baseline.solarIrradianceKwhM2.toLocaleString()} kWh/m²/yr`} sublabel="30-yr climatology · NASA POWER" />
+                  )}
+                  {baseline.prevailingWindDir !== null && (
+                    <BaselineCard icon="🌬" label="Prevailing Wind" value={baseline.prevailingWindDir} sublabel="Mean annual direction · NASA POWER" />
+                  )}
+                  {baseline.meanWindSpeedMs !== null && (
+                    <BaselineCard icon="💨" label="Mean Wind Speed" value={`${baseline.meanWindSpeedMs} m/s`} sublabel="Annual average · NASA POWER" />
+                  )}
+                </BaselineSection>
+
+                {/* Elevation */}
+                {baseline.elevationM !== null && (
+                  <BaselineSection label="Elevation">
+                    <BaselineCard icon="🏔" label="Elevation ASL" value={`${baseline.elevationM} m`} sublabel="SRTM 30m · OpenTopoData" />
+                  </BaselineSection>
+                )}
+
+                {/* Soil (ISRIC SoilGrids — global) */}
+                <BaselineSection label="Soil (0–5 cm depth)">
+                  {baseline.soilTextureClass !== null && (
+                    <BaselineCard icon="🪱" label="Texture Class" value={baseline.soilTextureClass} sublabel="USDA triangle · ISRIC SoilGrids" />
+                  )}
+                  {(baseline.soilClay !== null || baseline.soilSand !== null || baseline.soilSilt !== null) && (
+                    <BaselineCard
+                      icon="⚗️"
+                      label="Composition"
+                      value={[
+                        baseline.soilClay !== null ? `Clay ${baseline.soilClay}%` : null,
+                        baseline.soilSand !== null ? `Sand ${baseline.soilSand}%` : null,
+                        baseline.soilSilt !== null ? `Silt ${baseline.soilSilt}%` : null,
+                      ].filter(Boolean).join(" · ")}
+                      sublabel="ISRIC SoilGrids · global coverage"
+                    />
+                  )}
+                  {baseline.soilPH !== null && (
+                    <BaselineCard icon="🧪" label="Soil pH" value={String(baseline.soilPH)} sublabel="pH in water · ISRIC SoilGrids" />
+                  )}
+                  {baseline.soilOrganicCarbonGkg !== null && (
+                    <BaselineCard icon="🌿" label="Organic Carbon" value={`${baseline.soilOrganicCarbonGkg} g/kg`} sublabel="SOC · ISRIC SoilGrids" />
+                  )}
+                  {baseline.soilTextureClass === null && baseline.soilClay === null && (
+                    <p className="text-[11px]" style={{ color: "hsl(42, 15%, 45%)" }}>Soil data unavailable for this location.</p>
+                  )}
+                </BaselineSection>
+
+                {/* Estimated soil type from climate model as fallback context */}
+                <p className="text-[10px]" style={{ color: "hsl(42, 15%, 38%)" }}>
+                  Climate-inferred soil order: {baseline.estimatedSoilType}
+                </p>
               </div>
             )}
           </div>
@@ -468,6 +541,19 @@ export function OnboardingModal({ propertyId, propertyName, boundaryGeojson, onC
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+// ─── Baseline section heading ─────────────────────────────────────────────────
+
+function BaselineSection({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <div className="text-[9px] uppercase tracking-widest font-semibold mb-1.5 px-0.5" style={{ color: "hsl(103, 35%, 40%)" }}>
+        {label}
+      </div>
+      <div className="space-y-1.5">{children}</div>
     </div>
   );
 }

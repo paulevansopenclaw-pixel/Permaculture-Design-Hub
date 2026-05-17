@@ -851,6 +851,52 @@ components:
         climateZone:
           type: string
           nullable: true
+        # Extended site baseline fields
+        elevationM:
+          type: number
+          nullable: true
+        meanAnnualTempC:
+          type: number
+          nullable: true
+        summerMaxTempC:
+          type: number
+          nullable: true
+        winterMinTempC:
+          type: number
+          nullable: true
+        frostDaysPerYear:
+          type: number
+          nullable: true
+        annualHumidityPct:
+          type: number
+          nullable: true
+        prevailingWindDir:
+          type: string
+          nullable: true
+        meanWindSpeedMs:
+          type: number
+          nullable: true
+        solarIrradianceKwhM2:
+          type: number
+          nullable: true
+        soilClay:
+          type: number
+          nullable: true
+        soilSand:
+          type: number
+          nullable: true
+        soilSilt:
+          type: number
+          nullable: true
+        soilPH:
+          type: number
+          nullable: true
+        soilOrganicCarbonGkg:
+          type: number
+          nullable: true
+        soilTextureClass:
+          type: string
+          nullable: true
         machineryWidthM:
           type: number
         utilitiesOverheadPower:
@@ -891,6 +937,51 @@ components:
           type: string
           nullable: true
         climateZone:
+          type: string
+          nullable: true
+        elevationM:
+          type: number
+          nullable: true
+        meanAnnualTempC:
+          type: number
+          nullable: true
+        summerMaxTempC:
+          type: number
+          nullable: true
+        winterMinTempC:
+          type: number
+          nullable: true
+        frostDaysPerYear:
+          type: number
+          nullable: true
+        annualHumidityPct:
+          type: number
+          nullable: true
+        prevailingWindDir:
+          type: string
+          nullable: true
+        meanWindSpeedMs:
+          type: number
+          nullable: true
+        solarIrradianceKwhM2:
+          type: number
+          nullable: true
+        soilClay:
+          type: number
+          nullable: true
+        soilSand:
+          type: number
+          nullable: true
+        soilSilt:
+          type: number
+          nullable: true
+        soilPH:
+          type: number
+          nullable: true
+        soilOrganicCarbonGkg:
+          type: number
+          nullable: true
+        soilTextureClass:
           type: string
           nullable: true
         machineryWidthM:
