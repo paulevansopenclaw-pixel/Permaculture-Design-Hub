@@ -22,6 +22,8 @@ tags:
     description: Designed swale / water-path layers
   - name: client-brief
     description: Onboarding site survey linked to a property
+  - name: pathways
+    description: Access roads, footpaths, farm tracks and fencelines
 
 paths:
   /healthz:
@@ -386,6 +388,71 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ClientBrief"
+
+  /properties/{propertyId}/pathways:
+    get:
+      operationId: listPathways
+      tags: [pathways]
+      summary: List all access pathways for a property
+      parameters:
+        - name: propertyId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of pathways
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Pathway"
+
+    post:
+      operationId: createPathway
+      tags: [pathways]
+      summary: Save an access pathway
+      parameters:
+        - name: propertyId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PathwayInput"
+      responses:
+        "201":
+          description: Created pathway
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Pathway"
+
+  /properties/{propertyId}/pathways/{pathwayId}:
+    delete:
+      operationId: deletePathway
+      tags: [pathways]
+      summary: Delete an access pathway
+      parameters:
+        - name: propertyId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: pathwayId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
 
   /properties/{propertyId}/swales:
     get:
@@ -779,6 +846,35 @@ components:
         maintenanceCapacity:
           type: string
           nullable: true
+
+    Pathway:
+      type: object
+      required: [id, propertyId, label, pathwayType, lineGeojson, createdAt]
+      properties:
+        id:
+          type: string
+        propertyId:
+          type: string
+        label:
+          type: string
+        pathwayType:
+          type: string
+        lineGeojson:
+          type: string
+        createdAt:
+          type: string
+
+    PathwayInput:
+      type: object
+      required: [label, pathwayType, lineGeojson]
+      properties:
+        label:
+          type: string
+          minLength: 1
+        pathwayType:
+          type: string
+        lineGeojson:
+          type: string
 
     DesignedSwale:
       type: object

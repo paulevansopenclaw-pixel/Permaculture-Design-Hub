@@ -32,6 +32,10 @@ import {
   useCreateDesignedSwale,
   useDeleteDesignedSwale,
   getListDesignedSwalesQueryKey,
+  useListPathways,
+  useCreatePathway,
+  useDeletePathway,
+  getListPathwaysQueryKey,
 } from "@workspace/api-client-react";
 import { useAppStore, type Role } from "@/store/useAppStore";
 import { generateContours } from "@/lib/contourEngine";
@@ -73,6 +77,14 @@ function sectorWedge(centerLng: number, centerLat: number, radiusKm: number, sta
     return null;
   }
 }
+
+const PATHWAY_TYPES = [
+  { value: "driveway",   label: "Driveway",   color: "#8B6914" },
+  { value: "footpath",   label: "Footpath",   color: "#C4975A" },
+  { value: "farm_track", label: "Farm Track", color: "#6B4C2A" },
+  { value: "fenceline",  label: "Fenceline",  color: "#6B7280" },
+  { value: "firebreak",  label: "Firebreak",  color: "#DC2626" },
+];
 
 const STRUCTURE_TYPES = [
   { value: "house",      label: "House",       emoji: "🏠" },
@@ -161,6 +173,10 @@ export default function MapPage() {
   const buildingDrawActiveRef = useRef(false);
   const buildingOutlineLayersRef = useRef<L.GeoJSON[]>([]);
   const pendingFootprintPreviewRef = useRef<L.GeoJSON | null>(null);
+  const pathwayPolylineHandlerRef = useRef<any>(null);
+  const pathwayDrawActiveRef = useRef(false);
+  const pathwayLayersRef = useRef<L.GeoJSON[]>([]);
+  const pendingPathwayPreviewRef = useRef<L.GeoJSON | null>(null);
 
   const [mapboxToken, setMapboxToken] = useState("");
   const [mapLoaded, setMapLoaded] = useState(false);
@@ -168,6 +184,11 @@ export default function MapPage() {
   const [showSatellite, setShowSatellite] = useState(true);
   const [showBoundary, setShowBoundary] = useState(true);
   const [showContours, setShowContours] = useState(false);
+  const [showPathways, setShowPathways] = useState(true);
+  const [drawPathwayMode, setDrawPathwayMode] = useState(false);
+  const [pendingPathway, setPendingPathway] = useState<GeoJSON.LineString | null>(null);
+  const [pathwayLabel, setPathwayLabel] = useState("");
+  const [pathwayType, setPathwayType] = useState("footpath");
   const [showStructures, setShowStructures] = useState(true);
   const [dropStructureMode, setDropStructureMode] = useState(false);
   const [drawBuildingOutlineMode, setDrawBuildingOutlineMode] = useState(false);
@@ -247,6 +268,16 @@ export default function MapPage() {
   const createDesignedSwale = useCreateDesignedSwale();
   const deleteDesignedSwale = useDeleteDesignedSwale();
 
+  const { data: pathways = [] } = useListPathways(activePropertyId ?? "", {
+    query: {
+      enabled: !!activePropertyId,
+      queryKey: getListPathwaysQueryKey(activePropertyId ?? ""),
+      refetchInterval: 30_000,
+    },
+  });
+  const createPathway = useCreatePathway();
+  const deletePathway = useDeletePathway();
+
   // ─── FETCH TOKEN ──────────────────────────────────────────────────────────
   useEffect(() => {
     fetchMapboxToken().then(setMapboxToken);
@@ -297,26 +328,38 @@ export default function MapPage() {
     });
     buildingPolygonHandlerRef.current = buildingPolygonHandler;
 
+    // Pathway polyline handler
+    const PolylineHandler = (L as any).Draw.Polyline;
+    const pathwayPolylineHandler = new PolylineHandler(map, {
+      shapeOptions: { color: "#8B6914", weight: 3, opacity: 0.9 },
+      allowIntersection: true,
+    });
+    pathwayPolylineHandlerRef.current = pathwayPolylineHandler;
+
     map.on((L as any).Draw.Event.CREATED, (e: any) => {
-      const layer = e.layer as L.Polygon;
+      const layer = e.layer as L.Polygon | L.Polyline;
       const feature = layer.toGeoJSON();
-      const geometry = feature.geometry as GeoJSON.Polygon;
 
       if (buildingDrawActiveRef.current) {
         buildingDrawActiveRef.current = false;
-        // Compute centroid for the structure marker position
+        const geometry = feature.geometry as GeoJSON.Polygon;
         const centroid = turf.centroid(feature);
         const [lng, lat] = centroid.geometry.coordinates;
         setPendingFootprint(geometry);
         setPendingStructure({ lng, lat });
-        // Render preview on map
         const previewLayer = L.geoJSON(feature as any, {
           style: () => ({ color: "#000", weight: 2.5, opacity: 1, fillColor: "#000", fillOpacity: 0.06 }),
         }).addTo(map);
         pendingFootprintPreviewRef.current = previewLayer;
+      } else if (pathwayDrawActiveRef.current) {
+        pathwayDrawActiveRef.current = false;
+        const geometry = feature.geometry as GeoJSON.LineString;
+        setPendingPathway(geometry);
+        setDrawPathwayMode(false);
       } else {
         drawnItems.clearLayers();
-        drawnItems.addLayer(layer);
+        drawnItems.addLayer(layer as L.Polygon);
+        const geometry = feature.geometry as GeoJSON.Polygon;
         setPendingBoundary(geometry);
         const ha = turf.area(feature) / 10000;
         setPendingAreaHa(ha);
@@ -514,6 +557,18 @@ export default function MapPage() {
     };
   }, [drawBuildingOutlineMode, mapLoaded]);
 
+  // ─── PATHWAY DRAW MODE ───────────────────────────────────────────────────
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapLoaded || !drawPathwayMode) return;
+    pathwayDrawActiveRef.current = true;
+    pathwayPolylineHandlerRef.current?.enable();
+    return () => {
+      pathwayDrawActiveRef.current = false;
+      pathwayPolylineHandlerRef.current?.disable();
+    };
+  }, [drawPathwayMode, mapLoaded]);
+
   // ─── STRUCTURE CLICK HANDLER (Designer mode) ─────────────────────────────
   useEffect(() => {
     const map = mapRef.current;
@@ -585,6 +640,59 @@ export default function MapPage() {
       return marker;
     });
   }, [structures, activePropertyId, mapLoaded, role, showStructures, handleDeleteStructure]);
+
+  // ─── PATHWAY HANDLERS ────────────────────────────────────────────────────
+  const handleDeletePathway = useCallback(
+    (pathwayId: string) => {
+      if (!activePropertyId) return;
+      deletePathway.mutate(
+        { propertyId: activePropertyId, pathwayId },
+        { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListPathwaysQueryKey(activePropertyId) }) },
+      );
+    },
+    [activePropertyId, deletePathway, queryClient],
+  );
+
+  // ─── PENDING PATHWAY PREVIEW ─────────────────────────────────────────────
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapLoaded) return;
+    if (pendingPathwayPreviewRef.current) { map.removeLayer(pendingPathwayPreviewRef.current); pendingPathwayPreviewRef.current = null; }
+    if (!pendingPathway) return;
+    const color = PATHWAY_TYPES.find((t) => t.value === pathwayType)?.color ?? "#8B6914";
+    const feature: GeoJSON.Feature = { type: "Feature", geometry: pendingPathway, properties: {} };
+    const layer = L.geoJSON(feature as any, { style: () => ({ color, weight: 3, opacity: 0.9 }) }).addTo(map);
+    pendingPathwayPreviewRef.current = layer;
+  }, [pendingPathway, pathwayType, mapLoaded]);
+
+  // ─── SAVED PATHWAY LINES ─────────────────────────────────────────────────
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapLoaded) return;
+    pathwayLayersRef.current.forEach((l) => map.removeLayer(l));
+    pathwayLayersRef.current = [];
+    if (!activePropertyId || !showPathways) return;
+    pathways.forEach((p) => {
+      try {
+        const geom = JSON.parse(p.lineGeojson) as GeoJSON.LineString;
+        const feature: GeoJSON.Feature = { type: "Feature", geometry: geom, properties: {} };
+        const pt = PATHWAY_TYPES.find((t) => t.value === p.pathwayType);
+        const color = pt?.color ?? "#8B6914";
+        const layer = L.geoJSON(feature as any, { style: () => ({ color, weight: 3, opacity: 0.9 }) });
+        const popup = document.createElement("div");
+        popup.style.cssText = "font-size:12px;padding:2px 4px;min-width:120px;max-width:200px;";
+        popup.innerHTML = `
+          <div style="font-weight:700;color:#111;margin-bottom:2px;">${p.label}</div>
+          <div style="font-size:10px;color:#555;margin-bottom:4px;">${pt?.label ?? p.pathwayType}</div>
+          ${role === "designer" ? `<button class="del-btn" style="margin-top:4px;padding:2px 8px;border:1px solid #c00;color:#c00;border-radius:3px;cursor:pointer;font-size:10px;background:none;">Delete</button>` : ""}
+        `;
+        layer.bindPopup(popup);
+        popup.querySelector(".del-btn")?.addEventListener("click", () => { handleDeletePathway(p.id); layer.closePopup(); });
+        layer.addTo(map);
+        pathwayLayersRef.current.push(layer);
+      } catch { /* skip malformed GeoJSON */ }
+    });
+  }, [pathways, activePropertyId, mapLoaded, role, showPathways, handleDeletePathway]);
 
   // ─── BUILDING OUTLINE POLYGONS (saved) ───────────────────────────────────
   useEffect(() => {
@@ -1013,6 +1121,36 @@ export default function MapPage() {
     );
   }
 
+  function handleSavePathway() {
+    if (!activePropertyId || !pendingPathway || !pathwayLabel.trim()) return;
+    createPathway.mutate(
+      {
+        propertyId: activePropertyId,
+        data: { label: pathwayLabel.trim(), pathwayType, lineGeojson: JSON.stringify(pendingPathway) },
+      },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getListPathwaysQueryKey(activePropertyId) });
+          if (pendingPathwayPreviewRef.current) { mapRef.current?.removeLayer(pendingPathwayPreviewRef.current); pendingPathwayPreviewRef.current = null; }
+          setPendingPathway(null);
+          setPathwayLabel("");
+          setPathwayType("footpath");
+          setDrawPathwayMode(false);
+        },
+      },
+    );
+  }
+
+  function handleCancelPathway() {
+    if (pendingPathwayPreviewRef.current) { mapRef.current?.removeLayer(pendingPathwayPreviewRef.current); pendingPathwayPreviewRef.current = null; }
+    pathwayPolylineHandlerRef.current?.disable();
+    pathwayDrawActiveRef.current = false;
+    setPendingPathway(null);
+    setPathwayLabel("");
+    setPathwayType("footpath");
+    setDrawPathwayMode(false);
+  }
+
   function handleCancelStructure() {
     if (pendingStructureMarkerRef.current) {
       mapRef.current?.removeLayer(pendingStructureMarkerRef.current);
@@ -1214,6 +1352,13 @@ export default function MapPage() {
               color="#1e3a5f"
               active={showStructures}
               onToggle={() => setShowStructures((v) => !v)}
+              disabled={!activePropertyId}
+            />
+            <LayerToggle
+              label="Pathways"
+              color="#8B6914"
+              active={showPathways}
+              onToggle={() => setShowPathways((v) => !v)}
               disabled={!activePropertyId}
             />
           </div>
@@ -1863,6 +2008,115 @@ export default function MapPage() {
                           <div className="flex-1 min-w-0">
                             <div className="text-[11px] font-medium truncate" style={{ color: "hsl(42, 28%, 85%)" }}>{s.label}</div>
                             <div className="text-[10px]" style={{ color: "hsl(42, 15%, 50%)" }}>{entry?.label ?? s.structureType}</div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </SidebarSection>
+
+        {/* ── LAYER 7: ACCESS & PATHWAYS ── */}
+        <SidebarSection label="Layer 7 — Access & Pathways">
+          {!activePropertyId ? (
+            <p className="text-[11px]" style={{ color: "hsl(42, 15%, 50%)" }}>Select a property to map access and pathways.</p>
+          ) : role === "designer" ? (
+            <div className="space-y-2.5">
+              {pendingPathway ? (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 px-2 py-1.5 rounded" style={{ background: "hsl(103, 35%, 14%)", border: "1px solid hsl(103, 30%, 22%)" }}>
+                    <span style={{ display: "inline-block", width: 16, height: 3, background: PATHWAY_TYPES.find((t) => t.value === pathwayType)?.color ?? "#8B6914", borderRadius: 2, flexShrink: 0 }} />
+                    <span className="text-[11px]" style={{ color: "hsl(42, 28%, 80%)" }}>Path drawn. Add details:</span>
+                  </div>
+                  <select
+                    className="w-full text-xs px-2 py-1.5 rounded border outline-none"
+                    style={{ background: "hsl(103, 35%, 17%)", borderColor: "hsl(103, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
+                    value={pathwayType}
+                    onChange={(e) => setPathwayType(e.target.value)}
+                  >
+                    {PATHWAY_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+                  </select>
+                  <input
+                    className="w-full text-xs px-2.5 py-1.5 rounded border outline-none"
+                    style={{ background: "hsl(103, 35%, 17%)", borderColor: "hsl(103, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
+                    placeholder="Label (e.g. Main Driveway, North Path...)"
+                    value={pathwayLabel}
+                    onChange={(e) => setPathwayLabel(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleSavePathway()}
+                    autoFocus
+                  />
+                  <div className="flex gap-1.5">
+                    <button
+                      onClick={handleSavePathway}
+                      disabled={!pathwayLabel.trim() || createPathway.isPending}
+                      className="flex-1 text-xs py-1.5 rounded font-medium"
+                      style={{ background: "hsl(84, 38%, 42%)", color: "#fff", opacity: !pathwayLabel.trim() ? 0.5 : 1 }}
+                    >
+                      {createPathway.isPending ? "Saving..." : "Save Pathway"}
+                    </button>
+                    <button onClick={handleCancelPathway} className="px-3 text-xs py-1.5 rounded" style={{ color: "hsl(42, 15%, 55%)" }}>
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setDrawPathwayMode(true)}
+                  disabled={drawPathwayMode}
+                  className="w-full text-xs px-3 py-2 rounded font-medium transition-colors"
+                  style={{
+                    background: drawPathwayMode ? "hsl(220, 60%, 30%)" : "hsl(103, 35%, 17%)",
+                    border: "1px solid hsl(103, 30%, 22%)",
+                    color: drawPathwayMode ? "#fff" : "hsl(42, 28%, 88%)",
+                  }}
+                >
+                  {drawPathwayMode ? "Click points on map · double-click to finish" : "✏ Draw Access or Pathway"}
+                </button>
+              )}
+              {pathways.length > 0 && !pendingPathway && (
+                <div>
+                  <div className="text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: "hsl(42, 15%, 50%)" }}>
+                    {pathways.length} {pathways.length === 1 ? "Pathway" : "Pathways"}
+                  </div>
+                  <div className="space-y-1 max-h-40 overflow-y-auto">
+                    {pathways.map((p) => {
+                      const pt = PATHWAY_TYPES.find((t) => t.value === p.pathwayType);
+                      return (
+                        <div key={p.id} className="flex items-center gap-2 px-2 py-1.5 rounded" style={{ background: "hsl(103, 35%, 14%)" }}>
+                          <span style={{ display: "inline-block", width: 16, height: 3, background: pt?.color ?? "#8B6914", borderRadius: 2, flexShrink: 0 }} />
+                          <div className="flex-1 min-w-0">
+                            <div className="text-[11px] font-medium truncate" style={{ color: "hsl(42, 28%, 85%)" }}>{p.label}</div>
+                            <div className="text-[10px]" style={{ color: "hsl(42, 15%, 50%)" }}>{pt?.label ?? p.pathwayType}</div>
+                          </div>
+                          <button onClick={() => handleDeletePathway(p.id)} className="text-[10px] flex-shrink-0" style={{ color: "hsl(0, 55%, 50%)" }}>×</button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div>
+              {pathways.length === 0 ? (
+                <p className="text-[11px]" style={{ color: "hsl(42, 15%, 50%)" }}>No access or pathways mapped yet.</p>
+              ) : (
+                <div>
+                  <div className="text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: "hsl(42, 15%, 50%)" }}>
+                    {pathways.length} {pathways.length === 1 ? "Pathway" : "Pathways"} — click lines on map
+                  </div>
+                  <div className="space-y-1 max-h-40 overflow-y-auto">
+                    {pathways.map((p) => {
+                      const pt = PATHWAY_TYPES.find((t) => t.value === p.pathwayType);
+                      return (
+                        <div key={p.id} className="flex items-center gap-2 px-2 py-1.5 rounded" style={{ background: "hsl(103, 35%, 14%)" }}>
+                          <span style={{ display: "inline-block", width: 16, height: 3, background: pt?.color ?? "#8B6914", borderRadius: 2, flexShrink: 0 }} />
+                          <div className="flex-1 min-w-0">
+                            <div className="text-[11px] font-medium truncate" style={{ color: "hsl(42, 28%, 85%)" }}>{p.label}</div>
+                            <div className="text-[10px]" style={{ color: "hsl(42, 15%, 50%)" }}>{pt?.label ?? p.pathwayType}</div>
                           </div>
                         </div>
                       );

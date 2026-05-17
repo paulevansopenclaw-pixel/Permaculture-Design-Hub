@@ -27,6 +27,8 @@ import type {
   DesignedSwale,
   DesignedSwaleInput,
   HealthStatus,
+  Pathway,
+  PathwayInput,
   Property,
   PropertyInput,
   PropertyStats,
@@ -1309,6 +1311,227 @@ export const useUpsertClientBrief = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getUpsertClientBriefMutationOptions(options));
+    }
+
+export const getListPathwaysUrl = (propertyId: string,) => {
+
+
+
+
+  return `/api/properties/${propertyId}/pathways`
+}
+
+/**
+ * @summary List all access pathways for a property
+ */
+export const listPathways = async (propertyId: string, options?: RequestInit): Promise<Pathway[]> => {
+
+  return customFetch<Pathway[]>(getListPathwaysUrl(propertyId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListPathwaysQueryKey = (propertyId: string,) => {
+    return [
+    `/api/properties/${propertyId}/pathways`
+    ] as const;
+    }
+
+
+export const getListPathwaysQueryOptions = <TData = Awaited<ReturnType<typeof listPathways>>, TError = ErrorType<unknown>>(propertyId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPathways>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListPathwaysQueryKey(propertyId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPathways>>> = ({ signal }) => listPathways(propertyId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(propertyId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listPathways>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListPathwaysQueryResult = NonNullable<Awaited<ReturnType<typeof listPathways>>>
+export type ListPathwaysQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List all access pathways for a property
+ */
+
+export function useListPathways<TData = Awaited<ReturnType<typeof listPathways>>, TError = ErrorType<unknown>>(
+ propertyId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPathways>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListPathwaysQueryOptions(propertyId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreatePathwayUrl = (propertyId: string,) => {
+
+
+
+
+  return `/api/properties/${propertyId}/pathways`
+}
+
+/**
+ * @summary Save an access pathway
+ */
+export const createPathway = async (propertyId: string,
+    pathwayInput: PathwayInput, options?: RequestInit): Promise<Pathway> => {
+
+  return customFetch<Pathway>(getCreatePathwayUrl(propertyId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      pathwayInput,)
+  }
+);}
+
+
+
+
+export const getCreatePathwayMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPathway>>, TError,{propertyId: string;data: BodyType<PathwayInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createPathway>>, TError,{propertyId: string;data: BodyType<PathwayInput>}, TContext> => {
+
+const mutationKey = ['createPathway'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createPathway>>, {propertyId: string;data: BodyType<PathwayInput>}> = (props) => {
+          const {propertyId,data} = props ?? {};
+
+          return  createPathway(propertyId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreatePathwayMutationResult = NonNullable<Awaited<ReturnType<typeof createPathway>>>
+    export type CreatePathwayMutationBody = BodyType<PathwayInput>
+    export type CreatePathwayMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Save an access pathway
+ */
+export const useCreatePathway = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPathway>>, TError,{propertyId: string;data: BodyType<PathwayInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createPathway>>,
+        TError,
+        {propertyId: string;data: BodyType<PathwayInput>},
+        TContext
+      > => {
+      return useMutation(getCreatePathwayMutationOptions(options));
+    }
+
+export const getDeletePathwayUrl = (propertyId: string,
+    pathwayId: string,) => {
+
+
+
+
+  return `/api/properties/${propertyId}/pathways/${pathwayId}`
+}
+
+/**
+ * @summary Delete an access pathway
+ */
+export const deletePathway = async (propertyId: string,
+    pathwayId: string, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeletePathwayUrl(propertyId,pathwayId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeletePathwayMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deletePathway>>, TError,{propertyId: string;pathwayId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deletePathway>>, TError,{propertyId: string;pathwayId: string}, TContext> => {
+
+const mutationKey = ['deletePathway'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deletePathway>>, {propertyId: string;pathwayId: string}> = (props) => {
+          const {propertyId,pathwayId} = props ?? {};
+
+          return  deletePathway(propertyId,pathwayId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeletePathwayMutationResult = NonNullable<Awaited<ReturnType<typeof deletePathway>>>
+
+    export type DeletePathwayMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Delete an access pathway
+ */
+export const useDeletePathway = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deletePathway>>, TError,{propertyId: string;pathwayId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deletePathway>>,
+        TError,
+        {propertyId: string;pathwayId: string},
+        TContext
+      > => {
+      return useMutation(getDeletePathwayMutationOptions(options));
     }
 
 export const getListDesignedSwalesUrl = (propertyId: string,) => {

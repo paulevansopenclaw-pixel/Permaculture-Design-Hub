@@ -355,6 +355,50 @@ export const UpsertClientBriefResponse = zod.object({
 
 
 /**
+ * @summary List all access pathways for a property
+ */
+export const ListPathwaysParams = zod.object({
+  "propertyId": zod.coerce.string()
+})
+
+export const ListPathwaysResponseItem = zod.object({
+  "id": zod.string(),
+  "propertyId": zod.string(),
+  "label": zod.string(),
+  "pathwayType": zod.string(),
+  "lineGeojson": zod.string(),
+  "createdAt": zod.string()
+})
+export const ListPathwaysResponse = zod.array(ListPathwaysResponseItem)
+
+
+/**
+ * @summary Save an access pathway
+ */
+export const CreatePathwayParams = zod.object({
+  "propertyId": zod.coerce.string()
+})
+
+
+
+
+export const CreatePathwayBody = zod.object({
+  "label": zod.string().min(1),
+  "pathwayType": zod.string(),
+  "lineGeojson": zod.string()
+})
+
+
+/**
+ * @summary Delete an access pathway
+ */
+export const DeletePathwayParams = zod.object({
+  "propertyId": zod.coerce.string(),
+  "pathwayId": zod.coerce.string()
+})
+
+
+/**
  * @summary List all designed swale lines for a property
  */
 export const ListDesignedSwalesParams = zod.object({

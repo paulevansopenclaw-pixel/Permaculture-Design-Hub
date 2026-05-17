@@ -13,6 +13,8 @@ export * from './commentInput';
 export * from './designedSwale';
 export * from './designedSwaleInput';
 export * from './healthStatus';
+export * from './pathway';
+export * from './pathwayInput';
 export * from './property';
 export * from './propertyBoundaryGeojson';
 export * from './propertyInput';

@@ -6,6 +6,7 @@ import structuresRouter from "./structures";
 import sectorsRouter from "./sectors";
 import swalesRouter from "./swales";
 import clientBriefsRouter from "./clientBriefs";
+import pathwaysRouter from "./pathways";
 import configRouter from "./config";
 
 const router: IRouter = Router();
@@ -18,5 +19,6 @@ router.use(structuresRouter);
 router.use(sectorsRouter);
 router.use(swalesRouter);
 router.use(clientBriefsRouter);
+router.use(pathwaysRouter);
 
 export default router;

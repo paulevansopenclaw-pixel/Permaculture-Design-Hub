@@ -165,6 +165,22 @@ export interface ClientBriefInput {
   maintenanceCapacity?: string | null;
 }
 
+export interface Pathway {
+  id: string;
+  propertyId: string;
+  label: string;
+  pathwayType: string;
+  lineGeojson: string;
+  createdAt: string;
+}
+
+export interface PathwayInput {
+  /** @minLength 1 */
+  label: string;
+  pathwayType: string;
+  lineGeojson: string;
+}
+
 export interface DesignedSwale {
   id: string;
   propertyId: string;
