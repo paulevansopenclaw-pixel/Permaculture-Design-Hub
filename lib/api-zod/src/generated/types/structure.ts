@@ -13,5 +13,6 @@ export interface Structure {
   lat: number;
   label: string;
   structureType: string;
+  footprintGeojson?: string | null;
   createdAt: string;
 }

@@ -74,6 +74,7 @@ export interface Structure {
   lat: number;
   label: string;
   structureType: string;
+  footprintGeojson?: string | null;
   createdAt: string;
 }
 
@@ -83,12 +84,14 @@ export interface StructureInput {
   /** @minLength 1 */
   label: string;
   structureType: string;
+  footprintGeojson?: string | null;
 }
 
 export interface StructureUpdate {
   /** @minLength 1 */
   label?: string;
   structureType?: string;
+  footprintGeojson?: string | null;
 }
 
 export interface Sector {

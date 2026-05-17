@@ -135,6 +135,7 @@ export const ListStructuresResponseItem = zod.object({
   "lat": zod.number(),
   "label": zod.string(),
   "structureType": zod.string(),
+  "footprintGeojson": zod.string().nullish(),
   "createdAt": zod.string()
 })
 export const ListStructuresResponse = zod.array(ListStructuresResponseItem)
@@ -154,7 +155,8 @@ export const CreateStructureBody = zod.object({
   "lng": zod.number(),
   "lat": zod.number(),
   "label": zod.string().min(1),
-  "structureType": zod.string()
+  "structureType": zod.string(),
+  "footprintGeojson": zod.string().nullish()
 })
 
 
@@ -171,7 +173,8 @@ export const UpdateStructureParams = zod.object({
 
 export const UpdateStructureBody = zod.object({
   "label": zod.string().min(1).optional(),
-  "structureType": zod.string().optional()
+  "structureType": zod.string().optional(),
+  "footprintGeojson": zod.string().nullish()
 })
 
 export const UpdateStructureResponse = zod.object({
@@ -181,6 +184,7 @@ export const UpdateStructureResponse = zod.object({
   "lat": zod.number(),
   "label": zod.string(),
   "structureType": zod.string(),
+  "footprintGeojson": zod.string().nullish(),
   "createdAt": zod.string()
 })
 

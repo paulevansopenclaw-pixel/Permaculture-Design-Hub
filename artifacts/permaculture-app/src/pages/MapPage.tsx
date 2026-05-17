@@ -157,6 +157,10 @@ export default function MapPage() {
   const longestSwaleLayersRef = useRef<L.GeoJSON[]>([]);
   const highestSwaleLayerRef = useRef<L.GeoJSON | null>(null);
   const savedSwaleLayersRef = useRef<L.GeoJSON[]>([]);
+  const buildingPolygonHandlerRef = useRef<any>(null);
+  const buildingDrawActiveRef = useRef(false);
+  const buildingOutlineLayersRef = useRef<L.GeoJSON[]>([]);
+  const pendingFootprintPreviewRef = useRef<L.GeoJSON | null>(null);
 
   const [mapboxToken, setMapboxToken] = useState("");
   const [mapLoaded, setMapLoaded] = useState(false);
@@ -166,7 +170,9 @@ export default function MapPage() {
   const [showContours, setShowContours] = useState(false);
   const [showStructures, setShowStructures] = useState(true);
   const [dropStructureMode, setDropStructureMode] = useState(false);
+  const [drawBuildingOutlineMode, setDrawBuildingOutlineMode] = useState(false);
   const [pendingStructure, setPendingStructure] = useState<{ lng: number; lat: number } | null>(null);
+  const [pendingFootprint, setPendingFootprint] = useState<GeoJSON.Polygon | null>(null);
   const [structureLabel, setStructureLabel] = useState("");
   const [structureType, setStructureType] = useState("house");
   const [showSectors, setShowSectors] = useState(true);
@@ -284,16 +290,38 @@ export default function MapPage() {
     });
     drawPolygonHandlerRef.current = polygonHandler;
 
+    // Building outline polygon handler — black stroke, light fill
+    const buildingPolygonHandler = new PolygonHandler(map, {
+      shapeOptions: { color: "#000", weight: 2.5, opacity: 1, fillColor: "#000", fillOpacity: 0.06 },
+      allowIntersection: false,
+    });
+    buildingPolygonHandlerRef.current = buildingPolygonHandler;
+
     map.on((L as any).Draw.Event.CREATED, (e: any) => {
       const layer = e.layer as L.Polygon;
-      drawnItems.clearLayers();
-      drawnItems.addLayer(layer);
       const feature = layer.toGeoJSON();
       const geometry = feature.geometry as GeoJSON.Polygon;
-      setPendingBoundary(geometry);
-      const ha = turf.area(feature) / 10000;
-      setPendingAreaHa(ha);
-      setPendingAreaAc(ha * 2.47105);
+
+      if (buildingDrawActiveRef.current) {
+        buildingDrawActiveRef.current = false;
+        // Compute centroid for the structure marker position
+        const centroid = turf.centroid(feature);
+        const [lng, lat] = centroid.geometry.coordinates;
+        setPendingFootprint(geometry);
+        setPendingStructure({ lng, lat });
+        // Render preview on map
+        const previewLayer = L.geoJSON(feature as any, {
+          style: () => ({ color: "#000", weight: 2.5, opacity: 1, fillColor: "#000", fillOpacity: 0.06 }),
+        }).addTo(map);
+        pendingFootprintPreviewRef.current = previewLayer;
+      } else {
+        drawnItems.clearLayers();
+        drawnItems.addLayer(layer);
+        setPendingBoundary(geometry);
+        const ha = turf.area(feature) / 10000;
+        setPendingAreaHa(ha);
+        setPendingAreaAc(ha * 2.47105);
+      }
     });
 
     mapRef.current = map;
@@ -474,6 +502,18 @@ export default function MapPage() {
     });
   }, [comments, activePropertyId, mapLoaded, role, handleDeleteComment]);
 
+  // ─── BUILDING OUTLINE DRAW MODE ──────────────────────────────────────────
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapLoaded || !drawBuildingOutlineMode) return;
+    buildingDrawActiveRef.current = true;
+    buildingPolygonHandlerRef.current?.enable();
+    return () => {
+      buildingDrawActiveRef.current = false;
+      buildingPolygonHandlerRef.current?.disable();
+    };
+  }, [drawBuildingOutlineMode, mapLoaded]);
+
   // ─── STRUCTURE CLICK HANDLER (Designer mode) ─────────────────────────────
   useEffect(() => {
     const map = mapRef.current;
@@ -545,6 +585,29 @@ export default function MapPage() {
       return marker;
     });
   }, [structures, activePropertyId, mapLoaded, role, showStructures, handleDeleteStructure]);
+
+  // ─── BUILDING OUTLINE POLYGONS (saved) ───────────────────────────────────
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapLoaded) return;
+
+    buildingOutlineLayersRef.current.forEach((l) => map.removeLayer(l));
+    buildingOutlineLayersRef.current = [];
+
+    if (!activePropertyId || !showStructures) return;
+
+    structures.forEach((s) => {
+      if (!s.footprintGeojson) return;
+      try {
+        const geom = JSON.parse(s.footprintGeojson) as GeoJSON.Polygon;
+        const feature: GeoJSON.Feature = { type: "Feature", geometry: geom, properties: {} };
+        const layer = L.geoJSON(feature as any, {
+          style: () => ({ color: "#000", weight: 2.5, opacity: 1, fillColor: "#000", fillOpacity: 0.06 }),
+        }).addTo(map);
+        buildingOutlineLayersRef.current.push(layer);
+      } catch { /* malformed GeoJSON, skip */ }
+    });
+  }, [structures, activePropertyId, mapLoaded, showStructures]);
 
   // ─── SECTOR CENTER CLICK HANDLER ─────────────────────────────────────────
   useEffect(() => {
@@ -913,7 +976,13 @@ export default function MapPage() {
     createStructure.mutate(
       {
         propertyId: activePropertyId,
-        data: { lng: pendingStructure.lng, lat: pendingStructure.lat, label: structureLabel.trim(), structureType },
+        data: {
+          lng: pendingStructure.lng,
+          lat: pendingStructure.lat,
+          label: structureLabel.trim(),
+          structureType,
+          footprintGeojson: pendingFootprint ? JSON.stringify(pendingFootprint) : null,
+        },
       },
       {
         onSuccess: () => {
@@ -922,12 +991,36 @@ export default function MapPage() {
             mapRef.current?.removeLayer(pendingStructureMarkerRef.current);
             pendingStructureMarkerRef.current = null;
           }
+          if (pendingFootprintPreviewRef.current) {
+            mapRef.current?.removeLayer(pendingFootprintPreviewRef.current);
+            pendingFootprintPreviewRef.current = null;
+          }
           setPendingStructure(null);
+          setPendingFootprint(null);
+          setDrawBuildingOutlineMode(false);
           setStructureLabel("");
           setStructureType("house");
         },
       },
     );
+  }
+
+  function handleCancelStructure() {
+    if (pendingStructureMarkerRef.current) {
+      mapRef.current?.removeLayer(pendingStructureMarkerRef.current);
+      pendingStructureMarkerRef.current = null;
+    }
+    if (pendingFootprintPreviewRef.current) {
+      mapRef.current?.removeLayer(pendingFootprintPreviewRef.current);
+      pendingFootprintPreviewRef.current = null;
+    }
+    buildingPolygonHandlerRef.current?.disable();
+    buildingDrawActiveRef.current = false;
+    setPendingStructure(null);
+    setPendingFootprint(null);
+    setDrawBuildingOutlineMode(false);
+    setStructureLabel("");
+    setStructureType("house");
   }
 
   // ─── BOUNDARY REQUEST (CLIENT) ────────────────────────────────────────────
@@ -1630,7 +1723,19 @@ export default function MapPage() {
             <div className="space-y-2.5">
               {pendingStructure ? (
                 <div className="space-y-2">
-                  <p className="text-[11px]" style={{ color: "hsl(42, 28%, 80%)" }}>Structure placed. Add details:</p>
+                  <div className="flex items-center gap-2 px-2 py-1.5 rounded" style={{ background: "hsl(103, 35%, 14%)", border: "1px solid hsl(103, 30%, 22%)" }}>
+                    {pendingFootprint ? (
+                      <>
+                        <span className="text-sm">⬛</span>
+                        <span className="text-[11px]" style={{ color: "hsl(42, 28%, 80%)" }}>Building outline drawn</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-sm">📍</span>
+                        <span className="text-[11px]" style={{ color: "hsl(42, 28%, 80%)" }}>Marker placed. Add details:</span>
+                      </>
+                    )}
+                  </div>
                   <select
                     className="w-full text-xs px-2 py-1.5 rounded border outline-none"
                     style={{ background: "hsl(103, 35%, 17%)", borderColor: "hsl(103, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
@@ -1660,7 +1765,7 @@ export default function MapPage() {
                       {createStructure.isPending ? "Saving..." : "Save Structure"}
                     </button>
                     <button
-                      onClick={() => { setPendingStructure(null); setStructureLabel(""); if (pendingStructureMarkerRef.current) { mapRef.current?.removeLayer(pendingStructureMarkerRef.current); pendingStructureMarkerRef.current = null; } }}
+                      onClick={handleCancelStructure}
                       className="px-3 text-xs py-1.5 rounded"
                       style={{ color: "hsl(42, 15%, 55%)" }}
                     >
@@ -1669,17 +1774,32 @@ export default function MapPage() {
                   </div>
                 </div>
               ) : (
-                <button
-                  onClick={() => setDropStructureMode(true)}
-                  className="w-full text-xs px-3 py-2 rounded font-medium transition-colors"
-                  style={{
-                    background: dropStructureMode ? "hsl(220, 60%, 30%)" : "hsl(103, 35%, 17%)",
-                    border: "1px solid hsl(103, 30%, 22%)",
-                    color: dropStructureMode ? "#fff" : "hsl(42, 28%, 88%)",
-                  }}
-                >
-                  {dropStructureMode ? "Click on the map to place a structure" : "Place Structure Marker"}
-                </button>
+                <div className="space-y-1.5">
+                  <button
+                    onClick={() => { setDrawBuildingOutlineMode(true); setDropStructureMode(false); }}
+                    disabled={drawBuildingOutlineMode}
+                    className="w-full text-xs px-3 py-2 rounded font-medium transition-colors"
+                    style={{
+                      background: drawBuildingOutlineMode ? "hsl(220, 60%, 30%)" : "hsl(103, 35%, 17%)",
+                      border: "1px solid hsl(103, 30%, 22%)",
+                      color: drawBuildingOutlineMode ? "#fff" : "hsl(42, 28%, 88%)",
+                    }}
+                  >
+                    {drawBuildingOutlineMode ? "Click points on map · double-click to finish" : "⬛ Draw Building Outline"}
+                  </button>
+                  <button
+                    onClick={() => { setDropStructureMode(true); setDrawBuildingOutlineMode(false); }}
+                    disabled={dropStructureMode}
+                    className="w-full text-xs px-3 py-2 rounded font-medium transition-colors"
+                    style={{
+                      background: dropStructureMode ? "hsl(220, 60%, 30%)" : "hsl(103, 35%, 17%)",
+                      border: "1px solid hsl(103, 30%, 22%)",
+                      color: dropStructureMode ? "#fff" : "hsl(42, 28%, 88%)",
+                    }}
+                  >
+                    {dropStructureMode ? "Click on the map to place a structure" : "📍 Place Structure Marker"}
+                  </button>
+                </div>
               )}
               {structures.length > 0 && !pendingStructure && (
                 <div>

@@ -9,6 +9,7 @@ export const structuresTable = pgTable("structures", {
   lat: real("lat").notNull(),
   label: text("label").notNull(),
   structureType: text("structure_type").notNull().default("other"),
+  footprintGeojson: text("footprint_geojson"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

@@ -12,4 +12,5 @@ export interface StructureInput {
   /** @minLength 1 */
   label: string;
   structureType: string;
+  footprintGeojson?: string | null;
 }
