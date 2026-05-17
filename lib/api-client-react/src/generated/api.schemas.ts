@@ -124,6 +124,28 @@ export interface SectorUpdate {
   label?: string;
 }
 
+export interface DesignedSwale {
+  id: string;
+  propertyId: string;
+  name: string;
+  geojsonLinestring: string;
+  elevationM: number;
+  lengthM: number;
+  swaleType: string;
+  notes: string;
+  createdAt: string;
+}
+
+export interface DesignedSwaleInput {
+  /** @minLength 1 */
+  name: string;
+  geojsonLinestring: string;
+  elevationM: number;
+  lengthM: number;
+  swaleType: string;
+  notes: string;
+}
+
 export interface Comment {
   id: string;
   propertyId: string;

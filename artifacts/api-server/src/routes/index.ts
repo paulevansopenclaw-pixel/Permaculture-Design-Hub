@@ -4,6 +4,7 @@ import propertiesRouter from "./properties";
 import commentsRouter from "./comments";
 import structuresRouter from "./structures";
 import sectorsRouter from "./sectors";
+import swalesRouter from "./swales";
 import configRouter from "./config";
 
 const router: IRouter = Router();
@@ -14,5 +15,6 @@ router.use(propertiesRouter);
 router.use(commentsRouter);
 router.use(structuresRouter);
 router.use(sectorsRouter);
+router.use(swalesRouter);
 
 export default router;

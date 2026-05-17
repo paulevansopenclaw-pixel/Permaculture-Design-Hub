@@ -276,6 +276,56 @@ export const DeleteSectorParams = zod.object({
 
 
 /**
+ * @summary List all designed swale lines for a property
+ */
+export const ListDesignedSwalesParams = zod.object({
+  "propertyId": zod.coerce.string()
+})
+
+export const ListDesignedSwalesResponseItem = zod.object({
+  "id": zod.string(),
+  "propertyId": zod.string(),
+  "name": zod.string(),
+  "geojsonLinestring": zod.string(),
+  "elevationM": zod.number(),
+  "lengthM": zod.number(),
+  "swaleType": zod.string(),
+  "notes": zod.string(),
+  "createdAt": zod.string()
+})
+export const ListDesignedSwalesResponse = zod.array(ListDesignedSwalesResponseItem)
+
+
+/**
+ * @summary Save a designed swale line
+ */
+export const CreateDesignedSwaleParams = zod.object({
+  "propertyId": zod.coerce.string()
+})
+
+
+
+
+export const CreateDesignedSwaleBody = zod.object({
+  "name": zod.string().min(1),
+  "geojsonLinestring": zod.string(),
+  "elevationM": zod.number(),
+  "lengthM": zod.number(),
+  "swaleType": zod.string(),
+  "notes": zod.string()
+})
+
+
+/**
+ * @summary Delete a designed swale line
+ */
+export const DeleteDesignedSwaleParams = zod.object({
+  "propertyId": zod.coerce.string(),
+  "swaleId": zod.coerce.string()
+})
+
+
+/**
  * @summary List all feedback pins for a property
  */
 export const ListCommentsParams = zod.object({

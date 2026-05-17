@@ -8,6 +8,8 @@
 
 export * from './comment';
 export * from './commentInput';
+export * from './designedSwale';
+export * from './designedSwaleInput';
 export * from './healthStatus';
 export * from './property';
 export * from './propertyBoundaryGeojson';

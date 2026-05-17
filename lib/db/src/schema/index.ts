@@ -2,3 +2,4 @@ export * from "./properties";
 export * from "./comments";
 export * from "./structures";
 export * from "./sectors";
+export * from "./swales";

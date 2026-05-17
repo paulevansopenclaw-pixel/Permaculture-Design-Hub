@@ -28,9 +28,14 @@ import {
   getListCommentsQueryKey,
   getListStructuresQueryKey,
   getListSectorsQueryKey,
+  useListDesignedSwales,
+  useCreateDesignedSwale,
+  useDeleteDesignedSwale,
+  getListDesignedSwalesQueryKey,
 } from "@workspace/api-client-react";
 import { useAppStore, type Role } from "@/store/useAppStore";
 import { generateContours } from "@/lib/contourEngine";
+import { analyzeWaterPaths, type WaterAnalysisResult, type AnalyzedSwale } from "@/lib/keylineEngine";
 
 async function fetchMapboxToken(): Promise<string> {
   try {
@@ -146,6 +151,11 @@ export default function MapPage() {
   const sectorLayersRef = useRef<Map<string, L.GeoJSON>>(new Map());
   const sectorPreviewLayerRef = useRef<L.GeoJSON | null>(null);
   const sectorCenterMarkerRef = useRef<L.Marker | null>(null);
+  const contourDataRef = useRef<GeoJSON.FeatureCollection | null>(null);
+  const damMarkerRef = useRef<L.Marker | null>(null);
+  const longestSwaleLayersRef = useRef<L.GeoJSON[]>([]);
+  const highestSwaleLayerRef = useRef<L.GeoJSON | null>(null);
+  const savedSwaleLayersRef = useRef<L.GeoJSON[]>([]);
 
   const [mapboxToken, setMapboxToken] = useState("");
   const [mapLoaded, setMapLoaded] = useState(false);
@@ -163,6 +173,11 @@ export default function MapPage() {
   const [sectorCenter, setSectorCenter] = useState<{ lng: number; lat: number } | null>(null);
   const [sectorDraft, setSectorDraft] = useState({ sectorType: "custom_view", radiusKm: 0.5, startAngle: 0, endAngle: 90, label: "" });
   const [editingSectorId, setEditingSectorId] = useState<string | null>(null);
+  const [showWater, setShowWater] = useState(true);
+  const [waterAnalysis, setWaterAnalysis] = useState<WaterAnalysisResult | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [minUphillAcres, setMinUphillAcres] = useState(0.5);
+  const [waterHighlightsActive, setWaterHighlightsActive] = useState(false);
   const [isGeneratingContours, setIsGeneratingContours] = useState(false);
   const [dropPinMode, setDropPinMode] = useState(false);
   const [pendingPin, setPendingPin] = useState<{ lng: number; lat: number } | null>(null);
@@ -213,6 +228,16 @@ export default function MapPage() {
   const createSector = useCreateSector();
   const updateSector = useUpdateSector();
   const deleteSector = useDeleteSector();
+
+  const { data: designedSwales = [] } = useListDesignedSwales(activePropertyId ?? "", {
+    query: {
+      enabled: !!activePropertyId,
+      queryKey: getListDesignedSwalesQueryKey(activePropertyId ?? ""),
+      refetchInterval: 30_000,
+    },
+  });
+  const createDesignedSwale = useCreateDesignedSwale();
+  const deleteDesignedSwale = useDeleteDesignedSwale();
 
   // ─── FETCH TOKEN ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -358,6 +383,7 @@ export default function MapPage() {
       .then((fc) => {
         const m = mapRef.current;
         if (!m) return;
+        contourDataRef.current = fc;
         const layer = L.geoJSON(fc as any, {
           style: () => ({ color: "#ef4444", weight: 2, opacity: 0.9, fill: false }),
         }).addTo(m);
@@ -623,6 +649,170 @@ export default function MapPage() {
     setSectorDraft({ sectorType: "custom_view", radiusKm: 0.5, startAngle: 0, endAngle: 90, label: "" });
     if (sectorCenterMarkerRef.current) { mapRef.current?.removeLayer(sectorCenterMarkerRef.current); (sectorCenterMarkerRef as any).current = null; }
     if (sectorPreviewLayerRef.current) { mapRef.current?.removeLayer(sectorPreviewLayerRef.current); sectorPreviewLayerRef.current = null; }
+  }
+
+  // ─── WATER LAYER VISIBILITY ───────────────────────────────────────────────
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapLoaded) return;
+    const allLayers = [
+      damMarkerRef.current,
+      ...longestSwaleLayersRef.current,
+      highestSwaleLayerRef.current,
+      ...savedSwaleLayersRef.current,
+    ].filter(Boolean) as L.Layer[];
+    allLayers.forEach((l) => { if (showWater) { if (!map.hasLayer(l)) map.addLayer(l); } else { if (map.hasLayer(l)) map.removeLayer(l); } });
+  }, [showWater, mapLoaded]);
+
+  // ─── RUN KEYLINE ANALYSIS ─────────────────────────────────────────────────
+  function handleRunWaterAnalysis() {
+    if (!contourDataRef.current || !activeProperty?.boundaryGeojson) return;
+    setIsAnalyzing(true);
+    try {
+      const boundaryFeature: GeoJSON.Feature<GeoJSON.Polygon> = {
+        type: "Feature",
+        geometry: activeProperty.boundaryGeojson as unknown as GeoJSON.Polygon,
+        properties: {},
+      };
+      const result = analyzeWaterPaths(contourDataRef.current, boundaryFeature, minUphillAcres);
+      setWaterAnalysis(result);
+    } catch (err) {
+      console.error("Keyline analysis failed:", err);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  }
+
+  // ─── RENDER DAM MARKER ────────────────────────────────────────────────────
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapLoaded) return;
+    if (damMarkerRef.current) { map.removeLayer(damMarkerRef.current); damMarkerRef.current = null; }
+    if (!waterAnalysis?.damSite || !showWater) return;
+    const { coordinates } = waterAnalysis.damSite.geometry;
+    const { elevation, interContourSpacingM } = waterAnalysis.damSite.properties;
+    const icon = L.divIcon({
+      className: "",
+      html: `<div style="display:flex;flex-direction:column;align-items:center;gap:2px;pointer-events:none;">
+        <div style="font-size:28px;filter:drop-shadow(0 2px 6px rgba(0,80,200,0.8));">💧</div>
+        <div style="background:rgba(0,60,180,0.85);color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;white-space:nowrap;">
+          Keyline Dam Site
+        </div>
+      </div>`,
+      iconSize: [80, 52],
+      iconAnchor: [40, 28],
+      popupAnchor: [0, -32],
+    });
+    const marker = L.marker([coordinates[1], coordinates[0]], { icon });
+    const popup = document.createElement("div");
+    popup.style.cssText = "font-size:12px;padding:2px 4px;min-width:160px;";
+    popup.innerHTML = `
+      <div style="font-weight:700;color:#003cb3;margin-bottom:4px;">💧 Suggested Keyline Dam Site</div>
+      <div style="color:#333;font-size:11px;margin-bottom:2px;"><b>Elevation:</b> ${elevation.toFixed(1)} m</div>
+      <div style="color:#333;font-size:11px;margin-bottom:2px;"><b>Inter-contour spacing:</b> ${interContourSpacingM} m</div>
+      <div style="color:#666;font-size:10px;margin-top:4px;">This is the valley inflection point where the slope<br>transitions from convex to concave (Yeomans' keypoint).</div>`;
+    marker.bindPopup(popup).addTo(map);
+    damMarkerRef.current = marker;
+  }, [waterAnalysis, mapLoaded, showWater]);
+
+  // ─── RENDER OPTIMAL SWALE LINES ───────────────────────────────────────────
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapLoaded) return;
+    longestSwaleLayersRef.current.forEach((l) => map.removeLayer(l));
+    longestSwaleLayersRef.current = [];
+    if (highestSwaleLayerRef.current) { map.removeLayer(highestSwaleLayerRef.current); highestSwaleLayerRef.current = null; }
+    if (!waterAnalysis || !waterHighlightsActive || !showWater) return;
+
+    const RANK_COLORS = ["#15803d", "#16a34a", "#22c55e"];
+    longestSwaleLayersRef.current = waterAnalysis.longestSwales.map((swale, i) => {
+      const color = RANK_COLORS[i] ?? "#22c55e";
+      const layer = L.geoJSON(swale as any, {
+        style: () => ({ color, weight: 3, opacity: 0.95, fill: false }),
+      });
+      layer.on("mouseover", (e: any) => {
+        const latlng = e.latlng;
+        L.popup({ closeButton: false })
+          .setLatLng(latlng)
+          .setContent(`<div style="font-size:11px;"><b>Longest Swale #${(swale.properties.rank ?? i + 1)}</b><br>Length: ${swale.properties.lengthM.toLocaleString()} m<br>Elevation: ${swale.properties.elevation.toFixed(1)} m</div>`)
+          .openOn(map);
+      });
+      layer.on("mouseout", () => map.closePopup());
+      layer.addTo(map);
+      return layer;
+    });
+
+    if (waterAnalysis.highestSwale) {
+      const swale = waterAnalysis.highestSwale;
+      const layer = L.geoJSON(swale as any, {
+        style: () => ({ color: "#06b6d4", weight: 3, opacity: 0.95, fill: false }),
+      });
+      layer.on("mouseover", (e: any) => {
+        L.popup({ closeButton: false })
+          .setLatLng(e.latlng)
+          .setContent(`<div style="font-size:11px;"><b>Highest Practical Swale</b><br>Length: ${swale.properties.lengthM.toLocaleString()} m<br>Elevation: ${swale.properties.elevation.toFixed(1)} m<br>Uphill area: ~${swale.properties.uphillAreaAcres} ac</div>`)
+          .openOn(map);
+      });
+      layer.on("mouseout", () => map.closePopup());
+      layer.addTo(map);
+      highestSwaleLayerRef.current = layer;
+    }
+  }, [waterAnalysis, waterHighlightsActive, mapLoaded, showWater]);
+
+  // ─── RENDER SAVED SWALES ──────────────────────────────────────────────────
+  const handleDeleteSavedSwale = useCallback(
+    (swaleId: string) => {
+      if (!activePropertyId) return;
+      deleteDesignedSwale.mutate(
+        { propertyId: activePropertyId, swaleId },
+        { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListDesignedSwalesQueryKey(activePropertyId) }) },
+      );
+    },
+    [activePropertyId, deleteDesignedSwale, queryClient],
+  );
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapLoaded) return;
+    savedSwaleLayersRef.current.forEach((l) => map.removeLayer(l));
+    savedSwaleLayersRef.current = [];
+    if (!activePropertyId || !showWater) return;
+    designedSwales.forEach((ds) => {
+      let geo: any;
+      try { geo = JSON.parse(ds.geojsonLinestring); } catch { return; }
+      const layer = L.geoJSON(geo, {
+        style: () => ({ color: "#0ea5e9", weight: 2.5, opacity: 0.85, fill: false, dashArray: "6 4" }),
+      });
+      const el = document.createElement("div");
+      el.style.cssText = "font-size:11px;padding:2px 4px;min-width:150px;";
+      el.innerHTML = `
+        <div style="font-weight:700;color:#0369a1;margin-bottom:3px;">💾 ${ds.name}</div>
+        <div style="color:#444;margin-bottom:2px;">Elev: ${ds.elevationM.toFixed(1)} m · ${ds.lengthM.toLocaleString()} m</div>
+        <div style="color:#666;font-size:10px;text-transform:capitalize;">${ds.swaleType.replace(/_/g, " ")}</div>
+        ${role === "designer" ? `<button class="del-swale" style="margin-top:5px;padding:2px 8px;border:1px solid #c00;color:#c00;border-radius:3px;cursor:pointer;font-size:10px;background:none;">Delete</button>` : ""}`;
+      el.querySelector(".del-swale")?.addEventListener("click", () => { handleDeleteSavedSwale(ds.id); layer.closePopup(); });
+      layer.bindPopup(el).addTo(map);
+      savedSwaleLayersRef.current.push(layer);
+    });
+  }, [designedSwales, activePropertyId, mapLoaded, role, showWater, handleDeleteSavedSwale]);
+
+  // ─── CONVERT SWALE TO LAYER ───────────────────────────────────────────────
+  function handleConvertToSwale(swale: AnalyzedSwale, name: string) {
+    if (!activePropertyId) return;
+    createDesignedSwale.mutate(
+      {
+        propertyId: activePropertyId,
+        data: {
+          name,
+          geojsonLinestring: JSON.stringify(swale),
+          elevationM: swale.properties.elevation,
+          lengthM: swale.properties.lengthM,
+          swaleType: swale.properties.swaleKind,
+          notes: "",
+        },
+      },
+      { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListDesignedSwalesQueryKey(activePropertyId) }) },
+    );
   }
 
   // ─── GEOCODING SEARCH ────────────────────────────────────────────────────
@@ -909,6 +1099,13 @@ export default function MapPage() {
               disabled={!activePropertyId}
             />
             <LayerToggle
+              label="Water Analysis"
+              color="#0ea5e9"
+              active={showWater}
+              onToggle={() => setShowWater((v) => !v)}
+              disabled={!activePropertyId}
+            />
+            <LayerToggle
               label="Structures"
               color="#1e3a5f"
               active={showStructures}
@@ -1126,8 +1323,211 @@ export default function MapPage() {
           )}
         </SidebarSection>
 
-        {/* ── LAYER 4: FEEDBACK PINS ── */}
-        <SidebarSection label="Layer 4 — Feedback Pins">
+        {/* ── LAYER 4: WATER AUTOMATION ── */}
+        <SidebarSection label="Layer 4 — Water Automation">
+          {!activePropertyId ? (
+            <p className="text-[11px]" style={{ color: "hsl(42, 15%, 50%)" }}>Select a property to run water analysis.</p>
+          ) : !activeProperty?.boundaryGeojson ? (
+            <p className="text-[11px]" style={{ color: "hsl(42, 15%, 50%)" }}>Draw a property boundary first to enable water analysis.</p>
+          ) : !contourDataRef.current ? (
+            <p className="text-[11px]" style={{ color: "hsl(42, 15%, 50%)" }}>Enable and load terrain contours (Layer 2) to unlock water analysis.</p>
+          ) : (
+            <div className="space-y-3">
+
+              {/* ── Keyline Dam Locator ── */}
+              <div>
+                <div className="text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: "#06b6d4" }}>
+                  Keyline Dam Locator
+                </div>
+                <p className="text-[10px] mb-2" style={{ color: "hsl(42, 15%, 55%)" }}>
+                  Detects the Yeomans inflection point — where valley contours narrow then spread — and pins the optimal dam site.
+                </p>
+                {role === "designer" && (
+                  <button
+                    onClick={handleRunWaterAnalysis}
+                    disabled={isAnalyzing}
+                    className="w-full text-xs px-3 py-2 rounded font-medium transition-colors flex items-center justify-center gap-2"
+                    style={{
+                      background: isAnalyzing ? "hsl(103, 20%, 20%)" : "hsl(198, 80%, 22%)",
+                      border: "1px solid hsl(198, 60%, 30%)",
+                      color: "hsl(42, 28%, 88%)",
+                      opacity: isAnalyzing ? 0.6 : 1,
+                    }}
+                  >
+                    {isAnalyzing ? (
+                      <>
+                        <div className="w-3 h-3 border border-t-transparent rounded-full animate-spin" style={{ borderColor: "#06b6d4" }} />
+                        Analysing contours…
+                      </>
+                    ) : (
+                      "💧 Run Keyline Analysis"
+                    )}
+                  </button>
+                )}
+                {waterAnalysis?.damSite && (
+                  <div className="mt-2 rounded p-2 text-[10px] space-y-0.5" style={{ background: "hsl(198, 40%, 12%)", border: "1px solid hsl(198, 40%, 20%)" }}>
+                    <div className="font-semibold" style={{ color: "#38bdf8" }}>💧 Keyline Dam Site found</div>
+                    <div style={{ color: "hsl(42, 15%, 65%)" }}>Elevation: <span style={{ color: "#e2d5b5" }}>{waterAnalysis.damSite.properties.elevation.toFixed(1)} m</span></div>
+                    <div style={{ color: "hsl(42, 15%, 65%)" }}>Inter-contour gap: <span style={{ color: "#e2d5b5" }}>{waterAnalysis.damSite.properties.interContourSpacingM} m</span></div>
+                    <div style={{ color: "hsl(42, 15%, 50%)" }}>Click the 💧 marker on the map for details.</div>
+                  </div>
+                )}
+                {waterAnalysis && !waterAnalysis.damSite && (
+                  <div className="mt-2 text-[10px] rounded p-2" style={{ background: "hsl(30, 30%, 12%)", color: "hsl(42, 15%, 55%)" }}>
+                    Not enough contour variation to detect a valley inflection. Try a property with more relief.
+                  </div>
+                )}
+              </div>
+
+              {/* ── Optimal Water Lines ── */}
+              <div>
+                <div className="text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: "#22c55e" }}>
+                  Optimal Water Lines
+                </div>
+
+                {/* min uphill threshold */}
+                <div className="mb-2">
+                  <label className="text-[10px] flex items-center justify-between mb-1" style={{ color: "hsl(42, 15%, 55%)" }}>
+                    <span>Min uphill area</span>
+                    <span style={{ color: "#e2d5b5" }}>{minUphillAcres.toFixed(2)} ac</span>
+                  </label>
+                  <input
+                    type="range"
+                    min={0.1}
+                    max={5}
+                    step={0.1}
+                    value={minUphillAcres}
+                    onChange={(e) => setMinUphillAcres(parseFloat(e.target.value))}
+                    className="w-full h-1.5 rounded appearance-none cursor-pointer"
+                    style={{ accentColor: "#06b6d4" }}
+                  />
+                </div>
+
+                {role === "designer" && (
+                  <button
+                    onClick={() => {
+                      if (!waterAnalysis) handleRunWaterAnalysis();
+                      setWaterHighlightsActive((v) => !v);
+                    }}
+                    className="w-full text-xs px-3 py-2 rounded font-medium transition-colors"
+                    style={{
+                      background: waterHighlightsActive ? "hsl(142, 50%, 18%)" : "hsl(103, 35%, 17%)",
+                      border: `1px solid ${waterHighlightsActive ? "#15803d" : "hsl(103, 30%, 22%)"}`,
+                      color: "hsl(42, 28%, 88%)",
+                    }}
+                  >
+                    {waterHighlightsActive ? "✓ Highlights On — Click to Hide" : "✦ Highlight Optimal Water Lines"}
+                  </button>
+                )}
+
+                {waterAnalysis && waterHighlightsActive && (
+                  <div className="mt-2.5 space-y-2">
+                    {/* Longest swales */}
+                    {waterAnalysis.longestSwales.length > 0 && (
+                      <div>
+                        <div className="text-[9px] uppercase tracking-wider mb-1 font-semibold" style={{ color: "#15803d" }}>
+                          Top {waterAnalysis.longestSwales.length} Longest Swales
+                        </div>
+                        {waterAnalysis.longestSwales.map((swale, i) => (
+                          <div key={i} className="rounded p-1.5 mb-1 text-[10px]" style={{ background: "hsl(142, 30%, 10%)", border: "1px solid #15803d33" }}>
+                            <div className="flex items-center justify-between mb-0.5">
+                              <span style={{ color: "#4ade80" }}>#{swale.properties.rank} · {swale.properties.lengthM.toLocaleString()} m</span>
+                              <span style={{ color: "hsl(42, 15%, 55%)" }}>{swale.properties.elevation.toFixed(1)} m elev</span>
+                            </div>
+                            {role === "designer" && (
+                              <button
+                                onClick={() => handleConvertToSwale(swale, `Longest Swale #${swale.properties.rank} (${swale.properties.elevation.toFixed(0)}m)`)}
+                                className="mt-1 w-full text-[9px] px-2 py-1 rounded transition-colors"
+                                style={{ background: "hsl(142, 35%, 14%)", border: "1px solid #15803d", color: "#4ade80" }}
+                              >
+                                Save to Swale Layer
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Highest swale */}
+                    {waterAnalysis.highestSwale && (
+                      <div>
+                        <div className="text-[9px] uppercase tracking-wider mb-1 font-semibold" style={{ color: "#06b6d4" }}>
+                          Highest Practical Swale
+                        </div>
+                        <div className="rounded p-1.5 text-[10px]" style={{ background: "hsl(198, 30%, 10%)", border: "1px solid #06b6d433" }}>
+                          <div className="flex items-center justify-between mb-0.5">
+                            <span style={{ color: "#67e8f9" }}>{waterAnalysis.highestSwale.properties.lengthM.toLocaleString()} m long</span>
+                            <span style={{ color: "hsl(42, 15%, 55%)" }}>{waterAnalysis.highestSwale.properties.elevation.toFixed(1)} m elev</span>
+                          </div>
+                          <div style={{ color: "hsl(42, 15%, 55%)" }}>
+                            ~{waterAnalysis.highestSwale.properties.uphillAreaAcres} ac uphill
+                          </div>
+                          {role === "designer" && (
+                            <button
+                              onClick={() => handleConvertToSwale(
+                                waterAnalysis.highestSwale!,
+                                `Highest Practical Swale (${waterAnalysis.highestSwale!.properties.elevation.toFixed(0)}m)`,
+                              )}
+                              className="mt-1 w-full text-[9px] px-2 py-1 rounded transition-colors"
+                              style={{ background: "hsl(198, 35%, 14%)", border: "1px solid #06b6d4", color: "#67e8f9" }}
+                            >
+                              Save to Swale Layer
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {waterAnalysis.longestSwales.length === 0 && !waterAnalysis.highestSwale && (
+                      <div className="text-[10px] rounded p-2" style={{ background: "hsl(30, 30%, 12%)", color: "hsl(42, 15%, 55%)" }}>
+                        No interior contour lines detected. The contours may all clip the boundary edge on this property.
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* ── Saved Swale Layers ── */}
+              {designedSwales.length > 0 && (
+                <div>
+                  <div className="text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: "#0ea5e9" }}>
+                    Saved Swale Layers ({designedSwales.length})
+                  </div>
+                  <div className="space-y-1">
+                    {designedSwales.map((ds) => (
+                      <div key={ds.id} className="rounded p-1.5 text-[10px] flex items-start justify-between gap-1"
+                        style={{ background: "hsl(198, 25%, 12%)", border: "1px solid #0ea5e933" }}>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium truncate" style={{ color: "#38bdf8" }}>{ds.name}</div>
+                          <div style={{ color: "hsl(42, 15%, 55%)" }}>{ds.elevationM.toFixed(1)} m · {ds.lengthM.toLocaleString()} m</div>
+                        </div>
+                        {role === "designer" && (
+                          <button
+                            onClick={() => handleDeleteSavedSwale(ds.id)}
+                            className="shrink-0 text-[9px] px-1.5 py-0.5 rounded transition-colors"
+                            style={{ border: "1px solid #c00", color: "#f87171", background: "none" }}
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* ── Client note ── */}
+              {role === "client" && (
+                <p className="text-[10px]" style={{ color: "hsl(42, 15%, 50%)" }}>
+                  Water paths are highlighted on the map. Use the feedback pins (Layer 5) to drop comments directly onto proposed swale lines.
+                </p>
+              )}
+            </div>
+          )}
+        </SidebarSection>
+
+        {/* ── LAYER 5: FEEDBACK PINS ── */}
+        <SidebarSection label="Layer 5 — Feedback Pins">
           {!activePropertyId ? (
             <p className="text-[11px]" style={{ color: "hsl(42, 15%, 50%)" }}>Select a property to manage feedback.</p>
           ) : role === "client" ? (
@@ -1219,8 +1619,8 @@ export default function MapPage() {
           )}
         </SidebarSection>
 
-        {/* ── LAYER 5: STRUCTURES ── */}
-        <SidebarSection label="Layer 5 — Structures">
+        {/* ── LAYER 6: STRUCTURES ── */}
+        <SidebarSection label="Layer 6 — Structures">
           {!activePropertyId ? (
             <p className="text-[11px]" style={{ color: "hsl(42, 15%, 50%)" }}>Select a property to manage structures.</p>
           ) : role === "designer" ? (

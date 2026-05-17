@@ -22,6 +22,8 @@ import type {
 import type {
   Comment,
   CommentInput,
+  DesignedSwale,
+  DesignedSwaleInput,
   HealthStatus,
   Property,
   PropertyInput,
@@ -1156,6 +1158,227 @@ export const useDeleteSector = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getDeleteSectorMutationOptions(options));
+    }
+
+export const getListDesignedSwalesUrl = (propertyId: string,) => {
+
+
+
+
+  return `/api/properties/${propertyId}/swales`
+}
+
+/**
+ * @summary List all designed swale lines for a property
+ */
+export const listDesignedSwales = async (propertyId: string, options?: RequestInit): Promise<DesignedSwale[]> => {
+
+  return customFetch<DesignedSwale[]>(getListDesignedSwalesUrl(propertyId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListDesignedSwalesQueryKey = (propertyId: string,) => {
+    return [
+    `/api/properties/${propertyId}/swales`
+    ] as const;
+    }
+
+
+export const getListDesignedSwalesQueryOptions = <TData = Awaited<ReturnType<typeof listDesignedSwales>>, TError = ErrorType<unknown>>(propertyId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDesignedSwales>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListDesignedSwalesQueryKey(propertyId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listDesignedSwales>>> = ({ signal }) => listDesignedSwales(propertyId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(propertyId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listDesignedSwales>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListDesignedSwalesQueryResult = NonNullable<Awaited<ReturnType<typeof listDesignedSwales>>>
+export type ListDesignedSwalesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List all designed swale lines for a property
+ */
+
+export function useListDesignedSwales<TData = Awaited<ReturnType<typeof listDesignedSwales>>, TError = ErrorType<unknown>>(
+ propertyId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDesignedSwales>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListDesignedSwalesQueryOptions(propertyId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateDesignedSwaleUrl = (propertyId: string,) => {
+
+
+
+
+  return `/api/properties/${propertyId}/swales`
+}
+
+/**
+ * @summary Save a designed swale line
+ */
+export const createDesignedSwale = async (propertyId: string,
+    designedSwaleInput: DesignedSwaleInput, options?: RequestInit): Promise<DesignedSwale> => {
+
+  return customFetch<DesignedSwale>(getCreateDesignedSwaleUrl(propertyId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      designedSwaleInput,)
+  }
+);}
+
+
+
+
+export const getCreateDesignedSwaleMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createDesignedSwale>>, TError,{propertyId: string;data: BodyType<DesignedSwaleInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createDesignedSwale>>, TError,{propertyId: string;data: BodyType<DesignedSwaleInput>}, TContext> => {
+
+const mutationKey = ['createDesignedSwale'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createDesignedSwale>>, {propertyId: string;data: BodyType<DesignedSwaleInput>}> = (props) => {
+          const {propertyId,data} = props ?? {};
+
+          return  createDesignedSwale(propertyId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateDesignedSwaleMutationResult = NonNullable<Awaited<ReturnType<typeof createDesignedSwale>>>
+    export type CreateDesignedSwaleMutationBody = BodyType<DesignedSwaleInput>
+    export type CreateDesignedSwaleMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Save a designed swale line
+ */
+export const useCreateDesignedSwale = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createDesignedSwale>>, TError,{propertyId: string;data: BodyType<DesignedSwaleInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createDesignedSwale>>,
+        TError,
+        {propertyId: string;data: BodyType<DesignedSwaleInput>},
+        TContext
+      > => {
+      return useMutation(getCreateDesignedSwaleMutationOptions(options));
+    }
+
+export const getDeleteDesignedSwaleUrl = (propertyId: string,
+    swaleId: string,) => {
+
+
+
+
+  return `/api/properties/${propertyId}/swales/${swaleId}`
+}
+
+/**
+ * @summary Delete a designed swale line
+ */
+export const deleteDesignedSwale = async (propertyId: string,
+    swaleId: string, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteDesignedSwaleUrl(propertyId,swaleId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteDesignedSwaleMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteDesignedSwale>>, TError,{propertyId: string;swaleId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteDesignedSwale>>, TError,{propertyId: string;swaleId: string}, TContext> => {
+
+const mutationKey = ['deleteDesignedSwale'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteDesignedSwale>>, {propertyId: string;swaleId: string}> = (props) => {
+          const {propertyId,swaleId} = props ?? {};
+
+          return  deleteDesignedSwale(propertyId,swaleId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteDesignedSwaleMutationResult = NonNullable<Awaited<ReturnType<typeof deleteDesignedSwale>>>
+
+    export type DeleteDesignedSwaleMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Delete a designed swale line
+ */
+export const useDeleteDesignedSwale = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteDesignedSwale>>, TError,{propertyId: string;swaleId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteDesignedSwale>>,
+        TError,
+        {propertyId: string;swaleId: string},
+        TContext
+      > => {
+      return useMutation(getDeleteDesignedSwaleMutationOptions(options));
     }
 
 export const getListCommentsUrl = (propertyId: string,) => {

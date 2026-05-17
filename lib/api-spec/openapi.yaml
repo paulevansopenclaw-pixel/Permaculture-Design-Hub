@@ -18,6 +18,8 @@ tags:
     description: Property structure markers
   - name: sectors
     description: Permaculture sector analysis wedges
+  - name: swales
+    description: Designed swale / water-path layers
 
 paths:
   /healthz:
@@ -338,6 +340,71 @@ paths:
         "204":
           description: Deleted
 
+  /properties/{propertyId}/swales:
+    get:
+      operationId: listDesignedSwales
+      tags: [swales]
+      summary: List all designed swale lines for a property
+      parameters:
+        - name: propertyId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of designed swales
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DesignedSwale"
+
+    post:
+      operationId: createDesignedSwale
+      tags: [swales]
+      summary: Save a designed swale line
+      parameters:
+        - name: propertyId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DesignedSwaleInput"
+      responses:
+        "201":
+          description: Created swale
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DesignedSwale"
+
+  /properties/{propertyId}/swales/{swaleId}:
+    delete:
+      operationId: deleteDesignedSwale
+      tags: [swales]
+      summary: Delete a designed swale line
+      parameters:
+        - name: propertyId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: swaleId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
   /properties/{propertyId}/comments:
     get:
       operationId: listComments
@@ -571,6 +638,47 @@ components:
         endAngle:
           type: integer
         label:
+          type: string
+
+    DesignedSwale:
+      type: object
+      required: [id, propertyId, name, geojsonLinestring, elevationM, lengthM, swaleType, notes, createdAt]
+      properties:
+        id:
+          type: string
+        propertyId:
+          type: string
+        name:
+          type: string
+        geojsonLinestring:
+          type: string
+        elevationM:
+          type: number
+        lengthM:
+          type: number
+        swaleType:
+          type: string
+        notes:
+          type: string
+        createdAt:
+          type: string
+
+    DesignedSwaleInput:
+      type: object
+      required: [name, geojsonLinestring, elevationM, lengthM, swaleType, notes]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        geojsonLinestring:
+          type: string
+        elevationM:
+          type: number
+        lengthM:
+          type: number
+        swaleType:
+          type: string
+        notes:
           type: string
 
     Comment:
