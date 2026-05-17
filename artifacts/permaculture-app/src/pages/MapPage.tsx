@@ -67,6 +67,7 @@ export default function MapPage() {
 
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
+  const tileLayerRef = useRef<L.TileLayer | null>(null);
   const boundaryLayerRef = useRef<L.GeoJSON | null>(null);
   const contourLayerRef = useRef<L.GeoJSON | null>(null);
   const drawnItemsRef = useRef<L.FeatureGroup | null>(null);
@@ -77,6 +78,8 @@ export default function MapPage() {
   const [mapboxToken, setMapboxToken] = useState("");
   const [mapLoaded, setMapLoaded] = useState(false);
 
+  const [showSatellite, setShowSatellite] = useState(true);
+  const [showBoundary, setShowBoundary] = useState(true);
   const [showContours, setShowContours] = useState(false);
   const [isGeneratingContours, setIsGeneratingContours] = useState(false);
   const [dropPinMode, setDropPinMode] = useState(false);
@@ -125,7 +128,7 @@ export default function MapPage() {
     });
 
     // Mapbox satellite raster tiles — no WebGL required
-    L.tileLayer(
+    const tileLayer = L.tileLayer(
       `https://api.mapbox.com/styles/v1/mapbox/satellite-streets-v12/tiles/{z}/{x}/{y}?access_token=${mapboxToken}`,
       {
         tileSize: 512,
@@ -134,6 +137,7 @@ export default function MapPage() {
         attribution: '© <a href="https://www.mapbox.com">Mapbox</a> © <a href="https://www.openstreetmap.org">OpenStreetMap</a>',
       }
     ).addTo(map);
+    tileLayerRef.current = tileLayer;
 
     L.control.zoom({ position: "bottomright" }).addTo(map);
     L.control.scale({ metric: true, imperial: false, position: "bottomleft" }).addTo(map);
@@ -180,6 +184,30 @@ export default function MapPage() {
     if (!mapLoaded) return;
     if (role !== "designer") drawPolygonHandlerRef.current?.disable();
   }, [role, mapLoaded]);
+
+  // ─── SATELLITE VISIBILITY ─────────────────────────────────────────────────
+  useEffect(() => {
+    const map = mapRef.current;
+    const tile = tileLayerRef.current;
+    if (!map || !tile || !mapLoaded) return;
+    if (showSatellite) {
+      if (!map.hasLayer(tile)) map.addLayer(tile);
+    } else {
+      if (map.hasLayer(tile)) map.removeLayer(tile);
+    }
+  }, [showSatellite, mapLoaded]);
+
+  // ─── BOUNDARY VISIBILITY ──────────────────────────────────────────────────
+  useEffect(() => {
+    const map = mapRef.current;
+    const layer = boundaryLayerRef.current;
+    if (!map || !layer || !mapLoaded) return;
+    if (showBoundary) {
+      if (!map.hasLayer(layer)) map.addLayer(layer);
+    } else {
+      if (map.hasLayer(layer)) map.removeLayer(layer);
+    }
+  }, [showBoundary, mapLoaded]);
 
   // ─── BOUNDARY LAYER ───────────────────────────────────────────────────────
   useEffect(() => {
@@ -229,7 +257,7 @@ export default function MapPage() {
         const m = mapRef.current;
         if (!m) return;
         const layer = L.geoJSON(fc as any, {
-          style: () => ({ color: "#8B6914", weight: 0.8, opacity: 0.6, fill: false }),
+          style: () => ({ color: "#ef4444", weight: 2, opacity: 0.9, fill: false }),
         }).addTo(m);
         contourLayerRef.current = layer;
       })
@@ -551,6 +579,33 @@ export default function MapPage() {
           )}
         </div>
 
+        {/* ── LAYER VISIBILITY ── */}
+        <SidebarSection label="Layer Visibility">
+          <div className="space-y-2">
+            <LayerToggle label="Satellite Imagery" color="#4a9eff" active={showSatellite} onToggle={() => setShowSatellite((v) => !v)} />
+            <LayerToggle
+              label="Property Boundary"
+              color="#2D6A1A"
+              active={showBoundary}
+              onToggle={() => setShowBoundary((v) => !v)}
+              disabled={!activeProperty?.boundaryGeojson}
+            />
+            <LayerToggle
+              label="Terrain Contours"
+              color="#ef4444"
+              active={showContours}
+              onToggle={() => setShowContours((v) => !v)}
+              disabled={!activeProperty?.boundaryGeojson}
+            />
+          </div>
+          {isGeneratingContours && (
+            <div className="flex items-center gap-2 mt-2.5">
+              <div className="w-3 h-3 border border-t-transparent rounded-full animate-spin" style={{ borderColor: "#ef4444" }} />
+              <span className="text-[10px]" style={{ color: "hsl(42, 15%, 55%)" }}>Fetching elevation tiles...</span>
+            </div>
+          )}
+        </SidebarSection>
+
         {/* ── LAYER 1: BOUNDARY ── */}
         <SidebarSection label="Layer 1 — Property Boundary">
           {!activePropertyId ? (
@@ -602,32 +657,16 @@ export default function MapPage() {
 
         {/* ── LAYER 2: CONTOURS ── */}
         <SidebarSection label="Layer 2 — Terrain Contours">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[11px]" style={{ color: "hsl(42, 28%, 80%)" }}>Generate 1m Contours</span>
-            <button
-              onClick={() => setShowContours((v) => !v)}
-              disabled={!activeProperty?.boundaryGeojson}
-              className="relative w-9 h-5 rounded-full transition-colors flex-shrink-0"
-              style={{ background: showContours ? "hsl(84, 38%, 42%)" : "hsl(103, 30%, 20%)", opacity: !activeProperty?.boundaryGeojson ? 0.4 : 1 }}
-            >
-              <span className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all" style={{ left: showContours ? "18px" : "2px" }} />
-            </button>
-          </div>
-          {!activeProperty?.boundaryGeojson && (
+          {!activeProperty?.boundaryGeojson ? (
             <p className="text-[10px]" style={{ color: "hsl(42, 15%, 45%)" }}>Set a property boundary first to enable contours.</p>
-          )}
-          {isGeneratingContours && (
-            <div className="flex items-center gap-2 mt-1.5">
-              <div className="w-3 h-3 border border-t-transparent rounded-full animate-spin" style={{ borderColor: "hsl(84, 38%, 42%)" }} />
-              <span className="text-[10px]" style={{ color: "hsl(42, 15%, 55%)" }}>Fetching elevation tiles...</span>
+          ) : showContours && !isGeneratingContours ? (
+            <div className="flex items-center gap-1.5">
+              <div className="w-6 h-0.5 rounded" style={{ background: "#ef4444" }} />
+              <span className="text-[10px]" style={{ color: "hsl(42, 15%, 55%)" }}>1m interval contours — red lines</span>
             </div>
-          )}
-          {showContours && !isGeneratingContours && (
-            <div className="mt-1.5 flex items-center gap-1.5">
-              <div className="w-6 h-0.5 rounded" style={{ background: "hsl(35, 55%, 35%)" }} />
-              <span className="text-[10px]" style={{ color: "hsl(42, 15%, 55%)" }}>1m interval contours</span>
-            </div>
-          )}
+          ) : !showContours ? (
+            <p className="text-[10px]" style={{ color: "hsl(42, 15%, 45%)" }}>Toggle contours on in Layer Visibility above.</p>
+          ) : null}
         </SidebarSection>
 
         {/* ── LAYER 3: FEEDBACK PINS ── */}
@@ -808,6 +847,38 @@ function ClientBoundaryRequest({
           {sent ? "Request Sent" : "Send Request"}
         </button>
       </div>
+    </div>
+  );
+}
+
+function LayerToggle({
+  label,
+  color,
+  active,
+  onToggle,
+  disabled = false,
+}: {
+  label: string;
+  color: string;
+  active: boolean;
+  onToggle: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-2" style={{ opacity: disabled ? 0.4 : 1 }}>
+      <div className="flex items-center gap-2 min-w-0">
+        <div className="w-3 h-3 rounded-sm flex-shrink-0" style={{ background: color, opacity: active ? 1 : 0.3 }} />
+        <span className="text-[11px] truncate" style={{ color: active ? "hsl(42, 28%, 85%)" : "hsl(42, 15%, 45%)" }}>
+          {label}
+        </span>
+      </div>
+      <button
+        onClick={disabled ? undefined : onToggle}
+        className="relative w-9 h-5 rounded-full transition-colors flex-shrink-0"
+        style={{ background: active ? "hsl(84, 38%, 42%)" : "hsl(103, 30%, 20%)", cursor: disabled ? "not-allowed" : "pointer" }}
+      >
+        <span className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all" style={{ left: active ? "18px" : "2px" }} />
+      </button>
     </div>
   );
 }
