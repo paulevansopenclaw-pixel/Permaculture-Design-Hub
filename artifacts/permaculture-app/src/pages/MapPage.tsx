@@ -2,6 +2,8 @@ import { useEffect, useRef, useState, useCallback, type ReactNode } from "react"
 import { useLocation } from "wouter";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import mapboxgl from "mapbox-gl";
+import "mapbox-gl/dist/mapbox-gl.css";
 // @ts-ignore
 import "leaflet-draw/dist/leaflet.draw.css";
 // @ts-ignore
@@ -176,6 +178,8 @@ export default function MapPage() {
 
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
+  const gl3DContainerRef = useRef<HTMLDivElement>(null);
+  const gl3DMapRef = useRef<mapboxgl.Map | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   const boundaryLayerRef = useRef<L.GeoJSON | null>(null);
   const contourLayerRef = useRef<L.GeoJSON | null>(null);
@@ -245,6 +249,7 @@ export default function MapPage() {
   sectorDraftRef.current = sectorDraft;
   const [editingSectorId, setEditingSectorId] = useState<string | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [show3D, setShow3D] = useState(false);
   const [showWater, setShowWater] = useState(true);
   const [waterAnalysis, setWaterAnalysis] = useState<WaterAnalysisResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -333,6 +338,10 @@ export default function MapPage() {
   });
   const zonesRef = useRef(zones);
   zonesRef.current = zones;
+  const sectorsRef = useRef(sectors);
+  sectorsRef.current = sectors;
+  const activePropertyRef = useRef(activeProperty);
+  activePropertyRef.current = activeProperty;
   const bulkReplaceZones = useBulkReplaceZones();
   const deleteZone = useDeleteZone();
 
@@ -554,6 +563,127 @@ export default function MapPage() {
       .catch(console.error)
       .finally(() => setIsGeneratingContours(false));
   }, [showContours, activeProperty?.id, activeProperty?.boundaryGeojson, mapLoaded, mapboxToken]);
+
+  // ─── 3D TERRAIN OVERLAY ───────────────────────────────────────────────────
+  useEffect(() => {
+    if (!show3D || !mapboxToken) {
+      if (gl3DMapRef.current) { gl3DMapRef.current.remove(); gl3DMapRef.current = null; }
+      return;
+    }
+    const container = gl3DContainerRef.current;
+    if (!container) return;
+
+    // Sync starting view from Leaflet
+    const leaf = mapRef.current;
+    const lc = leaf ? leaf.getCenter() : { lat: -33, lng: 147 };
+    const lz = leaf ? leaf.getZoom() : 4;
+
+    mapboxgl.accessToken = mapboxToken;
+    const glMap = new mapboxgl.Map({
+      container,
+      style: "mapbox://styles/mapbox/satellite-streets-v12",
+      center: [lc.lng, lc.lat],
+      zoom: lz,
+      pitch: 0,
+      bearing: 0,
+      antialias: true,
+    });
+    gl3DMapRef.current = glMap;
+
+    glMap.addControl(new mapboxgl.NavigationControl({ showCompass: true }), "bottom-right");
+
+    glMap.on("load", () => {
+      // ── DEM terrain ──
+      glMap.addSource("mapbox-dem", {
+        type: "raster-dem",
+        url: "mapbox://mapbox.mapbox-terrain-dem-v1",
+        tileSize: 512,
+        maxzoom: 14,
+      });
+      glMap.setTerrain({ source: "mapbox-dem", exaggeration: 1.5 });
+
+      // ── Property boundary ──
+      const boundaryRaw = activePropertyRef.current?.boundaryGeojson;
+      const boundaryStr = typeof boundaryRaw === "string" ? boundaryRaw : (boundaryRaw ? JSON.stringify(boundaryRaw) : null);
+      if (boundaryStr) {
+        try {
+          const geo = JSON.parse(boundaryStr) as GeoJSON.Geometry;
+          glMap.addSource("gl-boundary", { type: "geojson", data: { type: "Feature", geometry: geo, properties: {} } });
+          glMap.addLayer({ id: "gl-boundary-fill", type: "fill", source: "gl-boundary", paint: { "fill-color": "#2D6A1A", "fill-opacity": 0.15 } });
+          glMap.addLayer({ id: "gl-boundary-line", type: "line", source: "gl-boundary", paint: { "line-color": "#4a9a28", "line-width": 2.5 } });
+        } catch { /* ignore */ }
+      }
+
+      // ── 1m contour lines ──
+      const contourData = contourDataRef.current;
+      if (contourData) {
+        glMap.addSource("gl-contours", { type: "geojson", data: contourData });
+        glMap.addLayer({
+          id: "gl-contour-lines",
+          type: "line",
+          source: "gl-contours",
+          paint: {
+            "line-color": [
+              "case",
+              ["==", ["%", ["to-number", ["coalesce", ["get", "ele"], 0]], 5], 0], "#ef4444",
+              "#ff666688",
+            ],
+            "line-width": ["case", ["==", ["%", ["to-number", ["coalesce", ["get", "ele"], 0]], 5], 0], 1.8, 0.8],
+            "line-opacity": 0.85,
+          },
+        });
+      }
+
+      // ── Zone polygons ──
+      const zoneFeatures: GeoJSON.Feature[] = [];
+      zonesRef.current.forEach((z) => {
+        try {
+          const geo = JSON.parse(z.zoneGeojson);
+          zoneFeatures.push({ type: "Feature", geometry: geo, properties: { zoneNumber: z.zoneNumber } });
+        } catch { /* ignore */ }
+      });
+      if (zoneFeatures.length > 0) {
+        glMap.addSource("gl-zones", { type: "geojson", data: { type: "FeatureCollection", features: zoneFeatures } });
+        glMap.addLayer({
+          id: "gl-zones-fill", type: "fill", source: "gl-zones",
+          paint: {
+            "fill-color": ["match", ["get", "zoneNumber"], 1, "#FDE68A", 2, "#86EFAC", 3, "#4ADE80", 4, "#D4A27A", 5, "#94A3B8", "#ffffff"],
+            "fill-opacity": 0.30,
+          },
+        });
+        glMap.addLayer({
+          id: "gl-zones-line", type: "line", source: "gl-zones",
+          paint: {
+            "line-color": ["match", ["get", "zoneNumber"], 1, "#CA8A04", 2, "#16A34A", 3, "#15803D", 4, "#92400E", 5, "#475569", "#888888"],
+            "line-width": 2, "line-opacity": 0.85,
+          },
+        });
+      }
+
+      // ── Sector wedges ──
+      const sectorFeatures: GeoJSON.Feature[] = [];
+      sectorsRef.current.forEach((s) => {
+        try {
+          const center = turf.point([s.centerLng, s.centerLat]);
+          const wedge = turf.sector(center, s.radiusKm, s.startAngle, s.endAngle, { units: "kilometers", steps: 64 });
+          wedge.properties = { label: s.label || s.sectorType };
+          sectorFeatures.push(wedge);
+        } catch { /* ignore */ }
+      });
+      if (sectorFeatures.length > 0) {
+        glMap.addSource("gl-sectors", { type: "geojson", data: { type: "FeatureCollection", features: sectorFeatures } });
+        glMap.addLayer({ id: "gl-sectors-fill", type: "fill", source: "gl-sectors", paint: { "fill-color": "#3b82f6", "fill-opacity": 0.18 } });
+        glMap.addLayer({ id: "gl-sectors-line", type: "line", source: "gl-sectors", paint: { "line-color": "#93c5fd", "line-width": 1.5, "line-opacity": 0.75 } });
+      }
+
+      // Animate to pitched 3D view
+      glMap.easeTo({ pitch: 60, bearing: -15, duration: 1400 });
+    });
+
+    return () => {
+      if (gl3DMapRef.current) { gl3DMapRef.current.remove(); gl3DMapRef.current = null; }
+    };
+  }, [show3D, mapboxToken]);
 
   // ─── DROP-PIN CLICK HANDLER ───────────────────────────────────────────────
   useEffect(() => {
@@ -3082,6 +3212,32 @@ export default function MapPage() {
       {/* ── MAP ── */}
       <div className="flex-1 relative">
         <div ref={mapContainerRef} className="absolute inset-0" />
+
+        {/* Mapbox GL 3D terrain overlay */}
+        <div
+          ref={gl3DContainerRef}
+          className="absolute inset-0"
+          style={{ zIndex: show3D ? 400 : -1, opacity: show3D ? 1 : 0, pointerEvents: show3D ? "auto" : "none", transition: "opacity 0.3s ease" }}
+        />
+
+        {/* 3D toggle button */}
+        {mapLoaded && (
+          <button
+            onClick={() => setShow3D((v) => !v)}
+            title={show3D ? "Back to 2D map" : "View 3D terrain"}
+            className="absolute bottom-10 right-3 flex items-center gap-1.5 px-3 py-2 rounded-xl text-[12px] font-semibold shadow-lg transition-all"
+            style={{
+              zIndex: 500,
+              background: show3D ? "linear-gradient(135deg, #1a3a6e, #2563eb)" : "linear-gradient(135deg, #1a4a0d, #2D6A1A)",
+              color: "#fff",
+              border: show3D ? "1px solid #3b82f6" : "1px solid #4a9a28",
+              boxShadow: show3D ? "0 4px 18px rgba(37,99,235,0.45)" : "0 4px 18px rgba(45,106,26,0.45)",
+            }}
+          >
+            {show3D ? "⬛ Flat 2D" : "🏔 3D Terrain"}
+          </button>
+        )}
+
         {!mapLoaded && (
           <div className="absolute inset-0 flex items-center justify-center" style={{ background: "hsl(103, 18%, 8%)" }}>
             <div className="flex flex-col items-center gap-3">
