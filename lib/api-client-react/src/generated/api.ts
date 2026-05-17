@@ -26,7 +26,10 @@ import type {
   Property,
   PropertyInput,
   PropertyStats,
-  PropertyUpdate
+  PropertyUpdate,
+  Structure,
+  StructureInput,
+  StructureUpdate
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -561,6 +564,301 @@ export function useGetPropertyStats<TData = Awaited<ReturnType<typeof getPropert
 
 
 
+
+export const getListStructuresUrl = (propertyId: string,) => {
+
+
+
+
+  return `/api/properties/${propertyId}/structures`
+}
+
+/**
+ * @summary List all structures for a property
+ */
+export const listStructures = async (propertyId: string, options?: RequestInit): Promise<Structure[]> => {
+
+  return customFetch<Structure[]>(getListStructuresUrl(propertyId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListStructuresQueryKey = (propertyId: string,) => {
+    return [
+    `/api/properties/${propertyId}/structures`
+    ] as const;
+    }
+
+
+export const getListStructuresQueryOptions = <TData = Awaited<ReturnType<typeof listStructures>>, TError = ErrorType<unknown>>(propertyId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listStructures>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListStructuresQueryKey(propertyId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listStructures>>> = ({ signal }) => listStructures(propertyId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(propertyId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listStructures>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListStructuresQueryResult = NonNullable<Awaited<ReturnType<typeof listStructures>>>
+export type ListStructuresQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List all structures for a property
+ */
+
+export function useListStructures<TData = Awaited<ReturnType<typeof listStructures>>, TError = ErrorType<unknown>>(
+ propertyId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listStructures>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListStructuresQueryOptions(propertyId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateStructureUrl = (propertyId: string,) => {
+
+
+
+
+  return `/api/properties/${propertyId}/structures`
+}
+
+/**
+ * @summary Add a structure marker to a property
+ */
+export const createStructure = async (propertyId: string,
+    structureInput: StructureInput, options?: RequestInit): Promise<Structure> => {
+
+  return customFetch<Structure>(getCreateStructureUrl(propertyId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      structureInput,)
+  }
+);}
+
+
+
+
+export const getCreateStructureMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createStructure>>, TError,{propertyId: string;data: BodyType<StructureInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createStructure>>, TError,{propertyId: string;data: BodyType<StructureInput>}, TContext> => {
+
+const mutationKey = ['createStructure'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createStructure>>, {propertyId: string;data: BodyType<StructureInput>}> = (props) => {
+          const {propertyId,data} = props ?? {};
+
+          return  createStructure(propertyId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateStructureMutationResult = NonNullable<Awaited<ReturnType<typeof createStructure>>>
+    export type CreateStructureMutationBody = BodyType<StructureInput>
+    export type CreateStructureMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Add a structure marker to a property
+ */
+export const useCreateStructure = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createStructure>>, TError,{propertyId: string;data: BodyType<StructureInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createStructure>>,
+        TError,
+        {propertyId: string;data: BodyType<StructureInput>},
+        TContext
+      > => {
+      return useMutation(getCreateStructureMutationOptions(options));
+    }
+
+export const getUpdateStructureUrl = (propertyId: string,
+    structureId: string,) => {
+
+
+
+
+  return `/api/properties/${propertyId}/structures/${structureId}`
+}
+
+/**
+ * @summary Update a structure label or type
+ */
+export const updateStructure = async (propertyId: string,
+    structureId: string,
+    structureUpdate: StructureUpdate, options?: RequestInit): Promise<Structure> => {
+
+  return customFetch<Structure>(getUpdateStructureUrl(propertyId,structureId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      structureUpdate,)
+  }
+);}
+
+
+
+
+export const getUpdateStructureMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateStructure>>, TError,{propertyId: string;structureId: string;data: BodyType<StructureUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateStructure>>, TError,{propertyId: string;structureId: string;data: BodyType<StructureUpdate>}, TContext> => {
+
+const mutationKey = ['updateStructure'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateStructure>>, {propertyId: string;structureId: string;data: BodyType<StructureUpdate>}> = (props) => {
+          const {propertyId,structureId,data} = props ?? {};
+
+          return  updateStructure(propertyId,structureId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateStructureMutationResult = NonNullable<Awaited<ReturnType<typeof updateStructure>>>
+    export type UpdateStructureMutationBody = BodyType<StructureUpdate>
+    export type UpdateStructureMutationError = ErrorType<void>
+
+    /**
+ * @summary Update a structure label or type
+ */
+export const useUpdateStructure = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateStructure>>, TError,{propertyId: string;structureId: string;data: BodyType<StructureUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateStructure>>,
+        TError,
+        {propertyId: string;structureId: string;data: BodyType<StructureUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateStructureMutationOptions(options));
+    }
+
+export const getDeleteStructureUrl = (propertyId: string,
+    structureId: string,) => {
+
+
+
+
+  return `/api/properties/${propertyId}/structures/${structureId}`
+}
+
+/**
+ * @summary Delete a structure marker
+ */
+export const deleteStructure = async (propertyId: string,
+    structureId: string, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteStructureUrl(propertyId,structureId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteStructureMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteStructure>>, TError,{propertyId: string;structureId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteStructure>>, TError,{propertyId: string;structureId: string}, TContext> => {
+
+const mutationKey = ['deleteStructure'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteStructure>>, {propertyId: string;structureId: string}> = (props) => {
+          const {propertyId,structureId} = props ?? {};
+
+          return  deleteStructure(propertyId,structureId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteStructureMutationResult = NonNullable<Awaited<ReturnType<typeof deleteStructure>>>
+
+    export type DeleteStructureMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Delete a structure marker
+ */
+export const useDeleteStructure = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteStructure>>, TError,{propertyId: string;structureId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteStructure>>,
+        TError,
+        {propertyId: string;structureId: string},
+        TContext
+      > => {
+      return useMutation(getDeleteStructureMutationOptions(options));
+    }
 
 export const getListCommentsUrl = (propertyId: string,) => {
 

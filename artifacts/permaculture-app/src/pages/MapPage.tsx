@@ -16,9 +16,13 @@ import {
   useListComments,
   useCreateComment,
   useDeleteComment,
+  useListStructures,
+  useCreateStructure,
+  useDeleteStructure,
   getListPropertiesQueryKey,
   getGetPropertyQueryKey,
   getListCommentsQueryKey,
+  getListStructuresQueryKey,
 } from "@workspace/api-client-react";
 import { useAppStore, type Role } from "@/store/useAppStore";
 import { generateContours } from "@/lib/contourEngine";
@@ -40,6 +44,47 @@ async function searchAddress(query: string, token: string) {
   if (!res.ok) return [];
   const data = await res.json();
   return data.features ?? [];
+}
+
+const STRUCTURE_TYPES = [
+  { value: "house",      label: "House",       emoji: "🏠" },
+  { value: "shed",       label: "Shed",        emoji: "🏚" },
+  { value: "barn",       label: "Barn",        emoji: "🏘" },
+  { value: "greenhouse", label: "Greenhouse",  emoji: "🌱" },
+  { value: "tank",       label: "Water Tank",  emoji: "💧" },
+  { value: "dam",        label: "Dam",         emoji: "🌊" },
+  { value: "fence",      label: "Fence",       emoji: "🔲" },
+  { value: "garage",     label: "Garage",      emoji: "🚗" },
+  { value: "other",      label: "Other",       emoji: "📍" },
+];
+
+function structureIcon(type: string, label: string) {
+  const entry = STRUCTURE_TYPES.find((t) => t.value === type) ?? STRUCTURE_TYPES[STRUCTURE_TYPES.length - 1];
+  const maxLabel = label.length > 12 ? label.slice(0, 12) + "…" : label;
+  return L.divIcon({
+    className: "",
+    html: `
+      <div style="display:flex;flex-direction:column;align-items:center;gap:2px;pointer-events:none;">
+        <div style="
+          width:34px;height:34px;border-radius:6px;
+          background:#1e3a5f;border:2px solid #fff;
+          box-shadow:0 2px 6px rgba(0,0,0,0.55);
+          display:flex;align-items:center;justify-content:center;
+          font-size:18px;line-height:1;
+        ">${entry.emoji}</div>
+        <div style="
+          background:rgba(0,0,0,0.75);color:#fff;
+          font-size:10px;font-weight:600;
+          padding:1px 5px;border-radius:3px;
+          white-space:nowrap;max-width:90px;
+          overflow:hidden;text-overflow:ellipsis;
+          box-shadow:0 1px 3px rgba(0,0,0,0.4);
+        ">${maxLabel}</div>
+      </div>`,
+    iconSize: [34, 52],
+    iconAnchor: [17, 34],
+    popupAnchor: [0, -36],
+  });
 }
 
 function pinIcon(color: string) {
@@ -74,6 +119,8 @@ export default function MapPage() {
   const drawPolygonHandlerRef = useRef<any>(null);
   const markersRef = useRef<L.Marker[]>([]);
   const pendingPinMarkerRef = useRef<L.Marker | null>(null);
+  const structureMarkersRef = useRef<L.Marker[]>([]);
+  const pendingStructureMarkerRef = useRef<L.Marker | null>(null);
 
   const [mapboxToken, setMapboxToken] = useState("");
   const [mapLoaded, setMapLoaded] = useState(false);
@@ -81,6 +128,11 @@ export default function MapPage() {
   const [showSatellite, setShowSatellite] = useState(true);
   const [showBoundary, setShowBoundary] = useState(true);
   const [showContours, setShowContours] = useState(false);
+  const [showStructures, setShowStructures] = useState(true);
+  const [dropStructureMode, setDropStructureMode] = useState(false);
+  const [pendingStructure, setPendingStructure] = useState<{ lng: number; lat: number } | null>(null);
+  const [structureLabel, setStructureLabel] = useState("");
+  const [structureType, setStructureType] = useState("house");
   const [isGeneratingContours, setIsGeneratingContours] = useState(false);
   const [dropPinMode, setDropPinMode] = useState(false);
   const [pendingPin, setPendingPin] = useState<{ lng: number; lat: number } | null>(null);
@@ -106,11 +158,20 @@ export default function MapPage() {
       refetchInterval: 10_000,
     },
   });
+  const { data: structures = [] } = useListStructures(activePropertyId ?? "", {
+    query: {
+      enabled: !!activePropertyId,
+      queryKey: getListStructuresQueryKey(activePropertyId ?? ""),
+      refetchInterval: 15_000,
+    },
+  });
 
   const createProperty = useCreateProperty();
   const updateProperty = useUpdateProperty();
   const createComment = useCreateComment();
   const deleteComment = useDeleteComment();
+  const createStructure = useCreateStructure();
+  const deleteStructure = useDeleteStructure();
 
   // ─── FETCH TOKEN ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -344,6 +405,78 @@ export default function MapPage() {
     });
   }, [comments, activePropertyId, mapLoaded, role, handleDeleteComment]);
 
+  // ─── STRUCTURE CLICK HANDLER (Designer mode) ─────────────────────────────
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapLoaded || role !== "designer" || !dropStructureMode) return;
+
+    const container = map.getContainer();
+    container.style.cursor = "crosshair";
+
+    const handleClick = (e: L.LeafletMouseEvent) => {
+      const { lat, lng } = e.latlng;
+      if (pendingStructureMarkerRef.current) {
+        map.removeLayer(pendingStructureMarkerRef.current);
+        pendingStructureMarkerRef.current = null;
+      }
+      const marker = L.marker([lat, lng], { icon: structureIcon("other", "?") }).addTo(map);
+      pendingStructureMarkerRef.current = marker;
+      setPendingStructure({ lng, lat });
+      setDropStructureMode(false);
+    };
+
+    map.on("click", handleClick);
+    return () => {
+      map.off("click", handleClick);
+      container.style.cursor = "";
+    };
+  }, [role, dropStructureMode, mapLoaded]);
+
+  // ─── STRUCTURE MARKERS ────────────────────────────────────────────────────
+  const handleDeleteStructure = useCallback(
+    (structureId: string) => {
+      if (!activePropertyId) return;
+      deleteStructure.mutate(
+        { propertyId: activePropertyId, structureId },
+        { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListStructuresQueryKey(activePropertyId) }) },
+      );
+    },
+    [activePropertyId, deleteStructure, queryClient],
+  );
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapLoaded) return;
+
+    structureMarkersRef.current.forEach((m) => map.removeLayer(m));
+    structureMarkersRef.current = [];
+    if (pendingStructureMarkerRef.current) {
+      map.removeLayer(pendingStructureMarkerRef.current);
+      pendingStructureMarkerRef.current = null;
+    }
+
+    if (!activePropertyId || !showStructures) return;
+
+    structureMarkersRef.current = structures.map((s) => {
+      const marker = L.marker([s.lat, s.lng], { icon: structureIcon(s.structureType, s.label) });
+
+      const el = document.createElement("div");
+      el.style.cssText = "font-size:12px;padding:2px 4px;min-width:130px;max-width:200px;";
+      el.innerHTML = `
+        <div style="font-weight:700;margin-bottom:2px;color:#111;">${s.label}</div>
+        <div style="font-size:10px;color:#555;margin-bottom:4px;text-transform:capitalize;">${STRUCTURE_TYPES.find(t => t.value === s.structureType)?.label ?? s.structureType}</div>
+        ${role === "designer" ? `<button class="del-btn" style="margin-top:4px;padding:2px 8px;border:1px solid #c00;color:#c00;border-radius:3px;cursor:pointer;font-size:10px;background:none;">Delete</button>` : ""}
+      `;
+      el.querySelector(".del-btn")?.addEventListener("click", () => {
+        handleDeleteStructure(s.id);
+        marker.closePopup();
+      });
+
+      marker.bindPopup(el).addTo(map);
+      return marker;
+    });
+  }, [structures, activePropertyId, mapLoaded, role, showStructures, handleDeleteStructure]);
+
   // ─── GEOCODING SEARCH ────────────────────────────────────────────────────
   useEffect(() => {
     if (!searchQuery.trim()) {
@@ -428,6 +561,29 @@ export default function MapPage() {
           }
           setPendingPin(null);
           setPinText("");
+        },
+      },
+    );
+  }
+
+  // ─── SAVE STRUCTURE ──────────────────────────────────────────────────────
+  function handleSaveStructure() {
+    if (!activePropertyId || !pendingStructure || !structureLabel.trim()) return;
+    createStructure.mutate(
+      {
+        propertyId: activePropertyId,
+        data: { lng: pendingStructure.lng, lat: pendingStructure.lat, label: structureLabel.trim(), structureType },
+      },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getListStructuresQueryKey(activePropertyId) });
+          if (pendingStructureMarkerRef.current) {
+            mapRef.current?.removeLayer(pendingStructureMarkerRef.current);
+            pendingStructureMarkerRef.current = null;
+          }
+          setPendingStructure(null);
+          setStructureLabel("");
+          setStructureType("house");
         },
       },
     );
@@ -597,6 +753,13 @@ export default function MapPage() {
               onToggle={() => setShowContours((v) => !v)}
               disabled={!activeProperty?.boundaryGeojson}
             />
+            <LayerToggle
+              label="Structures"
+              color="#1e3a5f"
+              active={showStructures}
+              onToggle={() => setShowStructures((v) => !v)}
+              disabled={!activePropertyId}
+            />
           </div>
           {isGeneratingContours && (
             <div className="flex items-center gap-2 mt-2.5">
@@ -755,6 +918,119 @@ export default function MapPage() {
                         </button>
                       </div>
                     ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </SidebarSection>
+
+        {/* ── LAYER 4: STRUCTURES ── */}
+        <SidebarSection label="Layer 4 — Structures">
+          {!activePropertyId ? (
+            <p className="text-[11px]" style={{ color: "hsl(42, 15%, 50%)" }}>Select a property to manage structures.</p>
+          ) : role === "designer" ? (
+            <div className="space-y-2.5">
+              {pendingStructure ? (
+                <div className="space-y-2">
+                  <p className="text-[11px]" style={{ color: "hsl(42, 28%, 80%)" }}>Structure placed. Add details:</p>
+                  <select
+                    className="w-full text-xs px-2 py-1.5 rounded border outline-none"
+                    style={{ background: "hsl(103, 35%, 17%)", borderColor: "hsl(103, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
+                    value={structureType}
+                    onChange={(e) => setStructureType(e.target.value)}
+                  >
+                    {STRUCTURE_TYPES.map((t) => (
+                      <option key={t.value} value={t.value}>{t.emoji} {t.label}</option>
+                    ))}
+                  </select>
+                  <input
+                    className="w-full text-xs px-2.5 py-1.5 rounded border outline-none"
+                    style={{ background: "hsl(103, 35%, 17%)", borderColor: "hsl(103, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
+                    placeholder="Label (e.g. Main House, Old Shed...)"
+                    value={structureLabel}
+                    onChange={(e) => setStructureLabel(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleSaveStructure()}
+                    autoFocus
+                  />
+                  <div className="flex gap-1.5">
+                    <button
+                      onClick={handleSaveStructure}
+                      disabled={!structureLabel.trim() || createStructure.isPending}
+                      className="flex-1 text-xs py-1.5 rounded font-medium"
+                      style={{ background: "hsl(84, 38%, 42%)", color: "#fff", opacity: !structureLabel.trim() ? 0.5 : 1 }}
+                    >
+                      {createStructure.isPending ? "Saving..." : "Save Structure"}
+                    </button>
+                    <button
+                      onClick={() => { setPendingStructure(null); setStructureLabel(""); if (pendingStructureMarkerRef.current) { mapRef.current?.removeLayer(pendingStructureMarkerRef.current); pendingStructureMarkerRef.current = null; } }}
+                      className="px-3 text-xs py-1.5 rounded"
+                      style={{ color: "hsl(42, 15%, 55%)" }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setDropStructureMode(true)}
+                  className="w-full text-xs px-3 py-2 rounded font-medium transition-colors"
+                  style={{
+                    background: dropStructureMode ? "hsl(220, 60%, 30%)" : "hsl(103, 35%, 17%)",
+                    border: "1px solid hsl(103, 30%, 22%)",
+                    color: dropStructureMode ? "#fff" : "hsl(42, 28%, 88%)",
+                  }}
+                >
+                  {dropStructureMode ? "Click on the map to place a structure" : "Place Structure Marker"}
+                </button>
+              )}
+              {structures.length > 0 && !pendingStructure && (
+                <div>
+                  <div className="text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: "hsl(42, 15%, 50%)" }}>
+                    {structures.length} {structures.length === 1 ? "Structure" : "Structures"}
+                  </div>
+                  <div className="space-y-1 max-h-44 overflow-y-auto">
+                    {structures.map((s) => {
+                      const entry = STRUCTURE_TYPES.find((t) => t.value === s.structureType);
+                      return (
+                        <div key={s.id} className="flex items-center gap-2 px-2 py-1.5 rounded" style={{ background: "hsl(103, 35%, 14%)" }}>
+                          <span className="text-sm">{entry?.emoji ?? "📍"}</span>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-[11px] font-medium truncate" style={{ color: "hsl(42, 28%, 85%)" }}>{s.label}</div>
+                            <div className="text-[10px]" style={{ color: "hsl(42, 15%, 50%)" }}>{entry?.label ?? s.structureType}</div>
+                          </div>
+                          <button onClick={() => handleDeleteStructure(s.id)} className="text-[10px] flex-shrink-0" style={{ color: "hsl(0, 55%, 50%)" }}>
+                            ×
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div>
+              {structures.length === 0 ? (
+                <p className="text-[11px]" style={{ color: "hsl(42, 15%, 50%)" }}>No structures mapped yet.</p>
+              ) : (
+                <div>
+                  <div className="text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: "hsl(42, 15%, 50%)" }}>
+                    {structures.length} {structures.length === 1 ? "Structure" : "Structures"} — click markers on map
+                  </div>
+                  <div className="space-y-1 max-h-44 overflow-y-auto">
+                    {structures.map((s) => {
+                      const entry = STRUCTURE_TYPES.find((t) => t.value === s.structureType);
+                      return (
+                        <div key={s.id} className="flex items-center gap-2 px-2 py-1.5 rounded" style={{ background: "hsl(103, 35%, 14%)" }}>
+                          <span className="text-sm">{entry?.emoji ?? "📍"}</span>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-[11px] font-medium truncate" style={{ color: "hsl(42, 28%, 85%)" }}>{s.label}</div>
+                            <div className="text-[10px]" style={{ color: "hsl(42, 15%, 50%)" }}>{entry?.label ?? s.structureType}</div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}

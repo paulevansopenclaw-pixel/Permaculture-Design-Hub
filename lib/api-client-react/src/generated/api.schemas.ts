@@ -67,6 +67,30 @@ export interface PropertyStats {
   commentCount: number;
 }
 
+export interface Structure {
+  id: string;
+  propertyId: string;
+  lng: number;
+  lat: number;
+  label: string;
+  structureType: string;
+  createdAt: string;
+}
+
+export interface StructureInput {
+  lng: number;
+  lat: number;
+  /** @minLength 1 */
+  label: string;
+  structureType: string;
+}
+
+export interface StructureUpdate {
+  /** @minLength 1 */
+  label?: string;
+  structureType?: string;
+}
+
 export interface Comment {
   id: string;
   propertyId: string;

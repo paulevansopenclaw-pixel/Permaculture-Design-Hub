@@ -14,6 +14,8 @@ tags:
     description: Property boundary management
   - name: comments
     description: Feedback pins and comments
+  - name: structures
+    description: Property structure markers
 
 paths:
   /healthz:
@@ -141,6 +143,102 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PropertyStats"
+
+  /properties/{propertyId}/structures:
+    get:
+      operationId: listStructures
+      tags: [structures]
+      summary: List all structures for a property
+      parameters:
+        - name: propertyId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of structures
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Structure"
+
+    post:
+      operationId: createStructure
+      tags: [structures]
+      summary: Add a structure marker to a property
+      parameters:
+        - name: propertyId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StructureInput"
+      responses:
+        "201":
+          description: Created structure
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Structure"
+
+  /properties/{propertyId}/structures/{structureId}:
+    patch:
+      operationId: updateStructure
+      tags: [structures]
+      summary: Update a structure label or type
+      parameters:
+        - name: propertyId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: structureId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StructureUpdate"
+      responses:
+        "200":
+          description: Updated structure
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Structure"
+        "404":
+          description: Not found
+
+    delete:
+      operationId: deleteStructure
+      tags: [structures]
+      summary: Delete a structure marker
+      parameters:
+        - name: propertyId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: structureId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
 
   /properties/{propertyId}/comments:
     get:
@@ -272,6 +370,48 @@ components:
           type: ["number", "null"]
         commentCount:
           type: integer
+
+    Structure:
+      type: object
+      required: [id, propertyId, lng, lat, label, structureType, createdAt]
+      properties:
+        id:
+          type: string
+        propertyId:
+          type: string
+        lng:
+          type: number
+        lat:
+          type: number
+        label:
+          type: string
+        structureType:
+          type: string
+        createdAt:
+          type: string
+
+    StructureInput:
+      type: object
+      required: [lng, lat, label, structureType]
+      properties:
+        lng:
+          type: number
+        lat:
+          type: number
+        label:
+          type: string
+          minLength: 1
+        structureType:
+          type: string
+
+    StructureUpdate:
+      type: object
+      properties:
+        label:
+          type: string
+          minLength: 1
+        structureType:
+          type: string
 
     Comment:
       type: object

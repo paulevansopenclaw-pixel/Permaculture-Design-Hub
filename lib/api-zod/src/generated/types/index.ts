@@ -16,3 +16,6 @@ export * from './propertyInputBoundaryGeojson';
 export * from './propertyStats';
 export * from './propertyUpdate';
 export * from './propertyUpdateBoundaryGeojson';
+export * from './structure';
+export * from './structureInput';
+export * from './structureUpdate';

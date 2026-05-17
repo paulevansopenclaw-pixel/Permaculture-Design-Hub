@@ -122,6 +122,79 @@ export const GetPropertyStatsResponse = zod.object({
 
 
 /**
+ * @summary List all structures for a property
+ */
+export const ListStructuresParams = zod.object({
+  "propertyId": zod.coerce.string()
+})
+
+export const ListStructuresResponseItem = zod.object({
+  "id": zod.string(),
+  "propertyId": zod.string(),
+  "lng": zod.number(),
+  "lat": zod.number(),
+  "label": zod.string(),
+  "structureType": zod.string(),
+  "createdAt": zod.string()
+})
+export const ListStructuresResponse = zod.array(ListStructuresResponseItem)
+
+
+/**
+ * @summary Add a structure marker to a property
+ */
+export const CreateStructureParams = zod.object({
+  "propertyId": zod.coerce.string()
+})
+
+
+
+
+export const CreateStructureBody = zod.object({
+  "lng": zod.number(),
+  "lat": zod.number(),
+  "label": zod.string().min(1),
+  "structureType": zod.string()
+})
+
+
+/**
+ * @summary Update a structure label or type
+ */
+export const UpdateStructureParams = zod.object({
+  "propertyId": zod.coerce.string(),
+  "structureId": zod.coerce.string()
+})
+
+
+
+
+export const UpdateStructureBody = zod.object({
+  "label": zod.string().min(1).optional(),
+  "structureType": zod.string().optional()
+})
+
+export const UpdateStructureResponse = zod.object({
+  "id": zod.string(),
+  "propertyId": zod.string(),
+  "lng": zod.number(),
+  "lat": zod.number(),
+  "label": zod.string(),
+  "structureType": zod.string(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Delete a structure marker
+ */
+export const DeleteStructureParams = zod.object({
+  "propertyId": zod.coerce.string(),
+  "structureId": zod.coerce.string()
+})
+
+
+/**
  * @summary List all feedback pins for a property
  */
 export const ListCommentsParams = zod.object({
