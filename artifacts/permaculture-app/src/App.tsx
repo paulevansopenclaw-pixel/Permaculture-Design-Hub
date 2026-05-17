@@ -45,10 +45,10 @@ function AuthGate({ children }: { children: React.ReactNode }) {
       <div className="h-screen w-screen flex items-center justify-center" style={{ background: "hsl(103, 18%, 8%)" }}>
         <div className="flex flex-col items-center gap-6 max-w-sm w-full px-6">
           <div className="text-center space-y-2">
-            <div className="text-4xl mb-3">🌿</div>
-            <h1 className="text-[22px] font-bold" style={{ color: "hsl(42, 28%, 88%)" }}>PermaMap</h1>
+            <div className="text-4xl mb-3">🛡</div>
+            <h1 className="text-[22px] font-bold" style={{ color: "hsl(42, 28%, 88%)" }}>TerraGuard</h1>
             <p className="text-[13px]" style={{ color: "hsl(42, 15%, 52%)" }}>
-              Collaborative permaculture design studio
+              Land Security & Autonomous Property Architect
             </p>
           </div>
           <button

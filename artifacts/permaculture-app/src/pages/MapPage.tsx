@@ -356,8 +356,10 @@ export default function MapPage() {
   }, []);
 
   // ─── MAP INITIALIZATION ───────────────────────────────────────────────────
+  // Runs once on mount regardless of token — OSM tiles load immediately,
+  // Mapbox satellite upgrades in a separate effect once the token arrives.
   useEffect(() => {
-    if (!mapContainerRef.current || !mapboxToken || mapRef.current) return;
+    if (!mapContainerRef.current || mapRef.current) return;
 
     const map = L.map(mapContainerRef.current, {
       center: [-33, 147],
@@ -365,15 +367,10 @@ export default function MapPage() {
       zoomControl: false,
     });
 
-    // Mapbox satellite raster tiles — no WebGL required
+    // OSM fallback — always available without a token
     const tileLayer = L.tileLayer(
-      `https://api.mapbox.com/styles/v1/mapbox/satellite-streets-v12/tiles/{z}/{x}/{y}?access_token=${mapboxToken}`,
-      {
-        tileSize: 512,
-        zoomOffset: -1,
-        maxZoom: 20,
-        attribution: '© <a href="https://www.mapbox.com">Mapbox</a> © <a href="https://www.openstreetmap.org">OpenStreetMap</a>',
-      }
+      "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+      { maxZoom: 19, attribution: '© <a href="https://www.openstreetmap.org">OpenStreetMap</a> contributors' }
     ).addTo(map);
     tileLayerRef.current = tileLayer;
 
@@ -480,13 +477,30 @@ export default function MapPage() {
       drawPolygonHandlerRef.current = null;
       setMapLoaded(false);
     };
-  }, [mapboxToken]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ─── ROLE CHANGE — disable draw in client mode ─────────────────────────────
   useEffect(() => {
     if (!mapLoaded) return;
     if (role !== "designer") drawPolygonHandlerRef.current?.disable();
   }, [role, mapLoaded]);
+
+  // ─── MAPBOX SATELLITE TILE UPGRADE ───────────────────────────────────────
+  // Runs once when the Mapbox token arrives — swaps OSM fallback for satellite
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapboxToken || !mapLoaded) return;
+    const prev = tileLayerRef.current;
+    const newTile = L.tileLayer(
+      `https://api.mapbox.com/styles/v1/mapbox/satellite-streets-v12/tiles/{z}/{x}/{y}?access_token=${mapboxToken}`,
+      { tileSize: 512, zoomOffset: -1, maxZoom: 20, attribution: '© <a href="https://www.mapbox.com">Mapbox</a> © <a href="https://www.openstreetmap.org">OpenStreetMap</a>' }
+    );
+    if (prev) map.removeLayer(prev);
+    if (showSatellite) newTile.addTo(map);
+    tileLayerRef.current = newTile;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mapboxToken, mapLoaded]);
 
   // ─── SATELLITE VISIBILITY ─────────────────────────────────────────────────
   useEffect(() => {
@@ -2036,8 +2050,8 @@ export default function MapPage() {
         <div className="px-4 py-3 border-b" style={{ borderColor: "hsl(103, 35%, 18%)" }}>
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-sm font-semibold tracking-tight" style={{ color: "hsl(42, 28%, 90%)" }}>PermaMap</h1>
-              <p className="text-[10px] mt-0.5" style={{ color: "hsl(42, 15%, 55%)" }}>Permaculture Design Studio</p>
+              <h1 className="text-sm font-semibold tracking-tight" style={{ color: "hsl(42, 28%, 90%)" }}>TerraGuard</h1>
+              <p className="text-[10px] mt-0.5" style={{ color: "hsl(42, 15%, 55%)" }}>Land Security Platform</p>
             </div>
             <button
               onClick={() => navigate("/properties")}
@@ -2063,7 +2077,7 @@ export default function MapPage() {
                   color: role === r ? "#fff" : "hsl(42, 15%, 55%)",
                 }}
               >
-                {r === "designer" ? "Designer" : "Client"} Mode
+                {r === "designer" ? "Engineer" : "Client"} Mode
               </button>
             ))}
           </div>

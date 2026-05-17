@@ -131,9 +131,9 @@ export default function PropertiesPage() {
               </svg>
             </div>
             <div className="text-center">
-              <h3 className="font-medium text-foreground">No properties yet</h3>
+              <h3 className="font-medium text-foreground">No sites yet</h3>
               <p className="text-sm text-muted-foreground mt-1">
-                Create your first property to start designing
+                Add your first site to begin your autonomous property design
               </p>
             </div>
             <Button onClick={() => setShowCreate(true)}>Create Property</Button>
