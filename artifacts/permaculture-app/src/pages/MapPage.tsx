@@ -12,6 +12,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   useListProperties,
   useGetProperty,
+  useGetClientBrief,
   useCreateProperty,
   useUpdateProperty,
   useListComments,
@@ -26,6 +27,7 @@ import {
   useDeleteSector,
   getListPropertiesQueryKey,
   getGetPropertyQueryKey,
+  getGetClientBriefQueryKey,
   getListCommentsQueryKey,
   getListStructuresQueryKey,
   getListSectorsQueryKey,
@@ -265,6 +267,9 @@ export default function MapPage() {
     activePropertyId ?? "",
     { query: { enabled: !!activePropertyId, queryKey: getGetPropertyQueryKey(activePropertyId ?? "") } },
   );
+  const { data: clientBrief } = useGetClientBrief(activePropertyId ?? "", {
+    query: { enabled: !!activePropertyId, queryKey: getGetClientBriefQueryKey(activePropertyId ?? "") },
+  });
   const { data: comments = [] } = useListComments(activePropertyId ?? "", {
     query: {
       enabled: !!activePropertyId,
@@ -2042,6 +2047,85 @@ export default function MapPage() {
           )}
         </SidebarSection>
 
+        {/* ── PROPERTY DETAILS ── */}
+        {activePropertyId && clientBrief && (
+          <SidebarSection label="Property Details">
+            <div className="space-y-3">
+
+              {/* Climate & Rainfall */}
+              {(clientBrief.climateZone || clientBrief.annualRainfallMm != null) && (
+                <DetailGroup heading="Climate & Rainfall">
+                  {clientBrief.climateZone && <DetailRow icon="🌍" label="Zone" value={clientBrief.climateZone} />}
+                  {clientBrief.annualRainfallMm != null && <DetailRow icon="🌧" label="Rainfall" value={`${clientBrief.annualRainfallMm.toLocaleString()} mm/yr`} />}
+                  {clientBrief.annualHumidityPct != null && <DetailRow icon="💧" label="Humidity" value={`${clientBrief.annualHumidityPct}%`} />}
+                </DetailGroup>
+              )}
+
+              {/* Temperature */}
+              {(clientBrief.meanAnnualTempC != null || clientBrief.frostDaysPerYear != null) && (
+                <DetailGroup heading="Temperature">
+                  {clientBrief.meanAnnualTempC != null && <DetailRow icon="🌡" label="Mean" value={`${clientBrief.meanAnnualTempC} °C`} />}
+                  {clientBrief.summerMaxTempC != null && <DetailRow icon="🔆" label="Summer max" value={`${clientBrief.summerMaxTempC} °C`} />}
+                  {clientBrief.winterMinTempC != null && <DetailRow icon="❄️" label="Winter min" value={`${clientBrief.winterMinTempC} °C`} />}
+                  {clientBrief.frostDaysPerYear != null && <DetailRow icon="🧊" label="Frost days" value={`${clientBrief.frostDaysPerYear} days/yr`} />}
+                </DetailGroup>
+              )}
+
+              {/* Solar & Wind */}
+              {(clientBrief.solarIrradianceKwhM2 != null || clientBrief.prevailingWindDir) && (
+                <DetailGroup heading="Solar & Wind">
+                  {clientBrief.solarIrradianceKwhM2 != null && <DetailRow icon="☀️" label="Irradiance" value={`${clientBrief.solarIrradianceKwhM2.toLocaleString()} kWh/m²/yr`} />}
+                  {clientBrief.prevailingWindDir && <DetailRow icon="🌬" label="Wind dir." value={clientBrief.prevailingWindDir} />}
+                  {clientBrief.meanWindSpeedMs != null && <DetailRow icon="💨" label="Wind speed" value={`${clientBrief.meanWindSpeedMs} m/s`} />}
+                </DetailGroup>
+              )}
+
+              {/* Elevation */}
+              {clientBrief.elevationM != null && (
+                <DetailGroup heading="Elevation">
+                  <DetailRow icon="🏔" label="ASL" value={`${clientBrief.elevationM} m`} />
+                </DetailGroup>
+              )}
+
+              {/* Soil */}
+              {(clientBrief.soilTextureClass || clientBrief.soilClay != null || clientBrief.soilPH != null) && (
+                <DetailGroup heading="Soil (0–5 cm)">
+                  {clientBrief.soilTextureClass && <DetailRow icon="🪱" label="Texture" value={clientBrief.soilTextureClass} />}
+                  {(clientBrief.soilClay != null || clientBrief.soilSand != null) && (
+                    <DetailRow
+                      icon="⚗️"
+                      label="Composition"
+                      value={[
+                        clientBrief.soilClay != null ? `Clay ${clientBrief.soilClay}%` : null,
+                        clientBrief.soilSand != null ? `Sand ${clientBrief.soilSand}%` : null,
+                        clientBrief.soilSilt != null ? `Silt ${clientBrief.soilSilt}%` : null,
+                      ].filter(Boolean).join(" · ")}
+                    />
+                  )}
+                  {clientBrief.soilPH != null && <DetailRow icon="🧪" label="pH" value={String(clientBrief.soilPH)} />}
+                  {clientBrief.soilOrganicCarbonGkg != null && <DetailRow icon="🌿" label="Org. carbon" value={`${clientBrief.soilOrganicCarbonGkg} g/kg`} />}
+                </DetailGroup>
+              )}
+
+              {/* Goals */}
+              {(clientBrief.primaryGoal || clientBrief.maintenanceCapacity) && (
+                <DetailGroup heading="Design Goals">
+                  {clientBrief.primaryGoal && <DetailRow icon="🎯" label="Primary goal" value={clientBrief.primaryGoal} />}
+                  {clientBrief.maintenanceCapacity && <DetailRow icon="🛠" label="Maintenance" value={clientBrief.maintenanceCapacity} />}
+                </DetailGroup>
+              )}
+
+              <button
+                onClick={() => setShowOnboarding(true)}
+                className="w-full py-1.5 rounded text-[11px] font-medium transition-all mt-1"
+                style={{ background: "hsl(103, 22%, 14%)", color: "hsl(103, 30%, 55%)", border: "1px solid hsl(103, 22%, 22%)" }}
+              >
+                Edit Survey →
+              </button>
+            </div>
+          </SidebarSection>
+        )}
+
         {/* ── LAYER 1: BOUNDARY ── */}
         <SidebarSection label="Layer 1 — Property Boundary">
           {!activePropertyId ? (
@@ -3008,6 +3092,29 @@ export default function MapPage() {
 }
 
 // ─── SUBCOMPONENTS ────────────────────────────────────────────────────────────
+
+function DetailGroup({ heading, children }: { heading: string; children: ReactNode }) {
+  return (
+    <div>
+      <div className="text-[9px] uppercase tracking-widest font-semibold mb-1 px-0.5" style={{ color: "hsl(103, 35%, 40%)" }}>
+        {heading}
+      </div>
+      <div className="rounded-lg overflow-hidden" style={{ border: "1px solid hsl(103, 22%, 18%)" }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function DetailRow({ icon, label, value }: { icon: string; label: string; value: string }) {
+  return (
+    <div className="flex items-center gap-2 px-2.5 py-1.5 text-[11px]" style={{ background: "hsl(103, 22%, 10%)", borderBottom: "1px solid hsl(103, 22%, 16%)" }}>
+      <span className="text-[13px] shrink-0">{icon}</span>
+      <span className="shrink-0" style={{ color: "hsl(42, 15%, 50%)", minWidth: "4.5rem" }}>{label}</span>
+      <span className="font-medium truncate" style={{ color: "hsl(42, 28%, 86%)" }}>{value}</span>
+    </div>
+  );
+}
 
 function SidebarSection({ label, children, defaultOpen = false }: { label: string; children: ReactNode; defaultOpen?: boolean }) {
   const [open, setOpen] = useState(defaultOpen);
