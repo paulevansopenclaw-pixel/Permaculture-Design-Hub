@@ -177,15 +177,12 @@ const PATHWAY_TYPES = [
 
 // ─── ZONE ANALYSIS CONSTANTS ──────────────────────────────────────────────────
 const ZONE_STYLES = [
-  { zone: 1, label: "Zone 1 — Daily Use",         color: "#CA8A04", fillColor: "#FDE68A", fillOpacity: 0.38, hint: "Kitchen garden, herbs — most visited" },
-  { zone: 2, label: "Zone 2 — Semi-Daily",         color: "#16A34A", fillColor: "#86EFAC", fillOpacity: 0.35, hint: "Orchard, small livestock, compost" },
-  { zone: 3, label: "Zone 3 — Farm / Pasture",     color: "#15803D", fillColor: "#4ADE80", fillOpacity: 0.30, hint: "Crops, larger livestock, fuel plants" },
-  { zone: 4, label: "Zone 4 — Semi-Wild / Timber", color: "#92400E", fillColor: "#D4A27A", fillOpacity: 0.28, hint: "Timber, foraging, managed forest" },
-  { zone: 5, label: "Zone 5 — Wilderness",         color: "#475569", fillColor: "#94A3B8", fillOpacity: 0.26, hint: "No intervention — wildlife sanctuary" },
-] as const;
-
-// Default radii (km) for auto-generated concentric zones from Zone 0
-const DEFAULT_ZONE_RADII_KM = [0.05, 0.14, 0.35, 0.75, 1.40];
+  { zone: 1, label: "Zone 1 — Daily Use",         drawLabel: "Draw Zone 1 (Daily)",            color: "#CA8A04", fillColor: "#FDE68A", fillOpacity: 0.35, hint: "Kitchen garden, herbs — most visited" },
+  { zone: 2, label: "Zone 2 — Semi-Daily",         drawLabel: "Draw Zone 2 (Semi-Daily)",        color: "#16A34A", fillColor: "#86EFAC", fillOpacity: 0.35, hint: "Orchard, small livestock, compost" },
+  { zone: 3, label: "Zone 3 — Farm / Pasture",     drawLabel: "Draw Zone 3 (Pasture/Crops)",     color: "#15803D", fillColor: "#4ADE80", fillOpacity: 0.30, hint: "Crops, larger livestock, fuel plants" },
+  { zone: 4, label: "Zone 4 — Semi-Wild / Timber", drawLabel: "Draw Zone 4 (Woodlot/Semi-Wild)", color: "#92400E", fillColor: "#D4A27A", fillOpacity: 0.30, hint: "Timber, foraging, managed forest" },
+  { zone: 5, label: "Zone 5 — Wilderness",         drawLabel: "Draw Zone 5 (Wild Nature)",       color: "#475569", fillColor: "#94A3B8", fillOpacity: 0.30, hint: "No intervention — wildlife sanctuary" },
+];
 
 // Structure types that are high-maintenance and trigger a zone audit warning in Zone 4+
 const HIGH_MAINTENANCE_TYPES = new Set([
@@ -288,6 +285,11 @@ export default function MapPage() {
   const pathwayLayersRef = useRef<L.GeoJSON[]>([]);
   const pendingPathwayPreviewRef = useRef<L.GeoJSON | null>(null);
   const zoneLayersRef = useRef<L.GeoJSON[]>([]);
+  const zonePolygonHandlersRef = useRef<Record<number, any>>({});
+  const zoneDrawActiveRef = useRef<number | null>(null);
+  const zonesEditGroupRef = useRef<L.FeatureGroup | null>(null);
+  const zoneEditHandlerRef = useRef<any>(null);
+  const zoneLayerToIdRef = useRef<Map<number, { id: string; zoneNumber: number }>>(new Map());
 
   const [mapboxToken, setMapboxToken] = useState("");
   const [mapLoaded, setMapLoaded] = useState(false);
@@ -299,6 +301,10 @@ export default function MapPage() {
   const [drawPathwayMode, setDrawPathwayMode] = useState(false);
   const [showZones, setShowZones] = useState(true);
   const [zoneAuditWarning, setZoneAuditWarning] = useState<string | null>(null);
+  const [activeZoneDraw, setActiveZoneDraw] = useState<number | null>(null);
+  const [editZoneMode, setEditZoneMode] = useState(false);
+  const [pendingZoneGeom, setPendingZoneGeom] = useState<{ zoneNumber: number; geojson: string } | null>(null);
+  const [pendingZoneEdits, setPendingZoneEdits] = useState<Array<{ id: string; zoneNumber: number; geojson: string }> | null>(null);
   const [pendingPathway, setPendingPathway] = useState<GeoJSON.LineString | null>(null);
   const [pathwayLabel, setPathwayLabel] = useState("");
   const [pathwayType, setPathwayType] = useState("footpath");
@@ -401,6 +407,8 @@ export default function MapPage() {
       refetchInterval: 30_000,
     },
   });
+  const zonesRef = useRef(zones);
+  zonesRef.current = zones;
   const bulkReplaceZones = useBulkReplaceZones();
   const deleteZone = useDeleteZone();
 
@@ -454,6 +462,21 @@ export default function MapPage() {
     });
     buildingPolygonHandlerRef.current = buildingPolygonHandler;
 
+    // Zone drawing handlers — one per zone, each with its own colour
+    const zoneHandlers: Record<number, any> = {};
+    ZONE_STYLES.forEach((s) => {
+      zoneHandlers[s.zone] = new PolygonHandler(map, {
+        shapeOptions: { color: s.color, weight: 2, opacity: 0.85, fillColor: s.fillColor, fillOpacity: s.fillOpacity },
+        allowIntersection: false,
+      });
+    });
+    zonePolygonHandlersRef.current = zoneHandlers;
+
+    // Feature group for zone vertex-editing
+    const zonesEditGroup = new L.FeatureGroup();
+    map.addLayer(zonesEditGroup);
+    zonesEditGroupRef.current = zonesEditGroup;
+
     // Pathway polyline handler
     const PolylineHandler = (L as any).Draw.Polyline;
     const pathwayPolylineHandler = new PolylineHandler(map, {
@@ -477,6 +500,11 @@ export default function MapPage() {
           style: () => ({ color: "#000", weight: 2.5, opacity: 1, fillColor: "#000", fillOpacity: 0.06 }),
         }).addTo(map);
         pendingFootprintPreviewRef.current = previewLayer;
+      } else if (zoneDrawActiveRef.current !== null) {
+        const zoneNumber = zoneDrawActiveRef.current;
+        zoneDrawActiveRef.current = null;
+        setActiveZoneDraw(null);
+        setPendingZoneGeom({ zoneNumber, geojson: JSON.stringify(feature.geometry as GeoJSON.Polygon) });
       } else if (pathwayDrawActiveRef.current) {
         pathwayDrawActiveRef.current = false;
         const geometry = feature.geometry as GeoJSON.LineString;
@@ -491,6 +519,17 @@ export default function MapPage() {
         setPendingAreaHa(ha);
         setPendingAreaAc(ha * 2.47105);
       }
+    });
+
+    map.on((L as any).Draw.Event.EDITED, (e: any) => {
+      const updates: Array<{ id: string; zoneNumber: number; geojson: string }> = [];
+      e.layers.eachLayer((layer: any) => {
+        const data = zoneLayerToIdRef.current.get(layer._leaflet_id);
+        if (data) {
+          updates.push({ id: data.id, zoneNumber: data.zoneNumber, geojson: JSON.stringify(layer.toGeoJSON().geometry) });
+        }
+      });
+      if (updates.length > 0) setPendingZoneEdits(updates);
     });
 
     mapRef.current = map;
@@ -826,7 +865,7 @@ export default function MapPage() {
     if (!map || !mapLoaded) return;
     zoneLayersRef.current.forEach((l) => map.removeLayer(l));
     zoneLayersRef.current = [];
-    if (!showZones || !activePropertyId || zones.length === 0) return;
+    if (!showZones || !activePropertyId || zones.length === 0 || editZoneMode) return;
     // Render largest zone first so smaller ones appear on top
     const sorted = [...zones].sort((a, b) => b.zoneNumber - a.zoneNumber);
     sorted.forEach((z) => {
@@ -860,7 +899,108 @@ export default function MapPage() {
       zoneLayersRef.current.push(layer);
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [zones, showZones, activePropertyId, mapLoaded, role]);
+  }, [zones, showZones, activePropertyId, mapLoaded, role, editZoneMode]);
+
+  // ─── ZONE DRAW MODE (activate/deactivate handler per button) ────────────
+  useEffect(() => {
+    const handlers = zonePolygonHandlersRef.current;
+    if (!mapLoaded) return;
+    Object.values(handlers).forEach((h: any) => h.disable());
+    if (activeZoneDraw !== null) {
+      zoneDrawActiveRef.current = activeZoneDraw;
+      handlers[activeZoneDraw]?.enable();
+    } else {
+      zoneDrawActiveRef.current = null;
+    }
+    return () => {
+      Object.values(handlers).forEach((h: any) => h.disable());
+      zoneDrawActiveRef.current = null;
+    };
+  }, [activeZoneDraw, mapLoaded]);
+
+  // ─── ZONE EDIT MODE (vertex-drag editing) ────────────────────────────────
+  useEffect(() => {
+    const map = mapRef.current;
+    const editGroup = zonesEditGroupRef.current;
+    if (!map || !mapLoaded || !editGroup) return;
+    if (!editZoneMode) {
+      if (zoneEditHandlerRef.current) {
+        zoneEditHandlerRef.current.disable();
+        zoneEditHandlerRef.current = null;
+      }
+      editGroup.clearLayers();
+      zoneLayerToIdRef.current.clear();
+      return;
+    }
+    editGroup.clearLayers();
+    zoneLayerToIdRef.current.clear();
+    zonesRef.current.forEach((z) => {
+      const style = ZONE_STYLES.find((s) => s.zone === z.zoneNumber);
+      if (!style) return;
+      let geo: any;
+      try { geo = JSON.parse(z.zoneGeojson); } catch { return; }
+      const geoLayer = L.geoJSON({ type: "Feature", geometry: geo, properties: {} } as any, {
+        style: () => ({ color: style.color, weight: 2.5, opacity: 0.9, fillColor: style.fillColor, fillOpacity: style.fillOpacity }),
+      });
+      let polyLayer: L.Layer | null = null;
+      geoLayer.eachLayer((l) => { polyLayer = l; });
+      if (polyLayer) {
+        editGroup.addLayer(polyLayer);
+        zoneLayerToIdRef.current.set((polyLayer as any)._leaflet_id, { id: z.id, zoneNumber: z.zoneNumber });
+      }
+    });
+    const EditHandler = (L as any).EditToolbar.Edit;
+    const handler = new EditHandler(map, { featureGroup: editGroup });
+    handler.enable();
+    zoneEditHandlerRef.current = handler;
+    return () => {
+      if (zoneEditHandlerRef.current) {
+        zoneEditHandlerRef.current.disable();
+        zoneEditHandlerRef.current = null;
+      }
+      editGroup.clearLayers();
+      zoneLayerToIdRef.current.clear();
+    };
+  }, [editZoneMode, mapLoaded]);
+
+  // ─── SAVE NEW FREE-FORM ZONE ──────────────────────────────────────────────
+  useEffect(() => {
+    if (!pendingZoneGeom || !activePropertyId) return;
+    const newZones = [
+      ...zonesRef.current.map((z) => ({ zoneNumber: z.zoneNumber, zoneGeojson: z.zoneGeojson })),
+      { zoneNumber: pendingZoneGeom.zoneNumber, zoneGeojson: pendingZoneGeom.geojson },
+    ];
+    bulkReplaceZones.mutate(
+      { propertyId: activePropertyId, data: newZones },
+      { onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getListZonesQueryKey(activePropertyId) });
+        setPendingZoneGeom(null);
+      } },
+    );
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingZoneGeom, activePropertyId]);
+
+  // ─── SAVE EDITED ZONE GEOMETRIES ─────────────────────────────────────────
+  useEffect(() => {
+    if (!pendingZoneEdits || !activePropertyId) return;
+    const editMap = new Map(pendingZoneEdits.map((e) => [e.id, e]));
+    const merged = zonesRef.current.map((z) => {
+      const edit = editMap.get(z.id);
+      return edit
+        ? { zoneNumber: edit.zoneNumber, zoneGeojson: edit.geojson }
+        : { zoneNumber: z.zoneNumber, zoneGeojson: z.zoneGeojson };
+    });
+    bulkReplaceZones.mutate(
+      { propertyId: activePropertyId, data: merged },
+      { onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getListZonesQueryKey(activePropertyId) });
+        setPendingZoneEdits(null);
+        setEditZoneMode(false);
+        if (zoneEditHandlerRef.current) { zoneEditHandlerRef.current.disable(); zoneEditHandlerRef.current = null; }
+      } },
+    );
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingZoneEdits, activePropertyId]);
 
   // ─── BUILDING OUTLINE POLYGONS (saved) ───────────────────────────────────
   useEffect(() => {
@@ -1442,30 +1582,6 @@ export default function MapPage() {
   }
 
   // ─── ZONE HANDLERS ────────────────────────────────────────────────────────
-  function handleGenerateZones() {
-    if (!activePropertyId || !sectorCenter) return;
-    const boundary = activeProperty?.boundaryGeojson as unknown as GeoJSON.Polygon | null;
-    const zoneInputs = DEFAULT_ZONE_RADII_KM.map((r, i) => {
-      const circle = turf.circle(
-        [sectorCenter.lng, sectorCenter.lat], r,
-        { units: "kilometers", steps: 64 },
-      );
-      let geometry: GeoJSON.Geometry = circle.geometry;
-      if (boundary) {
-        try {
-          const boundaryFeature = turf.feature(boundary);
-          const clipped = turf.intersect(turf.featureCollection([circle, boundaryFeature]));
-          if (clipped) geometry = clipped.geometry;
-        } catch { /* fall back to full circle */ }
-      }
-      return { zoneNumber: i + 1, zoneGeojson: JSON.stringify(geometry) };
-    });
-    bulkReplaceZones.mutate(
-      { propertyId: activePropertyId, data: zoneInputs },
-      { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListZonesQueryKey(activePropertyId) }) },
-    );
-  }
-
   function handleClearZones() {
     if (!activePropertyId) return;
     bulkReplaceZones.mutate(
@@ -2534,43 +2650,85 @@ export default function MapPage() {
                 </button>
               </div>
 
-              {/* Zone legend */}
-              <div className="space-y-1">
-                {ZONE_STYLES.map((s) => (
-                  <div key={s.zone} className="flex items-center gap-2">
-                    <span style={{
-                      display: "inline-block",
-                      width: 14,
-                      height: 14,
-                      background: s.fillColor,
-                      border: `1.5px solid ${s.color}`,
-                      borderRadius: 2,
-                      flexShrink: 0,
-                      opacity: 0.85,
-                    }} />
-                    <span className="text-[10px]" style={{ color: "hsl(42, 15%, 60%)" }}>{s.label}</span>
-                  </div>
-                ))}
-              </div>
-
               {role === "designer" && (
                 <>
-                  {/* Generate default zones — requires Zone 0 (sector center) */}
-                  <button
-                    onClick={handleGenerateZones}
-                    disabled={!sectorCenter || bulkReplaceZones.isPending}
-                    title={!sectorCenter ? "Place Zone 0 center in Layer 3 first" : ""}
-                    className="w-full text-xs px-3 py-2 rounded font-medium"
-                    style={{
-                      background: sectorCenter ? "hsl(84, 38%, 30%)" : "hsl(103, 25%, 18%)",
-                      border: "1px solid hsl(103, 30%, 22%)",
-                      color: sectorCenter ? "hsl(84, 55%, 80%)" : "hsl(42, 15%, 40%)",
-                      cursor: sectorCenter ? "pointer" : "not-allowed",
-                    }}
-                  >
-                    {bulkReplaceZones.isPending ? "Generating…" : !sectorCenter ? "⚠ Place Zone 0 center first" : "Generate Default Zones"}
-                  </button>
+                  {/* 5 free-form draw buttons */}
+                  <div className="space-y-1.5">
+                    {ZONE_STYLES.map((s) => {
+                      const isActive = activeZoneDraw === s.zone;
+                      return (
+                        <button
+                          key={s.zone}
+                          onClick={() => {
+                            setEditZoneMode(false);
+                            setActiveZoneDraw(isActive ? null : s.zone);
+                          }}
+                          className="w-full text-left text-[11px] px-2.5 py-2 rounded flex items-center gap-2.5"
+                          style={{
+                            background: isActive ? "hsl(103,35%,22%)" : "hsl(103,35%,15%)",
+                            border: `1.5px solid ${isActive ? s.color : "hsl(103,30%,22%)"}`,
+                            color: isActive ? s.fillColor : "hsl(42,20%,70%)",
+                            cursor: "pointer",
+                          }}
+                        >
+                          <span style={{
+                            display: "inline-block", width: 10, height: 10,
+                            background: s.fillColor, border: `1.5px solid ${s.color}`,
+                            borderRadius: 2, flexShrink: 0,
+                          }} />
+                          {isActive ? "Drawing… double-click to finish" : s.drawLabel}
+                        </button>
+                      );
+                    })}
+                  </div>
 
+                  {activeZoneDraw !== null && (
+                    <p className="text-[9px]" style={{ color: "hsl(42,15%,50%)" }}>
+                      Click to place vertices. Double-click or click the first point to close.
+                    </p>
+                  )}
+
+                  {/* Edit Zone Layout */}
+                  {zones.length > 0 && !editZoneMode && (
+                    <button
+                      onClick={() => { setActiveZoneDraw(null); setEditZoneMode(true); }}
+                      className="w-full text-[11px] px-3 py-1.5 rounded"
+                      style={{ background: "hsl(220,40%,22%)", border: "1px solid hsl(220,40%,32%)", color: "hsl(210,70%,75%)" }}
+                    >
+                      ✎ Edit Zone Layout
+                    </button>
+                  )}
+                  {editZoneMode && (
+                    <div className="space-y-1.5">
+                      <p className="text-[9px]" style={{ color: "hsl(42,15%,50%)" }}>
+                        Click a zone polygon, then drag its corner handles to reshape it.
+                      </p>
+                      <div className="flex gap-1.5">
+                        <button
+                          onClick={() => zoneEditHandlerRef.current?.save()}
+                          disabled={bulkReplaceZones.isPending}
+                          className="flex-1 text-[11px] py-1.5 rounded font-medium"
+                          style={{ background: "hsl(84,38%,30%)", color: "hsl(84,55%,80%)" }}
+                        >
+                          {bulkReplaceZones.isPending ? "Saving…" : "Save Edits"}
+                        </button>
+                        <button
+                          onClick={() => {
+                            zoneEditHandlerRef.current?.revertLayers();
+                            zoneEditHandlerRef.current?.disable();
+                            zoneEditHandlerRef.current = null;
+                            setEditZoneMode(false);
+                          }}
+                          className="px-3 text-[11px] py-1.5 rounded"
+                          style={{ color: "hsl(42,15%,55%)", border: "1px solid hsl(103,30%,22%)" }}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Saved zone list */}
                   {zones.length > 0 && (
                     <>
                       <div className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "hsl(42, 15%, 50%)" }}>
@@ -2621,10 +2779,6 @@ export default function MapPage() {
                   )}
                 </div>
               )}
-
-              <p className="text-[10px]" style={{ color: "hsl(42, 15%, 40%)" }}>
-                Zones radiate from Zone 0 (house). Generate using the Zone 0 center placed in Layer 3.
-              </p>
             </div>
           )}
         </SidebarSection>
