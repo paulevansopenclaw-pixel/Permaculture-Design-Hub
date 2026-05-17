@@ -68,6 +68,54 @@ const SECTOR_TYPES = [
   { value: "winter_solar", label: "Winter Solar Arc",     emoji: "☀️",  color: "rgba(249,115,22,0.3)",  border: "#f97316" },
 ];
 
+/**
+ * Compute the sun's arc across the sky for a given solar declination.
+ * Returns an ordered array of [lng, lat] points tracing the sun's path
+ * from sunrise to sunset at the given radius from the center.
+ *
+ * @param declinationDeg  Solar declination in degrees:
+ *   +23.45 = summer solstice, 0 = equinox, -23.45 = winter solstice
+ */
+function computeSolarArc(
+  centerLng: number,
+  centerLat: number,
+  radiusKm: number,
+  declinationDeg: number,
+): [number, number][] {
+  const φ = (centerLat * Math.PI) / 180;
+  const δ = (declinationDeg * Math.PI) / 180;
+  // Hour angle at sunrise/sunset: cos(H₀) = −tan(φ)·tan(δ)
+  const cosH0 = -Math.tan(φ) * Math.tan(δ);
+  if (cosH0 > 1) return []; // sun never rises at this declination/latitude
+  const H0 = cosH0 < -1 ? Math.PI : Math.acos(cosH0);
+  if (H0 < 0.01) return []; // degenerate (near-polar momentary sunrise)
+  const center = turf.point([centerLng, centerLat]);
+  const points: [number, number][] = [];
+  const STEPS = 120;
+  for (let i = 0; i <= STEPS; i++) {
+    const H = -H0 + (2 * H0 * i) / STEPS; // hour angle: −H₀ (sunrise) → +H₀ (sunset)
+    const sinAlt =
+      Math.sin(φ) * Math.sin(δ) + Math.cos(φ) * Math.cos(δ) * Math.cos(H);
+    if (sinAlt < -0.01) continue; // below horizon
+    const cosAlt = Math.sqrt(Math.max(0, 1 - sinAlt * sinAlt));
+    const rawCosAz =
+      cosAlt < 1e-9
+        ? 0
+        : (Math.sin(δ) - sinAlt * Math.sin(φ)) / (cosAlt * Math.cos(φ));
+    let azDeg = Math.acos(Math.max(-1, Math.min(1, rawCosAz))) * (180 / Math.PI);
+    if (H > 0) azDeg = 360 - azDeg; // afternoon: mirror east→west
+    const pt = turf.destination(center, radiusKm, azDeg, { units: "kilometers" });
+    points.push(pt.geometry.coordinates as [number, number]);
+  }
+  return points;
+}
+
+const SOLAR_ARCS = [
+  { key: "summer", label: "Summer Solstice", declination:  23.45, color: "#FBBF24", dash: undefined          },
+  { key: "equinox", label: "Equinox",        declination:   0,    color: "#FB923C", dash: "8 5"              },
+  { key: "winter", label: "Winter Solstice", declination: -23.45, color: "#EF4444", dash: "4 6"              },
+];
+
 function sectorWedge(centerLng: number, centerLat: number, radiusKm: number, startAngle: number, endAngle: number) {
   try {
     const center = turf.point([centerLng, centerLat]);
@@ -164,6 +212,7 @@ export default function MapPage() {
   const sectorLayersRef = useRef<Map<string, L.GeoJSON>>(new Map());
   const sectorPreviewLayerRef = useRef<L.GeoJSON | null>(null);
   const sectorCenterMarkerRef = useRef<L.Marker | null>(null);
+  const solarArcLayersRef = useRef<L.Polyline[]>([]);
   const contourDataRef = useRef<GeoJSON.FeatureCollection | null>(null);
   const damMarkerRef = useRef<L.Marker | null>(null);
   const longestSwaleLayersRef = useRef<L.GeoJSON[]>([]);
@@ -197,6 +246,7 @@ export default function MapPage() {
   const [structureLabel, setStructureLabel] = useState("");
   const [structureType, setStructureType] = useState("house");
   const [showSectors, setShowSectors] = useState(true);
+  const [showSolarArcs, setShowSolarArcs] = useState(true);
   const [dropSectorCenterMode, setDropSectorCenterMode] = useState(false);
   const [sectorCenter, setSectorCenter] = useState<{ lng: number; lat: number } | null>(null);
   const [sectorDraft, setSectorDraft] = useState({ sectorType: "custom_view", radiusKm: 0.5, startAngle: 0, endAngle: 90, label: "" });
@@ -751,6 +801,28 @@ export default function MapPage() {
     sectorPreviewLayerRef.current = layer;
     return () => { if (sectorPreviewLayerRef.current) { map.removeLayer(sectorPreviewLayerRef.current); sectorPreviewLayerRef.current = null; } };
   }, [sectorCenter, sectorDraft, mapLoaded]);
+
+  // ─── SOLAR ARCS (Summer Solstice / Equinox / Winter Solstice) ───────────
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapLoaded) return;
+    solarArcLayersRef.current.forEach((l) => map.removeLayer(l));
+    solarArcLayersRef.current = [];
+    if (!sectorCenter || !showSolarArcs) return;
+    const { radiusKm } = sectorDraft;
+    SOLAR_ARCS.forEach(({ declination, color, dash }) => {
+      const pts = computeSolarArc(sectorCenter.lng, sectorCenter.lat, radiusKm, declination);
+      if (pts.length < 2) return;
+      const latlngs = pts.map(([lng, lat]) => [lat, lng] as [number, number]);
+      const line = L.polyline(latlngs, {
+        color,
+        weight: 2,
+        opacity: 0.9,
+        dashArray: dash,
+      }).addTo(map);
+      solarArcLayersRef.current.push(line);
+    });
+  }, [sectorCenter, sectorDraft.radiusKm, showSolarArcs, mapLoaded]);
 
   // ─── SAVED SECTORS RENDERING ──────────────────────────────────────────────
   const handleDeleteSector = useCallback(
@@ -1341,6 +1413,13 @@ export default function MapPage() {
               disabled={!activePropertyId}
             />
             <LayerToggle
+              label="Solar Arcs"
+              color="#FBBF24"
+              active={showSolarArcs}
+              onToggle={() => setShowSolarArcs((v) => !v)}
+              disabled={!activePropertyId || !sectorCenter}
+            />
+            <LayerToggle
               label="Water Analysis"
               color="#0ea5e9"
               active={showWater}
@@ -1435,6 +1514,7 @@ export default function MapPage() {
 
         {/* ── LAYER 3: SECTOR ANALYSIS ── */}
         <SidebarSection label="Layer 3 — Sector Analysis">
+          <>
           {!activePropertyId ? (
             <p className="text-[11px]" style={{ color: "hsl(42, 15%, 50%)" }}>Select a property to add sector overlays.</p>
           ) : role !== "designer" ? (
@@ -1581,6 +1661,45 @@ export default function MapPage() {
               )}
             </div>
           )}
+
+          {/* ── Solar Arcs legend + radius — shown whenever sector center is placed ── */}
+          {sectorCenter && activePropertyId && (
+            <div className="mt-2.5 pt-2.5 space-y-2" style={{ borderTop: "1px solid hsl(103, 30%, 20%)" }}>
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "hsl(42, 28%, 65%)" }}>
+                  Solar Arcs
+                </span>
+                <button
+                  onClick={() => setShowSolarArcs((v) => !v)}
+                  className="text-[10px] px-2 py-0.5 rounded"
+                  style={{
+                    background: showSolarArcs ? "hsl(43, 75%, 30%)" : "hsl(103, 35%, 17%)",
+                    border: "1px solid hsl(103, 30%, 26%)",
+                    color: showSolarArcs ? "#FBBF24" : "hsl(42, 15%, 55%)",
+                  }}
+                >
+                  {showSolarArcs ? "Visible" : "Hidden"}
+                </button>
+              </div>
+              {SOLAR_ARCS.map(({ key, label, color, dash }) => (
+                <div key={key} className="flex items-center gap-2">
+                  <svg width="24" height="8" viewBox="0 0 24 8" style={{ flexShrink: 0 }}>
+                    <line
+                      x1="0" y1="4" x2="24" y2="4"
+                      stroke={color}
+                      strokeWidth="2"
+                      strokeDasharray={dash ?? ""}
+                    />
+                  </svg>
+                  <span className="text-[10px]" style={{ color: "hsl(42, 15%, 65%)" }}>{label}</span>
+                </div>
+              ))}
+              <p className="text-[10px]" style={{ color: "hsl(42, 15%, 45%)" }}>
+                Arcs scale with the Radius slider above. Radius represents the sun's reach from Zone 0.
+              </p>
+            </div>
+          )}
+          </>
         </SidebarSection>
 
         {/* ── LAYER 4: WATER AUTOMATION ── */}
