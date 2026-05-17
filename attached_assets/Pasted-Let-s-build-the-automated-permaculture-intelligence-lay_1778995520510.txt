@@ -1,0 +1,24 @@
+Let's build the automated permaculture intelligence layer. We need to add an 'Analyze Site' button to the header or sidebar that combines our database data with an LLM API (OpenAI or Anthropic) to generate tailored design reports and plant palettes.
+
+Please implement the following architecture:
+
+1. COMPILING THE AI CONTEXT (THE PROMPT BUILDER)
+- Create a backend route '/api/analyze-site' that gathers all data for the current property:
+  a. From 'client_brief': Pull goals, machinery constraints, and challenges.
+  b. From 'onboarding_data': Pull auto-populated rainfall, hardiness zone, and soil type.
+  c. From 'sectors' and 'zones': Use Turf.js on the backend to check geographic intersections (e.g., calculate the true compass bearing of the 'Damaging Wind' sector and find which side of the property boundary it hits).
+
+2. THE AI AGENT INTEGRATION
+- Set up an API call using the official `@google/generative-ai` or `openai` SDK (accessing the API key strictly via secure environment variables).
+- Feed the compiled text and spatial context into a structured system prompt that commands the AI to act as an expert Permaculture Designer.
+- Require the AI to return a cleanly formatted JSON response containing two major sections:
+  * 'plant_palette': An array of context-appropriate support guilds (Overstory tree, Nitrogen fixer, Dynamic accumulator, Insectary) native or adapted to the site's exact hardiness zone.
+  * 'spatial_recommendations': Actionable structural placements for Fencing, Vegetable Beds, Chicken Coops, and Windbreaks based on their sector overlapping rules.
+
+3. FRONTEND REPORT DISPLAY
+- On the frontend sidebar, add an "AI Analysis" tab with a prominent "Run Site Analysis" button.
+- While fetching, show a clean loading spinner text (e.g., "Analyzing topographic slopes and weather data...").
+- When the data returns, render it into a beautifully styled, scannable dashboard view with distinct sections for the "Guild Plant List" and "Zonal Layout Recommendations".
+- Add a "Save Report to Brief" button to commit this report text back into the PostgreSQL database.
+
+Please write the backend data compiler and hook up the AI processing route first, then design the frontend report dashboard.
