@@ -698,16 +698,24 @@ export default function MapPage() {
     if (editingSectorId) {
       updateSector.mutate(
         { propertyId: activePropertyId, sectorId: editingSectorId, data: payload },
-        { onSuccess: () => { queryClient.invalidateQueries({ queryKey: getListSectorsQueryKey(activePropertyId) }); handleCancelSectorDraft(); } },
+        { onSuccess: () => { queryClient.invalidateQueries({ queryKey: getListSectorsQueryKey(activePropertyId) }); handleResetSectorDraft(); } },
       );
     } else {
       createSector.mutate(
         { propertyId: activePropertyId, data: payload },
-        { onSuccess: () => { queryClient.invalidateQueries({ queryKey: getListSectorsQueryKey(activePropertyId) }); handleCancelSectorDraft(); } },
+        { onSuccess: () => { queryClient.invalidateQueries({ queryKey: getListSectorsQueryKey(activePropertyId) }); handleResetSectorDraft(); } },
       );
     }
   }
 
+  // Reset only the draft — keep the center marker in place for the next sector
+  function handleResetSectorDraft() {
+    setEditingSectorId(null);
+    setSectorDraft({ sectorType: "custom_view", radiusKm: 0.5, startAngle: 0, endAngle: 90, label: "" });
+    if (sectorPreviewLayerRef.current) { mapRef.current?.removeLayer(sectorPreviewLayerRef.current); sectorPreviewLayerRef.current = null; }
+  }
+
+  // Full cancel — clear center marker too
   function handleCancelSectorDraft() {
     setSectorCenter(null);
     setEditingSectorId(null);
@@ -1307,7 +1315,18 @@ export default function MapPage() {
             </div>
           ) : sectorCenter ? (
             <div className="space-y-2.5">
-              <p className="text-[11px]" style={{ color: "hsl(42, 28%, 80%)" }}>Center placed. Configure the wedge:</p>
+              <div className="flex items-center justify-between px-2 py-1.5 rounded" style={{ background: "hsl(103, 35%, 14%)", border: "1px solid hsl(103, 30%, 22%)" }}>
+                <span className="text-[11px]" style={{ color: "hsl(42, 28%, 80%)" }}>
+                  Zone 0 fixed · {sectorCenter.lat.toFixed(4)}, {sectorCenter.lng.toFixed(4)}
+                </span>
+                <button
+                  onClick={() => setDropSectorCenterMode(true)}
+                  className="text-[10px] px-1.5 py-0.5 rounded ml-2 flex-shrink-0"
+                  style={{ color: "hsl(42, 28%, 70%)", border: "1px solid hsl(103, 30%, 28%)" }}
+                >
+                  Move
+                </button>
+              </div>
 
               <div>
                 <label className="text-[10px] font-medium mb-1 block" style={{ color: "hsl(42, 15%, 55%)" }}>Sector Type</label>
