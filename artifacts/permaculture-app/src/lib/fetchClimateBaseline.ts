@@ -106,7 +106,7 @@ async function fetchOpenMeteo(lat: number, lng: number) {
     `&daily=precipitation_sum,temperature_2m_mean,temperature_2m_max,temperature_2m_min` +
     `&timezone=auto`;
 
-  const res = await fetch(url);
+  const res = await fetch(url, { signal: AbortSignal.timeout(12_000) });
   if (!res.ok) throw new Error(`Open-Meteo: ${res.status}`);
   const data = await res.json() as {
     daily: {
@@ -187,7 +187,7 @@ async function fetchNasaPower(lat: number, lng: number) {
     `&longitude=${lng.toFixed(4)}&latitude=${lat.toFixed(4)}` +
     `&format=JSON`;
 
-  const res = await fetch(url);
+  const res = await fetch(url, { signal: AbortSignal.timeout(12_000) });
   if (!res.ok) throw new Error(`NASA POWER: ${res.status}`);
   const data = await res.json() as {
     properties: {
@@ -219,7 +219,7 @@ async function fetchNasaPower(lat: number, lng: number) {
 
 async function fetchElevation(lat: number, lng: number): Promise<number | null> {
   const url = `https://api.opentopodata.org/v1/srtm30m?locations=${lat.toFixed(5)},${lng.toFixed(5)}`;
-  const res = await fetch(url);
+  const res = await fetch(url, { signal: AbortSignal.timeout(10_000) });
   if (!res.ok) return null;
   const data = await res.json() as { results: { elevation: number | null }[] };
   return data.results?.[0]?.elevation ?? null;
@@ -232,7 +232,7 @@ async function fetchSoilGrids(lat: number, lng: number) {
     `?lon=${lng.toFixed(5)}&lat=${lat.toFixed(5)}` +
     `&${props}&depth=0-5cm&value=mean`;
 
-  const res = await fetch(url);
+  const res = await fetch(url, { signal: AbortSignal.timeout(12_000) });
   if (!res.ok) throw new Error(`SoilGrids: ${res.status}`);
 
   const data = await res.json() as {
