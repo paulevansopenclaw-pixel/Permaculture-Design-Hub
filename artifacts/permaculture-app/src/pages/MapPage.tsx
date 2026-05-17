@@ -1135,6 +1135,23 @@ export default function MapPage() {
       return { outer, inner };
     }
 
+    // Append a thick stroke along an arc (outer edge emphasis).
+    function addArcStroke(pts: [number, number][], stroke: string, strokeW: number): void {
+      if (pts.length < 2) return;
+      const px = pts.map(([lng, lat]) => cPt(lng, lat));
+      let d = `M ${fmt(px[0].x)} ${fmt(px[0].y)}`;
+      for (let i = 1; i < px.length; i++) d += ` L ${fmt(px[i].x)} ${fmt(px[i].y)}`;
+      const el = document.createElementNS(SVG_NS, "path");
+      el.setAttribute("d", d);
+      el.setAttribute("fill", "none");
+      el.setAttribute("stroke", stroke);
+      el.setAttribute("stroke-width", String(strokeW));
+      el.setAttribute("stroke-linecap", "round");
+      el.setAttribute("stroke-linejoin", "round");
+      el.setAttribute("pointer-events", "none");
+      svgEl.appendChild(el);
+    }
+
     // Append an SVG ribbon path with optional click handler.
     function addRibbon(
       d: string, fill: string, stroke: string, strokeW: number,
@@ -1266,13 +1283,13 @@ export default function MapPage() {
           const r = parseInt(hx.slice(0, 2), 16);
           const g = parseInt(hx.slice(2, 4), 16);
           const b = parseInt(hx.slice(4, 6), 16);
-          const fill = `rgba(${r},${g},${b},0.45)`;
+          const fill = `rgba(${r},${g},${b},0.18)`;
 
           const { outer, inner } = wedgeArcs(s.centerLng, s.centerLat, s.radiusKm, 0.04, s.startAngle, s.endAngle);
           const span = ((s.endAngle - s.startAngle) + 360) % 360;
           const midAz = (s.startAngle + span / 2) % 360;
 
-          addRibbon(ribbonPath(outer, inner), fill, st.border, 1.5, () => {
+          addRibbon(ribbonPath(outer, inner), fill, st.border, 0.4, () => {
             const lPt = turf.destination(
               turf.point([s.centerLng, s.centerLat]),
               s.radiusKm * 0.5, midAz, { units: "kilometers" },
@@ -1293,12 +1310,15 @@ export default function MapPage() {
             popup.openOn(map!);
           });
 
-          // Arc label at midpoint
+          // Thick outer arc stroke — the defining visual edge of the sector
+          addArcStroke(outer, st.border, 3.5);
+
+          // Label sits on the outer circumference at the arc midpoint
           const lPt = turf.destination(
             turf.point([s.centerLng, s.centerLat]),
-            s.radiusKm * 0.54, midAz, { units: "kilometers" },
+            s.radiusKm * 0.92, midAz, { units: "kilometers" },
           );
-          addArcLabel(s.label || st.label, lPt.geometry.coordinates[0], lPt.geometry.coordinates[1], midAz, 14, "rgba(18,18,18,0.92)");
+          addArcLabel(s.label || st.label, lPt.geometry.coordinates[0], lPt.geometry.coordinates[1], midAz, 13, "rgba(18,18,18,0.92)");
         });
       }
     }
