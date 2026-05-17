@@ -38,6 +38,8 @@ export interface ClientBrief {
   challengeWildlifePressure: boolean;
   primaryGoal?: string | null;
   maintenanceCapacity?: string | null;
+  aiAnalysisReport?: string | null;
+  aiAnalysisGeneratedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }

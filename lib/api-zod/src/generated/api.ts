@@ -280,6 +280,31 @@ export const DeleteSectorParams = zod.object({
 
 
 /**
+ * @summary Run AI site analysis and return + persist the report
+ */
+export const AnalyzeSiteParams = zod.object({
+  "propertyId": zod.coerce.string()
+})
+
+export const AnalyzeSiteResponse = zod.object({
+  "propertyId": zod.string(),
+  "plant_palette": zod.array(zod.object({
+  "role": zod.string(),
+  "commonName": zod.string(),
+  "scientificName": zod.string(),
+  "rationale": zod.string()
+})),
+  "spatial_recommendations": zod.array(zod.object({
+  "element": zod.string(),
+  "placement": zod.string(),
+  "rationale": zod.string()
+})),
+  "generatedAt": zod.string(),
+  "rawJson": zod.string()
+})
+
+
+/**
  * @summary Get the client brief / site survey for a property
  */
 export const GetClientBriefParams = zod.object({
@@ -318,6 +343,8 @@ export const GetClientBriefResponse = zod.object({
   "challengeWildlifePressure": zod.boolean(),
   "primaryGoal": zod.string().nullish(),
   "maintenanceCapacity": zod.string().nullish(),
+  "aiAnalysisReport": zod.string().nullish(),
+  "aiAnalysisGeneratedAt": zod.string().nullish(),
   "createdAt": zod.string(),
   "updatedAt": zod.string()
 })
@@ -394,6 +421,8 @@ export const UpsertClientBriefResponse = zod.object({
   "challengeWildlifePressure": zod.boolean(),
   "primaryGoal": zod.string().nullish(),
   "maintenanceCapacity": zod.string().nullish(),
+  "aiAnalysisReport": zod.string().nullish(),
+  "aiAnalysisGeneratedAt": zod.string().nullish(),
   "createdAt": zod.string(),
   "updatedAt": zod.string()
 })

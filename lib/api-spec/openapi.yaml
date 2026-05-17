@@ -346,6 +346,29 @@ paths:
         "204":
           description: Deleted
 
+  /properties/{propertyId}/analyze-site:
+    post:
+      operationId: analyzeSite
+      tags: [client-brief]
+      summary: Run AI site analysis and return + persist the report
+      parameters:
+        - name: propertyId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: AI analysis report saved to client brief
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SiteAnalysisReport"
+        "404":
+          description: Property or client brief not found
+        "500":
+          description: AI analysis failed
+
   /properties/{propertyId}/client-brief:
     get:
       operationId: getClientBrief
@@ -834,6 +857,49 @@ components:
         label:
           type: string
 
+    PlantGuild:
+      type: object
+      required: [role, commonName, scientificName, rationale]
+      properties:
+        role:
+          type: string
+        commonName:
+          type: string
+        scientificName:
+          type: string
+        rationale:
+          type: string
+
+    SpatialRecommendation:
+      type: object
+      required: [element, placement, rationale]
+      properties:
+        element:
+          type: string
+        placement:
+          type: string
+        rationale:
+          type: string
+
+    SiteAnalysisReport:
+      type: object
+      required: [propertyId, plant_palette, spatial_recommendations, generatedAt, rawJson]
+      properties:
+        propertyId:
+          type: string
+        plant_palette:
+          type: array
+          items:
+            $ref: "#/components/schemas/PlantGuild"
+        spatial_recommendations:
+          type: array
+          items:
+            $ref: "#/components/schemas/SpatialRecommendation"
+        generatedAt:
+          type: string
+        rawJson:
+          type: string
+
     ClientBrief:
       type: object
       required: [id, propertyId, machineryWidthM, utilitiesOverheadPower, utilitiesBuriedPipes, utilitiesLegalEasements, utilitiesActiveWell, challengeSevereErosion, challengeWinterFlooding, challengeHighWind, challengeWildlifePressure, createdAt, updatedAt]
@@ -919,6 +985,12 @@ components:
           type: string
           nullable: true
         maintenanceCapacity:
+          type: string
+          nullable: true
+        aiAnalysisReport:
+          type: string
+          nullable: true
+        aiAnalysisGeneratedAt:
           type: string
           nullable: true
         createdAt:

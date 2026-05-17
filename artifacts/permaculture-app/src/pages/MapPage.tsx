@@ -48,6 +48,7 @@ import { useAppStore, type Role } from "@/store/useAppStore";
 import { generateContours } from "@/lib/contourEngine";
 import { analyzeWaterPaths, type WaterAnalysisResult, type AnalyzedSwale } from "@/lib/keylineEngine";
 import { OnboardingModal } from "@/components/OnboardingModal";
+import { AiAnalysisPanel } from "@/components/AiAnalysisPanel";
 
 async function fetchMapboxToken(): Promise<string> {
   try {
@@ -2123,6 +2124,19 @@ export default function MapPage() {
                 Edit Survey →
               </button>
             </div>
+          </SidebarSection>
+        )}
+
+        {/* ── AI ANALYSIS ── */}
+        {activePropertyId && (
+          <SidebarSection label="AI Analysis">
+            <AiAnalysisPanel
+              propertyId={activePropertyId}
+              hasBrief={!!clientBrief}
+              savedReport={clientBrief?.aiAnalysisReport}
+              savedAt={clientBrief?.aiAnalysisGeneratedAt ?? null}
+              onReportSaved={() => queryClient.invalidateQueries({ queryKey: getGetClientBriefQueryKey(activePropertyId) })}
+            />
           </SidebarSection>
         )}
 

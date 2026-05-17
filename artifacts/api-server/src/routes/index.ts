@@ -9,6 +9,7 @@ import clientBriefsRouter from "./clientBriefs";
 import pathwaysRouter from "./pathways";
 import zonesRouter from "./zones";
 import configRouter from "./config";
+import analyzeSiteRouter from "./analyzeSite";
 
 const router: IRouter = Router();
 
@@ -22,5 +23,6 @@ router.use(swalesRouter);
 router.use(clientBriefsRouter);
 router.use(pathwaysRouter);
 router.use(zonesRouter);
+router.use(analyzeSiteRouter);
 
 export default router;

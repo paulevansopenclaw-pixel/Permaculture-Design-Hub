@@ -36,6 +36,7 @@ import type {
   Sector,
   SectorInput,
   SectorUpdate,
+  SiteAnalysisReport,
   Structure,
   StructureInput,
   StructureUpdate,
@@ -1164,6 +1165,76 @@ export const useDeleteSector = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getDeleteSectorMutationOptions(options));
+    }
+
+export const getAnalyzeSiteUrl = (propertyId: string,) => {
+
+
+
+
+  return `/api/properties/${propertyId}/analyze-site`
+}
+
+/**
+ * @summary Run AI site analysis and return + persist the report
+ */
+export const analyzeSite = async (propertyId: string, options?: RequestInit): Promise<SiteAnalysisReport> => {
+
+  return customFetch<SiteAnalysisReport>(getAnalyzeSiteUrl(propertyId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getAnalyzeSiteMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof analyzeSite>>, TError,{propertyId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof analyzeSite>>, TError,{propertyId: string}, TContext> => {
+
+const mutationKey = ['analyzeSite'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof analyzeSite>>, {propertyId: string}> = (props) => {
+          const {propertyId} = props ?? {};
+
+          return  analyzeSite(propertyId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AnalyzeSiteMutationResult = NonNullable<Awaited<ReturnType<typeof analyzeSite>>>
+
+    export type AnalyzeSiteMutationError = ErrorType<void>
+
+    /**
+ * @summary Run AI site analysis and return + persist the report
+ */
+export const useAnalyzeSite = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof analyzeSite>>, TError,{propertyId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof analyzeSite>>,
+        TError,
+        {propertyId: string},
+        TContext
+      > => {
+      return useMutation(getAnalyzeSiteMutationOptions(options));
     }
 
 export const getGetClientBriefUrl = (propertyId: string,) => {

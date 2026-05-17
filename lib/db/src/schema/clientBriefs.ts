@@ -43,6 +43,9 @@ export const clientBriefsTable = pgTable("client_briefs", {
   // Step 4 — Vision & Goals
   primaryGoal: text("primary_goal"),
   maintenanceCapacity: text("maintenance_capacity"),
+  // AI Analysis
+  aiAnalysisReport: text("ai_analysis_report"),
+  aiAnalysisGeneratedAt: timestamp("ai_analysis_generated_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });

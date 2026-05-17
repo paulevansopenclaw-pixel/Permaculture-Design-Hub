@@ -127,6 +127,27 @@ export interface SectorUpdate {
   label?: string;
 }
 
+export interface PlantGuild {
+  role: string;
+  commonName: string;
+  scientificName: string;
+  rationale: string;
+}
+
+export interface SpatialRecommendation {
+  element: string;
+  placement: string;
+  rationale: string;
+}
+
+export interface SiteAnalysisReport {
+  propertyId: string;
+  plant_palette: PlantGuild[];
+  spatial_recommendations: SpatialRecommendation[];
+  generatedAt: string;
+  rawJson: string;
+}
+
 export interface ClientBrief {
   id: string;
   propertyId: string;
@@ -159,6 +180,8 @@ export interface ClientBrief {
   challengeWildlifePressure: boolean;
   primaryGoal?: string | null;
   maintenanceCapacity?: string | null;
+  aiAnalysisReport?: string | null;
+  aiAnalysisGeneratedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }
