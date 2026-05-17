@@ -491,3 +491,56 @@ export const DeleteCommentParams = zod.object({
 })
 
 
+/**
+ * @summary List all zones for a property
+ */
+export const ListZonesParams = zod.object({
+  "propertyId": zod.coerce.string()
+})
+
+export const ListZonesResponseItem = zod.object({
+  "id": zod.string(),
+  "propertyId": zod.string(),
+  "zoneNumber": zod.number(),
+  "zoneGeojson": zod.string(),
+  "createdAt": zod.string()
+})
+export const ListZonesResponse = zod.array(ListZonesResponseItem)
+
+
+/**
+ * @summary Bulk-replace all zones for a property
+ */
+export const BulkReplaceZonesParams = zod.object({
+  "propertyId": zod.coerce.string()
+})
+
+export const bulkReplaceZonesBodyZoneNumberMax = 5;
+
+
+
+export const BulkReplaceZonesBodyItem = zod.object({
+  "zoneNumber": zod.number().min(1).max(bulkReplaceZonesBodyZoneNumberMax),
+  "zoneGeojson": zod.string()
+})
+export const BulkReplaceZonesBody = zod.array(BulkReplaceZonesBodyItem)
+
+export const BulkReplaceZonesResponseItem = zod.object({
+  "id": zod.string(),
+  "propertyId": zod.string(),
+  "zoneNumber": zod.number(),
+  "zoneGeojson": zod.string(),
+  "createdAt": zod.string()
+})
+export const BulkReplaceZonesResponse = zod.array(BulkReplaceZonesResponseItem)
+
+
+/**
+ * @summary Delete a single zone
+ */
+export const DeleteZoneParams = zod.object({
+  "propertyId": zod.coerce.string(),
+  "zoneId": zod.coerce.string()
+})
+
+

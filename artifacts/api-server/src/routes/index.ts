@@ -7,6 +7,7 @@ import sectorsRouter from "./sectors";
 import swalesRouter from "./swales";
 import clientBriefsRouter from "./clientBriefs";
 import pathwaysRouter from "./pathways";
+import zonesRouter from "./zones";
 import configRouter from "./config";
 
 const router: IRouter = Router();
@@ -20,5 +21,6 @@ router.use(sectorsRouter);
 router.use(swalesRouter);
 router.use(clientBriefsRouter);
 router.use(pathwaysRouter);
+router.use(zonesRouter);
 
 export default router;

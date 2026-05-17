@@ -1,0 +1,27 @@
+Let's add "Layer 5: Permaculture Zone Analysis" to our design tools. This layer maps out concentric, organic, color-coded zones based on human energy and frequency of use, fanning out from Zone 0 (the house).
+
+Please implement the following:
+
+1. DATABASE UPDATE
+- Create a 'zones' table in PostgreSQL linked via property_id. Fields: id (UUID), property_id (UUID), zone_number (INT), zone_geojson (JSONB).
+
+2. SIDEBAR INTERFACE & TOOLS
+- Add a new sidebar section: "Layer 5: Zone Mapping".
+- Include a button: "Generate Default Zones". When clicked, read the center anchor point (Zone 0 house marker) and generate 5 nested, semi-transparent concentric polygon rings out to the property boundary using Turf.js buffer or circle features.
+- Color code the rings cleanly using standard permaculture convention:
+  * Zone 1 (Daily): Soft Yellow (Opacity 0.35)
+  * Zone 2 (Semi-Daily): Light Green (Opacity 0.35)
+  * Zone 3 (Farming/Pasture): Medium Green (Opacity 0.3)
+  * Zone 4 (Semi-Wild/Timber): Light Brown/Tan (Opacity 0.3)
+  * Zone 5 (Wild Wilderness): Dark Blue-Grey (Opacity 0.3)
+
+3. INTERACTIVE MANIPULATION
+- Allow the user to use the Mapbox Draw edit tools to drag and reshape the boundary lines of these zones. (Permaculture zones are organic and stretch along access roads or flat terrain, rather than being perfect circles).
+- In [Designer Mode], allow complete reshaping and custom polygon creation for individual zones.
+- In [Client Mode], make the zones read-only, but allow clicking a zone to leave a comment (e.g., "This area of Zone 1 gets too muddy to walk to in winter").
+
+4. DESIGN AUDIT LOGIC (SMART PLATFORM FEATURE)
+- Write a simple spatial check: If a user places a design marker (like an orchard tree or garden bed), check which 'zone_number' polygon it intersects with using turf.booleanPointInPolygon.
+- Display a tiny warning icon if a high-maintenance element is dropped in a wild zone (e.g., placing an intensive vegetable garden in Zone 4).
+
+Please build this Zone Analysis system next, integrated seamlessly with our map interface and database saving protocols.

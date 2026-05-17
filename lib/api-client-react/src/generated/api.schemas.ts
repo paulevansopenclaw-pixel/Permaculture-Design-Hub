@@ -165,6 +165,23 @@ export interface ClientBriefInput {
   maintenanceCapacity?: string | null;
 }
 
+export interface Zone {
+  id: string;
+  propertyId: string;
+  zoneNumber: number;
+  zoneGeojson: string;
+  createdAt: string;
+}
+
+export interface ZoneInput {
+  /**
+     * @minimum 1
+     * @maximum 5
+     */
+  zoneNumber: number;
+  zoneGeojson: string;
+}
+
 export interface Pathway {
   id: string;
   propertyId: string;

@@ -24,6 +24,8 @@ tags:
     description: Onboarding site survey linked to a property
   - name: pathways
     description: Access roads, footpaths, farm tracks and fencelines
+  - name: zones
+    description: Permaculture zone analysis polygons
 
 paths:
   /healthz:
@@ -584,6 +586,75 @@ paths:
         "204":
           description: Deleted
 
+  /properties/{propertyId}/zones:
+    get:
+      operationId: listZones
+      tags: [zones]
+      summary: List all zones for a property
+      parameters:
+        - name: propertyId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of zones
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Zone"
+
+    put:
+      operationId: bulkReplaceZones
+      tags: [zones]
+      summary: Bulk-replace all zones for a property
+      parameters:
+        - name: propertyId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/ZoneInput"
+      responses:
+        "200":
+          description: Replaced zones
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Zone"
+
+  /properties/{propertyId}/zones/{zoneId}:
+    delete:
+      operationId: deleteZone
+      tags: [zones]
+      summary: Delete a single zone
+      parameters:
+        - name: propertyId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: zoneId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
 components:
   schemas:
     HealthStatus:
@@ -846,6 +917,32 @@ components:
         maintenanceCapacity:
           type: string
           nullable: true
+
+    Zone:
+      type: object
+      required: [id, propertyId, zoneNumber, zoneGeojson, createdAt]
+      properties:
+        id:
+          type: string
+        propertyId:
+          type: string
+        zoneNumber:
+          type: integer
+        zoneGeojson:
+          type: string
+        createdAt:
+          type: string
+
+    ZoneInput:
+      type: object
+      required: [zoneNumber, zoneGeojson]
+      properties:
+        zoneNumber:
+          type: integer
+          minimum: 1
+          maximum: 5
+        zoneGeojson:
+          type: string
 
     Pathway:
       type: object

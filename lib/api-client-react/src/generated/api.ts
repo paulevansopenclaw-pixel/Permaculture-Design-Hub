@@ -38,7 +38,9 @@ import type {
   SectorUpdate,
   Structure,
   StructureInput,
-  StructureUpdate
+  StructureUpdate,
+  Zone,
+  ZoneInput
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -1974,5 +1976,226 @@ export const useDeleteComment = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getDeleteCommentMutationOptions(options));
+    }
+
+export const getListZonesUrl = (propertyId: string,) => {
+
+
+
+
+  return `/api/properties/${propertyId}/zones`
+}
+
+/**
+ * @summary List all zones for a property
+ */
+export const listZones = async (propertyId: string, options?: RequestInit): Promise<Zone[]> => {
+
+  return customFetch<Zone[]>(getListZonesUrl(propertyId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListZonesQueryKey = (propertyId: string,) => {
+    return [
+    `/api/properties/${propertyId}/zones`
+    ] as const;
+    }
+
+
+export const getListZonesQueryOptions = <TData = Awaited<ReturnType<typeof listZones>>, TError = ErrorType<unknown>>(propertyId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listZones>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListZonesQueryKey(propertyId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listZones>>> = ({ signal }) => listZones(propertyId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(propertyId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listZones>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListZonesQueryResult = NonNullable<Awaited<ReturnType<typeof listZones>>>
+export type ListZonesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List all zones for a property
+ */
+
+export function useListZones<TData = Awaited<ReturnType<typeof listZones>>, TError = ErrorType<unknown>>(
+ propertyId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listZones>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListZonesQueryOptions(propertyId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getBulkReplaceZonesUrl = (propertyId: string,) => {
+
+
+
+
+  return `/api/properties/${propertyId}/zones`
+}
+
+/**
+ * @summary Bulk-replace all zones for a property
+ */
+export const bulkReplaceZones = async (propertyId: string,
+    zoneInput: ZoneInput[], options?: RequestInit): Promise<Zone[]> => {
+
+  return customFetch<Zone[]>(getBulkReplaceZonesUrl(propertyId),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      zoneInput,)
+  }
+);}
+
+
+
+
+export const getBulkReplaceZonesMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bulkReplaceZones>>, TError,{propertyId: string;data: BodyType<ZoneInput[]>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof bulkReplaceZones>>, TError,{propertyId: string;data: BodyType<ZoneInput[]>}, TContext> => {
+
+const mutationKey = ['bulkReplaceZones'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof bulkReplaceZones>>, {propertyId: string;data: BodyType<ZoneInput[]>}> = (props) => {
+          const {propertyId,data} = props ?? {};
+
+          return  bulkReplaceZones(propertyId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type BulkReplaceZonesMutationResult = NonNullable<Awaited<ReturnType<typeof bulkReplaceZones>>>
+    export type BulkReplaceZonesMutationBody = BodyType<ZoneInput[]>
+    export type BulkReplaceZonesMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Bulk-replace all zones for a property
+ */
+export const useBulkReplaceZones = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bulkReplaceZones>>, TError,{propertyId: string;data: BodyType<ZoneInput[]>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof bulkReplaceZones>>,
+        TError,
+        {propertyId: string;data: BodyType<ZoneInput[]>},
+        TContext
+      > => {
+      return useMutation(getBulkReplaceZonesMutationOptions(options));
+    }
+
+export const getDeleteZoneUrl = (propertyId: string,
+    zoneId: string,) => {
+
+
+
+
+  return `/api/properties/${propertyId}/zones/${zoneId}`
+}
+
+/**
+ * @summary Delete a single zone
+ */
+export const deleteZone = async (propertyId: string,
+    zoneId: string, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteZoneUrl(propertyId,zoneId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteZoneMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteZone>>, TError,{propertyId: string;zoneId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteZone>>, TError,{propertyId: string;zoneId: string}, TContext> => {
+
+const mutationKey = ['deleteZone'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteZone>>, {propertyId: string;zoneId: string}> = (props) => {
+          const {propertyId,zoneId} = props ?? {};
+
+          return  deleteZone(propertyId,zoneId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteZoneMutationResult = NonNullable<Awaited<ReturnType<typeof deleteZone>>>
+
+    export type DeleteZoneMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Delete a single zone
+ */
+export const useDeleteZone = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteZone>>, TError,{propertyId: string;zoneId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteZone>>,
+        TError,
+        {propertyId: string;zoneId: string},
+        TContext
+      > => {
+      return useMutation(getDeleteZoneMutationOptions(options));
     }
 

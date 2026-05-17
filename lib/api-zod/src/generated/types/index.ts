@@ -28,3 +28,5 @@ export * from './sectorUpdate';
 export * from './structure';
 export * from './structureInput';
 export * from './structureUpdate';
+export * from './zone';
+export * from './zoneInput';

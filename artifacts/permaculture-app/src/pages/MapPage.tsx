@@ -36,6 +36,10 @@ import {
   useCreatePathway,
   useDeletePathway,
   getListPathwaysQueryKey,
+  useListZones,
+  useBulkReplaceZones,
+  useDeleteZone,
+  getListZonesQueryKey,
 } from "@workspace/api-client-react";
 import { useAppStore, type Role } from "@/store/useAppStore";
 import { generateContours } from "@/lib/contourEngine";
@@ -171,6 +175,23 @@ const PATHWAY_TYPES = [
   { value: "firebreak",  label: "Firebreak",  color: "#DC2626" },
 ];
 
+// ─── ZONE ANALYSIS CONSTANTS ──────────────────────────────────────────────────
+const ZONE_STYLES = [
+  { zone: 1, label: "Zone 1 — Daily Use",         color: "#CA8A04", fillColor: "#FDE68A", fillOpacity: 0.38, hint: "Kitchen garden, herbs — most visited" },
+  { zone: 2, label: "Zone 2 — Semi-Daily",         color: "#16A34A", fillColor: "#86EFAC", fillOpacity: 0.35, hint: "Orchard, small livestock, compost" },
+  { zone: 3, label: "Zone 3 — Farm / Pasture",     color: "#15803D", fillColor: "#4ADE80", fillOpacity: 0.30, hint: "Crops, larger livestock, fuel plants" },
+  { zone: 4, label: "Zone 4 — Semi-Wild / Timber", color: "#92400E", fillColor: "#D4A27A", fillOpacity: 0.28, hint: "Timber, foraging, managed forest" },
+  { zone: 5, label: "Zone 5 — Wilderness",         color: "#475569", fillColor: "#94A3B8", fillOpacity: 0.26, hint: "No intervention — wildlife sanctuary" },
+] as const;
+
+// Default radii (km) for auto-generated concentric zones from Zone 0
+const DEFAULT_ZONE_RADII_KM = [0.05, 0.14, 0.35, 0.75, 1.40];
+
+// Structure types that are high-maintenance and trigger a zone audit warning in Zone 4+
+const HIGH_MAINTENANCE_TYPES = new Set([
+  "greenhouse", "vegetable_garden", "herb_garden", "orchard", "nursery",
+]);
+
 const STRUCTURE_TYPES = [
   { value: "house",      label: "House",       emoji: "🏠" },
   { value: "shed",       label: "Shed",        emoji: "🏚" },
@@ -263,6 +284,7 @@ export default function MapPage() {
   const pathwayDrawActiveRef = useRef(false);
   const pathwayLayersRef = useRef<L.GeoJSON[]>([]);
   const pendingPathwayPreviewRef = useRef<L.GeoJSON | null>(null);
+  const zoneLayersRef = useRef<L.GeoJSON[]>([]);
 
   const [mapboxToken, setMapboxToken] = useState("");
   const [mapLoaded, setMapLoaded] = useState(false);
@@ -272,6 +294,8 @@ export default function MapPage() {
   const [showContours, setShowContours] = useState(false);
   const [showPathways, setShowPathways] = useState(true);
   const [drawPathwayMode, setDrawPathwayMode] = useState(false);
+  const [showZones, setShowZones] = useState(true);
+  const [zoneAuditWarning, setZoneAuditWarning] = useState<string | null>(null);
   const [pendingPathway, setPendingPathway] = useState<GeoJSON.LineString | null>(null);
   const [pathwayLabel, setPathwayLabel] = useState("");
   const [pathwayType, setPathwayType] = useState("footpath");
@@ -364,6 +388,16 @@ export default function MapPage() {
   });
   const createPathway = useCreatePathway();
   const deletePathway = useDeletePathway();
+
+  const { data: zones = [] } = useListZones(activePropertyId ?? "", {
+    query: {
+      enabled: !!activePropertyId,
+      queryKey: getListZonesQueryKey(activePropertyId ?? ""),
+      refetchInterval: 30_000,
+    },
+  });
+  const bulkReplaceZones = useBulkReplaceZones();
+  const deleteZone = useDeleteZone();
 
   // ─── FETCH TOKEN ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -780,6 +814,48 @@ export default function MapPage() {
       } catch { /* skip malformed GeoJSON */ }
     });
   }, [pathways, activePropertyId, mapLoaded, role, showPathways, handleDeletePathway]);
+
+  // ─── ZONE ANALYSIS POLYGONS ───────────────────────────────────────────────
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapLoaded) return;
+    zoneLayersRef.current.forEach((l) => map.removeLayer(l));
+    zoneLayersRef.current = [];
+    if (!showZones || !activePropertyId || zones.length === 0) return;
+    // Render largest zone first so smaller ones appear on top
+    const sorted = [...zones].sort((a, b) => b.zoneNumber - a.zoneNumber);
+    sorted.forEach((z) => {
+      const style = ZONE_STYLES.find((s) => s.zone === z.zoneNumber);
+      if (!style) return;
+      let geo: any;
+      try { geo = JSON.parse(z.zoneGeojson); } catch { return; }
+      const feature: GeoJSON.Feature = { type: "Feature", geometry: geo, properties: {} };
+      const layer = L.geoJSON(feature as any, {
+        style: () => ({
+          color: style.color,
+          weight: 1.5,
+          opacity: 0.65,
+          fillColor: style.fillColor,
+          fillOpacity: style.fillOpacity,
+        }),
+      });
+      layer.bindTooltip(
+        `<div style="font-size:11px;font-weight:700;">${style.label}</div><div style="font-size:10px;color:#555;">${style.hint}</div>`,
+        { sticky: true },
+      );
+      // Client mode: clicking a zone pre-fills a comment for that zone
+      if (role === "client") {
+        layer.on("click", (e: any) => {
+          setPendingPin({ lng: e.latlng.lng, lat: e.latlng.lat });
+          setPinText(`[${style.label}] `);
+          setDropPinMode(false);
+        });
+      }
+      layer.addTo(map);
+      zoneLayersRef.current.push(layer);
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [zones, showZones, activePropertyId, mapLoaded, role]);
 
   // ─── BUILDING OUTLINE POLYGONS (saved) ───────────────────────────────────
   useEffect(() => {
@@ -1207,6 +1283,24 @@ export default function MapPage() {
   // ─── SAVE STRUCTURE ──────────────────────────────────────────────────────
   function handleSaveStructure() {
     if (!activePropertyId || !pendingStructure || !structureLabel.trim()) return;
+    // ── Zone audit: warn if high-maintenance element placed in Zone 4 or 5 ──
+    if (zones.length > 0) {
+      const pt = turf.point([pendingStructure.lng, pendingStructure.lat]);
+      let effectiveZone: number | null = null;
+      zones.forEach((z) => {
+        try {
+          const geo = JSON.parse(z.zoneGeojson);
+          if (turf.booleanPointInPolygon(pt, geo)) {
+            effectiveZone = effectiveZone === null ? z.zoneNumber : Math.min(effectiveZone, z.zoneNumber);
+          }
+        } catch { /* skip malformed */ }
+      });
+      if (effectiveZone !== null && effectiveZone >= 4 && HIGH_MAINTENANCE_TYPES.has(structureType)) {
+        setZoneAuditWarning(`Zone ${effectiveZone} warning: "${structureLabel}" is a high-maintenance element. Consider moving it closer to Zone 0.`);
+      } else {
+        setZoneAuditWarning(null);
+      }
+    }
     createStructure.mutate(
       {
         propertyId: activePropertyId,
@@ -1256,6 +1350,37 @@ export default function MapPage() {
           setDrawPathwayMode(false);
         },
       },
+    );
+  }
+
+  // ─── ZONE HANDLERS ────────────────────────────────────────────────────────
+  function handleGenerateZones() {
+    if (!activePropertyId || !sectorCenter) return;
+    const zoneInputs = DEFAULT_ZONE_RADII_KM.map((r, i) => ({
+      zoneNumber: i + 1,
+      zoneGeojson: JSON.stringify(
+        turf.circle([sectorCenter.lng, sectorCenter.lat], r, { units: "kilometers", steps: 64 }).geometry,
+      ),
+    }));
+    bulkReplaceZones.mutate(
+      { propertyId: activePropertyId, data: zoneInputs },
+      { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListZonesQueryKey(activePropertyId) }) },
+    );
+  }
+
+  function handleClearZones() {
+    if (!activePropertyId) return;
+    bulkReplaceZones.mutate(
+      { propertyId: activePropertyId, data: [] },
+      { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListZonesQueryKey(activePropertyId) }) },
+    );
+  }
+
+  function handleDeleteZone(zoneId: string) {
+    if (!activePropertyId) return;
+    deleteZone.mutate(
+      { propertyId: activePropertyId, zoneId },
+      { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListZonesQueryKey(activePropertyId) }) },
     );
   }
 
@@ -2290,6 +2415,123 @@ export default function MapPage() {
                   </div>
                 </div>
               )}
+            </div>
+          )}
+        </SidebarSection>
+
+        {/* ── LAYER 8: ZONE MAPPING ── */}
+        <SidebarSection label="Layer 8 — Zone Mapping">
+          {!activePropertyId ? (
+            <p className="text-[11px]" style={{ color: "hsl(42, 15%, 50%)" }}>Select a property to map zones.</p>
+          ) : (
+            <div className="space-y-2.5">
+              {/* Zone visibility toggle */}
+              <div className="flex items-center justify-between">
+                <span className="text-[11px]" style={{ color: "hsl(42, 20%, 70%)" }}>Zone polygons</span>
+                <button
+                  onClick={() => setShowZones((v) => !v)}
+                  className="text-[10px] px-2 py-0.5 rounded border"
+                  style={{
+                    borderColor: showZones ? "hsl(84, 38%, 38%)" : "hsl(103, 30%, 22%)",
+                    color: showZones ? "hsl(84, 55%, 65%)" : "hsl(42, 15%, 50%)",
+                    background: "transparent",
+                  }}
+                >
+                  {showZones ? "Visible" : "Hidden"}
+                </button>
+              </div>
+
+              {/* Zone legend */}
+              <div className="space-y-1">
+                {ZONE_STYLES.map((s) => (
+                  <div key={s.zone} className="flex items-center gap-2">
+                    <span style={{
+                      display: "inline-block",
+                      width: 14,
+                      height: 14,
+                      background: s.fillColor,
+                      border: `1.5px solid ${s.color}`,
+                      borderRadius: 2,
+                      flexShrink: 0,
+                      opacity: 0.85,
+                    }} />
+                    <span className="text-[10px]" style={{ color: "hsl(42, 15%, 60%)" }}>{s.label}</span>
+                  </div>
+                ))}
+              </div>
+
+              {role === "designer" && (
+                <>
+                  {/* Generate default zones — requires Zone 0 (sector center) */}
+                  <button
+                    onClick={handleGenerateZones}
+                    disabled={!sectorCenter || bulkReplaceZones.isPending}
+                    title={!sectorCenter ? "Place Zone 0 center in Layer 3 first" : ""}
+                    className="w-full text-xs px-3 py-2 rounded font-medium"
+                    style={{
+                      background: sectorCenter ? "hsl(84, 38%, 30%)" : "hsl(103, 25%, 18%)",
+                      border: "1px solid hsl(103, 30%, 22%)",
+                      color: sectorCenter ? "hsl(84, 55%, 80%)" : "hsl(42, 15%, 40%)",
+                      cursor: sectorCenter ? "pointer" : "not-allowed",
+                    }}
+                  >
+                    {bulkReplaceZones.isPending ? "Generating…" : !sectorCenter ? "⚠ Place Zone 0 center first" : "Generate Default Zones"}
+                  </button>
+
+                  {zones.length > 0 && (
+                    <>
+                      <div className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "hsl(42, 15%, 50%)" }}>
+                        {zones.length} {zones.length === 1 ? "Zone" : "Zones"} saved
+                      </div>
+                      <div className="space-y-1 max-h-36 overflow-y-auto">
+                        {[...zones].sort((a, b) => a.zoneNumber - b.zoneNumber).map((z) => {
+                          const s = ZONE_STYLES.find((st) => st.zone === z.zoneNumber);
+                          return (
+                            <div key={z.id} className="flex items-center gap-2 px-2 py-1.5 rounded" style={{ background: "hsl(103, 35%, 14%)" }}>
+                              <span style={{ display: "inline-block", width: 10, height: 10, background: s?.fillColor ?? "#ccc", border: `1.5px solid ${s?.color ?? "#888"}`, borderRadius: 2, flexShrink: 0 }} />
+                              <div className="flex-1 min-w-0">
+                                <div className="text-[11px] font-medium truncate" style={{ color: "hsl(42, 28%, 85%)" }}>{s?.label ?? `Zone ${z.zoneNumber}`}</div>
+                              </div>
+                              <button onClick={() => handleDeleteZone(z.id)} className="text-[10px] flex-shrink-0" style={{ color: "hsl(0, 55%, 50%)" }}>×</button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <button
+                        onClick={handleClearZones}
+                        className="w-full text-[11px] py-1 rounded"
+                        style={{ color: "hsl(0, 55%, 55%)", border: "1px solid hsl(0, 45%, 30%)", background: "transparent" }}
+                      >
+                        Clear All Zones
+                      </button>
+                    </>
+                  )}
+
+                  {/* Zone audit warning */}
+                  {zoneAuditWarning && (
+                    <div className="px-2 py-2 rounded text-[10px]" style={{ background: "hsl(38, 60%, 18%)", border: "1px solid hsl(38, 55%, 32%)", color: "hsl(38, 80%, 75%)" }}>
+                      ⚠ {zoneAuditWarning}
+                      <button onClick={() => setZoneAuditWarning(null)} className="ml-2 underline" style={{ color: "hsl(38, 60%, 55%)" }}>Dismiss</button>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {role === "client" && (
+                <div className="space-y-1.5">
+                  {zones.length === 0 ? (
+                    <p className="text-[11px]" style={{ color: "hsl(42, 15%, 50%)" }}>No zones mapped yet — ask your designer.</p>
+                  ) : (
+                    <p className="text-[11px]" style={{ color: "hsl(42, 15%, 55%)" }}>
+                      Click any zone on the map to leave a comment about that area.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              <p className="text-[10px]" style={{ color: "hsl(42, 15%, 40%)" }}>
+                Zones radiate from Zone 0 (house). Generate using the Zone 0 center placed in Layer 3.
+              </p>
             </div>
           )}
         </SidebarSection>

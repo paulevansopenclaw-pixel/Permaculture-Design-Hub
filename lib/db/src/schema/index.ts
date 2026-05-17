@@ -5,3 +5,4 @@ export * from "./sectors";
 export * from "./swales";
 export * from "./clientBriefs";
 export * from "./pathways";
+export * from "./zones";
