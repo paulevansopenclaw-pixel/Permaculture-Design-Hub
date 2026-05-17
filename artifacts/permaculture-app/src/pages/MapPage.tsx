@@ -2015,6 +2015,33 @@ export default function MapPage() {
           )}
         </SidebarSection>
 
+        {/* ── CLIENT BRIEF ── */}
+        <SidebarSection label="Client Brief">
+          {!activePropertyId ? (
+            <p className="text-[11px]" style={{ color: "hsl(42, 15%, 50%)" }}>Select a property to open its site survey.</p>
+          ) : !activeProperty?.boundaryGeojson ? (
+            <p className="text-[11px]" style={{ color: "hsl(42, 15%, 50%)" }}>Draw and save a property boundary first — the survey uses it to fetch climate data.</p>
+          ) : (
+            <div className="space-y-2">
+              <p className="text-[11px]" style={{ color: "hsl(42, 15%, 55%)" }}>
+                Capture rainfall, soil type, infrastructure, site challenges, and design goals for this property.
+              </p>
+              <button
+                onClick={() => setShowOnboarding(true)}
+                className="w-full py-2 rounded-lg text-[12px] font-semibold transition-all"
+                style={{
+                  background: "linear-gradient(135deg, #2D6A1A, #4a9a28)",
+                  color: "#fff",
+                  border: "1px solid #4a9a28",
+                  boxShadow: "0 3px 12px rgba(45,106,26,0.35)",
+                }}
+              >
+                Open Site Survey →
+              </button>
+            </div>
+          )}
+        </SidebarSection>
+
         {/* ── LAYER 1: BOUNDARY ── */}
         <SidebarSection label="Layer 1 — Property Boundary">
           {!activePropertyId ? (
