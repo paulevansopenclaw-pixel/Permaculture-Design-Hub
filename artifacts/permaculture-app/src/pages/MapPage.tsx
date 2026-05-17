@@ -1173,6 +1173,62 @@ export default function MapPage() {
       return el;
     }
 
+    // Append text that flows along an arc using SVG textPath (characters follow the curve).
+    // arcPts: geo [lng,lat] points of the arc; midAz used to decide path direction.
+    function addCurvedLabel(
+      text: string,
+      arcPts: [number, number][],
+      midAz: number,
+      fontSize: number,
+      color: string,
+    ): void {
+      if (arcPts.length < 2) return;
+      const px = arcPts.map(([lng, lat]) => cPt(lng, lat));
+
+      // Reverse path for southern arcs (midAz 90–270°) so characters always read L→R.
+      const pts = (midAz > 90 && midAz < 270) ? [...px].reverse() : px;
+      let d = `M ${fmt(pts[0].x)} ${fmt(pts[0].y)}`;
+      for (let i = 1; i < pts.length; i++) d += ` L ${fmt(pts[i].x)} ${fmt(pts[i].y)}`;
+
+      const pathId = `ctp-${Math.random().toString(36).slice(2, 9)}`;
+
+      // Ensure a <defs> element exists (created fresh each draw() call).
+      let defs = svgEl.querySelector("defs");
+      if (!defs) {
+        defs = document.createElementNS(SVG_NS, "defs");
+        svgEl.insertBefore(defs, svgEl.firstChild);
+      }
+      const defPath = document.createElementNS(SVG_NS, "path");
+      defPath.setAttribute("id", pathId);
+      defPath.setAttribute("d", d);
+      defs.appendChild(defPath);
+
+      // Two-pass render: white halo outline + dark fill.
+      for (let pass = 0; pass < 2; pass++) {
+        const textEl = document.createElementNS(SVG_NS, "text");
+        textEl.setAttribute("font-size", `${fontSize}px`);
+        textEl.setAttribute("font-family", "ui-sans-serif,system-ui,-apple-system,sans-serif");
+        textEl.setAttribute("font-weight", "600");
+        textEl.setAttribute("letter-spacing", "0.04em");
+        textEl.setAttribute("pointer-events", "none");
+        if (pass === 0) {
+          textEl.setAttribute("fill", "none");
+          textEl.setAttribute("stroke", "rgba(255,255,255,0.75)");
+          textEl.setAttribute("stroke-width", "4");
+          textEl.setAttribute("stroke-linejoin", "round");
+        } else {
+          textEl.setAttribute("fill", color);
+        }
+        const tp = document.createElementNS(SVG_NS, "textPath");
+        tp.setAttribute("href", `#${pathId}`);
+        tp.setAttribute("startOffset", "50%");
+        tp.setAttribute("text-anchor", "middle");
+        tp.textContent = text;
+        textEl.appendChild(tp);
+        svgEl.appendChild(textEl);
+      }
+    }
+
     // Append an arc-following text label (dark outline + colour fill, two-pass render).
     function addArcLabel(
       text: string, lLng: number, lLat: number,
@@ -1313,12 +1369,8 @@ export default function MapPage() {
           // Thick outer arc stroke — the defining visual edge of the sector
           addArcStroke(outer, st.border, 3.5);
 
-          // Label sits on the outer circumference at the arc midpoint
-          const lPt = turf.destination(
-            turf.point([s.centerLng, s.centerLat]),
-            radiusKm * 0.97, midAz, { units: "kilometers" },
-          );
-          addArcLabel(s.label || st.label, lPt.geometry.coordinates[0], lPt.geometry.coordinates[1], midAz, 13, "rgba(18,18,18,0.92)");
+          // Curved label flowing along the outer arc
+          addCurvedLabel(s.label || st.label, outer, midAz, 13, "rgba(18,18,18,0.92)");
         });
       }
     }
