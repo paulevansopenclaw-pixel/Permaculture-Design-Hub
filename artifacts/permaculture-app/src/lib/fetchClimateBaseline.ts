@@ -40,15 +40,36 @@ export type ClimateBaseline = SiteBaseline;
 
 // ─── Helper classifiers ───────────────────────────────────────────────────────
 
-function classifyKoppen(annualRainfallMm: number, meanTempC: number): string {
-  if (meanTempC < -3) return "E — Polar / Tundra";
-  if (meanTempC < 5) return "D — Continental / Boreal";
+/**
+ * Köppen-Geiger classifier.
+ * @param annualRainfallMm  3-yr mean annual precipitation (mm)
+ * @param meanAnnualTempC   Mean of daily mean temperatures (°C)
+ * @param coldestMonthMinC  Average daily-minimum of the coldest 3-month block (°C)
+ *                          Used to properly separate A (tropical) from C (temperate).
+ *                          True tropical requires the coldest month to stay ≥ 18 °C.
+ */
+function classifyKoppen(annualRainfallMm: number, meanAnnualTempC: number, coldestMonthMinC: number): string {
+  // Polar / tundra — no month above 10 °C
+  if (meanAnnualTempC < -3) return "E — Polar / Tundra";
+  // Continental / boreal — coldest month < -3 °C
+  if (coldestMonthMinC < -3) return "D — Continental / Boreal";
+  // Arid — precipitation very low regardless of temp
   if (annualRainfallMm < 250) return "B — Arid / Desert";
   if (annualRainfallMm < 500) return "BS — Semi-arid Steppe";
-  if (meanTempC >= 18 && annualRainfallMm > 1200) return "Af — Tropical Rainforest";
-  if (meanTempC >= 18 && annualRainfallMm > 750) return "Am — Tropical Monsoon";
-  if (meanTempC >= 18) return "Aw — Tropical Savanna";
-  if (meanTempC >= 12) return "Csa/Csb — Mediterranean / Warm Temperate";
+  // Tropical A — coldest month MEAN ≥ 18 °C.
+  // coldestMonthMinC is the avg daily-min of the coldest 3 months; coldest month MEAN
+  // ≈ coldestMonthMinC + ~5 °C offset. Require coldestMonthMinC ≥ 14 as a conservative proxy.
+  const isTropical = coldestMonthMinC >= 14;
+  if (isTropical) {
+    if (annualRainfallMm > 1500) return "Af — Tropical Rainforest";
+    if (annualRainfallMm > 900)  return "Am — Tropical Monsoon";
+    return "Aw — Tropical Savanna";
+  }
+  // Temperate C — coldest month between -3 °C and ~14 °C (proxy)
+  // Cfa — Humid Subtropical: hot summers (mean annual ≥ 18 °C), no dry season
+  if (meanAnnualTempC >= 18 && annualRainfallMm >= 600) return "Cfa — Humid Subtropical";
+  if (meanAnnualTempC >= 18) return "Csa/Csb — Mediterranean / Warm Temperate";
+  if (meanAnnualTempC >= 12) return "Csa/Csb — Mediterranean / Warm Temperate";
   return "Cfb — Oceanic / Cool Temperate";
 }
 
@@ -174,7 +195,7 @@ async function fetchOpenMeteo(lat: number, lng: number) {
     summerMaxTempC,
     winterMinTempC,
     frostDaysPerYear,
-    climateZone: classifyKoppen(annualRainfallMm, meanAnnualTempC),
+    climateZone: classifyKoppen(annualRainfallMm, meanAnnualTempC, winterMinTempC),
     estimatedSoilType: estimateSoilType(annualRainfallMm, meanAnnualTempC),
   };
 }
