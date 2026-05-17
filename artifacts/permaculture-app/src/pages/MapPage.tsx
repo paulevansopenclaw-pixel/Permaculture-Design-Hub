@@ -1203,43 +1203,58 @@ export default function MapPage() {
       const { radiusKm } = sectorDraft;
       const year = new Date().getFullYear();
 
-      // ── Solar arc rings (full 360° concentric bands) ─────────────────────
-      // Rendered as complete rings so the diagram reads like a professional
-      // permaculture plan — summer sun outer, winter sun inner.
+      // ── Solar arc ribbons (true suncalc sunrise→sunset arcs) ─────────────
       if (showSolarArcs) {
         const SOLAR_SPECS = [
           {
+            month: 5, day: 21,            // June 21 — summer solstice
             outerFrac: 1.00, innerFrac: 0.80,
             fill: "rgba(240,170,20,0.42)", stroke: "#C8A43C", strokeW: 1.8,
-            label: "Summer Sun", labelBearing: 355,
+            label: "Summer Sun",
           },
           {
+            month: 11, day: 21,           // Dec 21 — winter solstice
             outerFrac: 0.80, innerFrac: 0.62,
             fill: "rgba(140,180,215,0.38)", stroke: "#7AAAC0", strokeW: 1.5,
-            label: "Winter Sun", labelBearing: 355,
+            label: "Winter Sun",
           },
         ] as const;
 
-        const STEPS = 128;
-        const c = turf.point([cLng, cLat]);
+        SOLAR_SPECS.forEach(({ month, day, outerFrac, innerFrac, fill, stroke, strokeW, label }) => {
+          const date = new Date(year, month, day, 12, 0, 0);
+          const times = SunCalc.getTimes(date, cLat, cLng);
+          const srMs = times.sunrise?.getTime();
+          const ssMs = times.sunset?.getTime();
+          if (!srMs || !ssMs || !isFinite(srMs) || !isFinite(ssMs) || ssMs <= srMs) return;
 
-        SOLAR_SPECS.forEach(({ outerFrac, innerFrac, fill, stroke, strokeW, label, labelBearing }) => {
+          const STEPS = 120;
+          const c = turf.point([cLng, cLat]);
           const outerPts: [number, number][] = [];
           const innerPts: [number, number][] = [];
-          // Full 360° ring — step from 0° back to 0°
+
           for (let i = 0; i <= STEPS; i++) {
-            const bearing = (360 * i) / STEPS;
+            const t = new Date(srMs + ((ssMs - srMs) * i) / STEPS);
+            const pos = SunCalc.getPosition(t, cLat, cLng);
+            if (pos.altitude < 0.005) continue;
+            // suncalc azimuth: 0=south, +π/2=west → compass bearing (0=N, CW)
+            const bearing = ((pos.azimuth * 180 / Math.PI) + 180 + 360) % 360;
             outerPts.push(turf.destination(c, radiusKm * outerFrac, bearing, { units: "kilometers" }).geometry.coordinates as [number, number]);
             innerPts.push(turf.destination(c, radiusKm * innerFrac, bearing, { units: "kilometers" }).geometry.coordinates as [number, number]);
           }
+          if (outerPts.length < 2) return;
 
           addRibbon(ribbonPath(outerPts, innerPts), fill, stroke, strokeW);
 
-          // Label at the top of the ring (north / slightly west of north)
-          const labelR = radiusKm * (outerFrac + innerFrac) / 2;
-          const lPt = turf.destination(c, labelR, labelBearing, { units: "kilometers" });
-          // Bearing ≈355° → tangent ≈90° → label is horizontal
-          addArcLabel(label, lPt.geometry.coordinates[0], lPt.geometry.coordinates[1], 90, 14, "rgba(18,18,18,0.92)");
+          // Label at the geometric midpoint of the arc
+          const mi = Math.floor(outerPts.length / 2);
+          const mOuter = outerPts[mi];
+          const mInner = innerPts[Math.min(mi, innerPts.length - 1)];
+          const lLng = (mOuter[0] + mInner[0]) / 2;
+          const lLat = (mOuter[1] + mInner[1]) / 2;
+          const centerPx = cPt(cLng, cLat);
+          const midPx = cPt(mOuter[0], mOuter[1]);
+          const midAz = ((Math.atan2(midPx.x - centerPx.x, -(midPx.y - centerPx.y)) * 180 / Math.PI) + 360) % 360;
+          addArcLabel(label, lLng, lLat, midAz, 14, "rgba(18,18,18,0.92)");
         });
       }
 
