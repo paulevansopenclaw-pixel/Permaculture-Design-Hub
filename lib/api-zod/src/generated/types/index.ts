@@ -6,6 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './clientBrief';
+export * from './clientBriefInput';
 export * from './comment';
 export * from './commentInput';
 export * from './designedSwale';

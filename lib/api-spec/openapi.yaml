@@ -20,6 +20,8 @@ tags:
     description: Permaculture sector analysis wedges
   - name: swales
     description: Designed swale / water-path layers
+  - name: client-brief
+    description: Onboarding site survey linked to a property
 
 paths:
   /healthz:
@@ -340,6 +342,51 @@ paths:
         "204":
           description: Deleted
 
+  /properties/{propertyId}/client-brief:
+    get:
+      operationId: getClientBrief
+      tags: [client-brief]
+      summary: Get the client brief / site survey for a property
+      parameters:
+        - name: propertyId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Client brief
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientBrief"
+        "404":
+          description: Not found
+
+    put:
+      operationId: upsertClientBrief
+      tags: [client-brief]
+      summary: Create or update the client brief for a property
+      parameters:
+        - name: propertyId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClientBriefInput"
+      responses:
+        "200":
+          description: Saved client brief
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientBrief"
+
   /properties/{propertyId}/swales:
     get:
       operationId: listDesignedSwales
@@ -639,6 +686,90 @@ components:
           type: integer
         label:
           type: string
+
+    ClientBrief:
+      type: object
+      required: [id, propertyId, machineryWidthM, utilitiesOverheadPower, utilitiesBuriedPipes, utilitiesLegalEasements, utilitiesActiveWell, challengeSevereErosion, challengeWinterFlooding, challengeHighWind, challengeWildlifePressure, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+        propertyId:
+          type: string
+        annualRainfallMm:
+          type: number
+          nullable: true
+        estimatedSoilType:
+          type: string
+          nullable: true
+        climateZone:
+          type: string
+          nullable: true
+        machineryWidthM:
+          type: number
+        utilitiesOverheadPower:
+          type: boolean
+        utilitiesBuriedPipes:
+          type: boolean
+        utilitiesLegalEasements:
+          type: boolean
+        utilitiesActiveWell:
+          type: boolean
+        challengeSevereErosion:
+          type: boolean
+        challengeWinterFlooding:
+          type: boolean
+        challengeHighWind:
+          type: boolean
+        challengeWildlifePressure:
+          type: boolean
+        primaryGoal:
+          type: string
+          nullable: true
+        maintenanceCapacity:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    ClientBriefInput:
+      type: object
+      required: [machineryWidthM, utilitiesOverheadPower, utilitiesBuriedPipes, utilitiesLegalEasements, utilitiesActiveWell, challengeSevereErosion, challengeWinterFlooding, challengeHighWind, challengeWildlifePressure]
+      properties:
+        annualRainfallMm:
+          type: number
+          nullable: true
+        estimatedSoilType:
+          type: string
+          nullable: true
+        climateZone:
+          type: string
+          nullable: true
+        machineryWidthM:
+          type: number
+        utilitiesOverheadPower:
+          type: boolean
+        utilitiesBuriedPipes:
+          type: boolean
+        utilitiesLegalEasements:
+          type: boolean
+        utilitiesActiveWell:
+          type: boolean
+        challengeSevereErosion:
+          type: boolean
+        challengeWinterFlooding:
+          type: boolean
+        challengeHighWind:
+          type: boolean
+        challengeWildlifePressure:
+          type: boolean
+        primaryGoal:
+          type: string
+          nullable: true
+        maintenanceCapacity:
+          type: string
+          nullable: true
 
     DesignedSwale:
       type: object

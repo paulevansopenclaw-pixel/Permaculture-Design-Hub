@@ -36,6 +36,7 @@ import {
 import { useAppStore, type Role } from "@/store/useAppStore";
 import { generateContours } from "@/lib/contourEngine";
 import { analyzeWaterPaths, type WaterAnalysisResult, type AnalyzedSwale } from "@/lib/keylineEngine";
+import { OnboardingModal } from "@/components/OnboardingModal";
 
 async function fetchMapboxToken(): Promise<string> {
   try {
@@ -173,6 +174,7 @@ export default function MapPage() {
   const [sectorCenter, setSectorCenter] = useState<{ lng: number; lat: number } | null>(null);
   const [sectorDraft, setSectorDraft] = useState({ sectorType: "custom_view", radiusKm: 0.5, startAngle: 0, endAngle: 90, label: "" });
   const [editingSectorId, setEditingSectorId] = useState<string | null>(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const [showWater, setShowWater] = useState(true);
   const [waterAnalysis, setWaterAnalysis] = useState<WaterAnalysisResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -861,6 +863,7 @@ export default function MapPage() {
           setPendingAreaAc(null);
           drawnItemsRef.current?.clearLayers();
           refetchProperty();
+          setShowOnboarding(true);
         },
       },
     );
@@ -1747,6 +1750,16 @@ export default function MapPage() {
           </div>
         )}
       </div>
+
+      {/* ── ONBOARDING MODAL ── */}
+      {showOnboarding && activePropertyId && activeProperty?.boundaryGeojson && (
+        <OnboardingModal
+          propertyId={activePropertyId}
+          propertyName={activeProperty.name}
+          boundaryGeojson={activeProperty.boundaryGeojson as unknown as GeoJSON.Polygon}
+          onClose={() => setShowOnboarding(false)}
+        />
+      )}
     </div>
   );
 }

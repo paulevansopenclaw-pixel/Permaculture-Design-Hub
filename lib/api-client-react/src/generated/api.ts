@@ -20,6 +20,8 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  ClientBrief,
+  ClientBriefInput,
   Comment,
   CommentInput,
   DesignedSwale,
@@ -1158,6 +1160,155 @@ export const useDeleteSector = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getDeleteSectorMutationOptions(options));
+    }
+
+export const getGetClientBriefUrl = (propertyId: string,) => {
+
+
+
+
+  return `/api/properties/${propertyId}/client-brief`
+}
+
+/**
+ * @summary Get the client brief / site survey for a property
+ */
+export const getClientBrief = async (propertyId: string, options?: RequestInit): Promise<ClientBrief> => {
+
+  return customFetch<ClientBrief>(getGetClientBriefUrl(propertyId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetClientBriefQueryKey = (propertyId: string,) => {
+    return [
+    `/api/properties/${propertyId}/client-brief`
+    ] as const;
+    }
+
+
+export const getGetClientBriefQueryOptions = <TData = Awaited<ReturnType<typeof getClientBrief>>, TError = ErrorType<void>>(propertyId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getClientBrief>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetClientBriefQueryKey(propertyId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getClientBrief>>> = ({ signal }) => getClientBrief(propertyId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(propertyId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getClientBrief>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetClientBriefQueryResult = NonNullable<Awaited<ReturnType<typeof getClientBrief>>>
+export type GetClientBriefQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get the client brief / site survey for a property
+ */
+
+export function useGetClientBrief<TData = Awaited<ReturnType<typeof getClientBrief>>, TError = ErrorType<void>>(
+ propertyId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getClientBrief>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetClientBriefQueryOptions(propertyId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpsertClientBriefUrl = (propertyId: string,) => {
+
+
+
+
+  return `/api/properties/${propertyId}/client-brief`
+}
+
+/**
+ * @summary Create or update the client brief for a property
+ */
+export const upsertClientBrief = async (propertyId: string,
+    clientBriefInput: ClientBriefInput, options?: RequestInit): Promise<ClientBrief> => {
+
+  return customFetch<ClientBrief>(getUpsertClientBriefUrl(propertyId),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      clientBriefInput,)
+  }
+);}
+
+
+
+
+export const getUpsertClientBriefMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof upsertClientBrief>>, TError,{propertyId: string;data: BodyType<ClientBriefInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof upsertClientBrief>>, TError,{propertyId: string;data: BodyType<ClientBriefInput>}, TContext> => {
+
+const mutationKey = ['upsertClientBrief'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof upsertClientBrief>>, {propertyId: string;data: BodyType<ClientBriefInput>}> = (props) => {
+          const {propertyId,data} = props ?? {};
+
+          return  upsertClientBrief(propertyId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpsertClientBriefMutationResult = NonNullable<Awaited<ReturnType<typeof upsertClientBrief>>>
+    export type UpsertClientBriefMutationBody = BodyType<ClientBriefInput>
+    export type UpsertClientBriefMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Create or update the client brief for a property
+ */
+export const useUpsertClientBrief = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof upsertClientBrief>>, TError,{propertyId: string;data: BodyType<ClientBriefInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof upsertClientBrief>>,
+        TError,
+        {propertyId: string;data: BodyType<ClientBriefInput>},
+        TContext
+      > => {
+      return useMutation(getUpsertClientBriefMutationOptions(options));
     }
 
 export const getListDesignedSwalesUrl = (propertyId: string,) => {

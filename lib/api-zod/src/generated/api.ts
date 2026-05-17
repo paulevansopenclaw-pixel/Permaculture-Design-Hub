@@ -276,6 +276,81 @@ export const DeleteSectorParams = zod.object({
 
 
 /**
+ * @summary Get the client brief / site survey for a property
+ */
+export const GetClientBriefParams = zod.object({
+  "propertyId": zod.coerce.string()
+})
+
+export const GetClientBriefResponse = zod.object({
+  "id": zod.string(),
+  "propertyId": zod.string(),
+  "annualRainfallMm": zod.number().nullish(),
+  "estimatedSoilType": zod.string().nullish(),
+  "climateZone": zod.string().nullish(),
+  "machineryWidthM": zod.number(),
+  "utilitiesOverheadPower": zod.boolean(),
+  "utilitiesBuriedPipes": zod.boolean(),
+  "utilitiesLegalEasements": zod.boolean(),
+  "utilitiesActiveWell": zod.boolean(),
+  "challengeSevereErosion": zod.boolean(),
+  "challengeWinterFlooding": zod.boolean(),
+  "challengeHighWind": zod.boolean(),
+  "challengeWildlifePressure": zod.boolean(),
+  "primaryGoal": zod.string().nullish(),
+  "maintenanceCapacity": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * @summary Create or update the client brief for a property
+ */
+export const UpsertClientBriefParams = zod.object({
+  "propertyId": zod.coerce.string()
+})
+
+export const UpsertClientBriefBody = zod.object({
+  "annualRainfallMm": zod.number().nullish(),
+  "estimatedSoilType": zod.string().nullish(),
+  "climateZone": zod.string().nullish(),
+  "machineryWidthM": zod.number(),
+  "utilitiesOverheadPower": zod.boolean(),
+  "utilitiesBuriedPipes": zod.boolean(),
+  "utilitiesLegalEasements": zod.boolean(),
+  "utilitiesActiveWell": zod.boolean(),
+  "challengeSevereErosion": zod.boolean(),
+  "challengeWinterFlooding": zod.boolean(),
+  "challengeHighWind": zod.boolean(),
+  "challengeWildlifePressure": zod.boolean(),
+  "primaryGoal": zod.string().nullish(),
+  "maintenanceCapacity": zod.string().nullish()
+})
+
+export const UpsertClientBriefResponse = zod.object({
+  "id": zod.string(),
+  "propertyId": zod.string(),
+  "annualRainfallMm": zod.number().nullish(),
+  "estimatedSoilType": zod.string().nullish(),
+  "climateZone": zod.string().nullish(),
+  "machineryWidthM": zod.number(),
+  "utilitiesOverheadPower": zod.boolean(),
+  "utilitiesBuriedPipes": zod.boolean(),
+  "utilitiesLegalEasements": zod.boolean(),
+  "utilitiesActiveWell": zod.boolean(),
+  "challengeSevereErosion": zod.boolean(),
+  "challengeWinterFlooding": zod.boolean(),
+  "challengeHighWind": zod.boolean(),
+  "challengeWildlifePressure": zod.boolean(),
+  "primaryGoal": zod.string().nullish(),
+  "maintenanceCapacity": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+
+
+/**
  * @summary List all designed swale lines for a property
  */
 export const ListDesignedSwalesParams = zod.object({

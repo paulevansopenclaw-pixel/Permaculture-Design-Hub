@@ -124,6 +124,44 @@ export interface SectorUpdate {
   label?: string;
 }
 
+export interface ClientBrief {
+  id: string;
+  propertyId: string;
+  annualRainfallMm?: number | null;
+  estimatedSoilType?: string | null;
+  climateZone?: string | null;
+  machineryWidthM: number;
+  utilitiesOverheadPower: boolean;
+  utilitiesBuriedPipes: boolean;
+  utilitiesLegalEasements: boolean;
+  utilitiesActiveWell: boolean;
+  challengeSevereErosion: boolean;
+  challengeWinterFlooding: boolean;
+  challengeHighWind: boolean;
+  challengeWildlifePressure: boolean;
+  primaryGoal?: string | null;
+  maintenanceCapacity?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ClientBriefInput {
+  annualRainfallMm?: number | null;
+  estimatedSoilType?: string | null;
+  climateZone?: string | null;
+  machineryWidthM: number;
+  utilitiesOverheadPower: boolean;
+  utilitiesBuriedPipes: boolean;
+  utilitiesLegalEasements: boolean;
+  utilitiesActiveWell: boolean;
+  challengeSevereErosion: boolean;
+  challengeWinterFlooding: boolean;
+  challengeHighWind: boolean;
+  challengeWildlifePressure: boolean;
+  primaryGoal?: string | null;
+  maintenanceCapacity?: string | null;
+}
+
 export interface DesignedSwale {
   id: string;
   propertyId: string;
