@@ -270,6 +270,9 @@ export default function MapPage() {
   const sectorLayersRef = useRef<Map<string, L.GeoJSON>>(new Map());
   const sectorPreviewLayerRef = useRef<L.GeoJSON | null>(null);
   const sectorCenterMarkerRef = useRef<L.Marker | null>(null);
+  const sectorArmStartRef = useRef<L.Marker | null>(null);
+  const sectorArmEndRef = useRef<L.Marker | null>(null);
+  const isDraggingArmRef = useRef(false);
   const solarArcLayersRef = useRef<L.Layer[]>([]);
   const contourDataRef = useRef<GeoJSON.FeatureCollection | null>(null);
   const damMarkerRef = useRef<L.Marker | null>(null);
@@ -311,6 +314,8 @@ export default function MapPage() {
   const [dropSectorCenterMode, setDropSectorCenterMode] = useState(false);
   const [sectorCenter, setSectorCenter] = useState<{ lng: number; lat: number } | null>(null);
   const [sectorDraft, setSectorDraft] = useState({ sectorType: "custom_view", radiusKm: 0.5, startAngle: 0, endAngle: 90, label: "" });
+  const sectorDraftRef = useRef(sectorDraft);
+  sectorDraftRef.current = sectorDraft;
   const [editingSectorId, setEditingSectorId] = useState<string | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showWater, setShowWater] = useState(true);
@@ -917,6 +922,69 @@ export default function MapPage() {
     map.on("click", handleClick);
     return () => { map.off("click", handleClick); container.style.cursor = ""; };
   }, [role, dropSectorCenterMode, mapLoaded]);
+
+  // ─── SECTOR ARM HANDLES (draggable angle markers) ────────────────────────
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapLoaded) return;
+    if (sectorArmStartRef.current) { map.removeLayer(sectorArmStartRef.current); sectorArmStartRef.current = null; }
+    if (sectorArmEndRef.current) { map.removeLayer(sectorArmEndRef.current); sectorArmEndRef.current = null; }
+    if (!sectorCenter) return;
+    const armIcon = (color: string) => L.divIcon({
+      className: "",
+      html: `<div style="width:14px;height:14px;border-radius:50%;background:#1a2e1a;border:2.5px solid ${color};box-shadow:0 1px 4px rgba(0,0,0,0.6);cursor:grab;"></div>`,
+      iconSize: [14, 14],
+      iconAnchor: [7, 7],
+    });
+    const makeHandle = (color: string, isStart: boolean) => {
+      const marker = L.marker([sectorCenter.lat, sectorCenter.lng], {
+        draggable: true,
+        icon: armIcon(color),
+        zIndexOffset: 500,
+      }).addTo(map);
+      marker.on("dragstart", () => { isDraggingArmRef.current = true; });
+      marker.on("drag", () => {
+        const { lat, lng } = marker.getLatLng();
+        const b = turf.bearing(
+          turf.point([sectorCenter.lng, sectorCenter.lat]),
+          turf.point([lng, lat]),
+        );
+        const angle = Math.round(((b % 360) + 360) % 360);
+        setSectorDraft((d) => isStart ? { ...d, startAngle: angle } : { ...d, endAngle: angle });
+      });
+      marker.on("dragend", () => {
+        isDraggingArmRef.current = false;
+        const draft = sectorDraftRef.current;
+        const angle = isStart ? draft.startAngle : draft.endAngle;
+        const dest = turf.destination(
+          turf.point([sectorCenter.lng, sectorCenter.lat]),
+          draft.radiusKm, angle, { units: "kilometers" },
+        );
+        marker.setLatLng([dest.geometry.coordinates[1], dest.geometry.coordinates[0]]);
+      });
+      return marker;
+    };
+    sectorArmStartRef.current = makeHandle("#84cc16", true);
+    sectorArmEndRef.current = makeHandle("#f97316", false);
+    return () => {
+      if (sectorArmStartRef.current) { map.removeLayer(sectorArmStartRef.current); sectorArmStartRef.current = null; }
+      if (sectorArmEndRef.current) { map.removeLayer(sectorArmEndRef.current); sectorArmEndRef.current = null; }
+    };
+  }, [sectorCenter, mapLoaded]);
+
+  // ─── REPOSITION ARM HANDLES when radius / angles change ──────────────────
+  useEffect(() => {
+    if (!sectorCenter || isDraggingArmRef.current) return;
+    const pos = (angle: number): [number, number] => {
+      const dest = turf.destination(
+        turf.point([sectorCenter.lng, sectorCenter.lat]),
+        sectorDraft.radiusKm, angle, { units: "kilometers" },
+      );
+      return [dest.geometry.coordinates[1], dest.geometry.coordinates[0]];
+    };
+    sectorArmStartRef.current?.setLatLng(pos(sectorDraft.startAngle));
+    sectorArmEndRef.current?.setLatLng(pos(sectorDraft.endAngle));
+  }, [sectorCenter, sectorDraft.startAngle, sectorDraft.endAngle, sectorDraft.radiusKm]);
 
   // ─── SECTOR PREVIEW (live wedge while editing) ────────────────────────────
   useEffect(() => {
@@ -1789,24 +1857,19 @@ export default function MapPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-[10px] font-medium mb-1 block" style={{ color: "hsl(42, 15%, 55%)" }}>Start °</label>
-                  <input type="number" min="0" max="360"
-                    className="w-full text-xs px-2 py-1.5 rounded border outline-none"
-                    style={{ background: "hsl(103, 35%, 17%)", borderColor: "hsl(103, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
-                    value={sectorDraft.startAngle}
-                    onChange={(e) => setSectorDraft((d) => ({ ...d, startAngle: Math.min(360, Math.max(0, parseInt(e.target.value) || 0)) }))}
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] font-medium mb-1 block" style={{ color: "hsl(42, 15%, 55%)" }}>End °</label>
-                  <input type="number" min="0" max="360"
-                    className="w-full text-xs px-2 py-1.5 rounded border outline-none"
-                    style={{ background: "hsl(103, 35%, 17%)", borderColor: "hsl(103, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
-                    value={sectorDraft.endAngle}
-                    onChange={(e) => setSectorDraft((d) => ({ ...d, endAngle: Math.min(360, Math.max(0, parseInt(e.target.value) || 0)) }))}
-                  />
+              <div>
+                <p className="text-[9px] mb-1.5" style={{ color: "hsl(42, 15%, 50%)" }}>
+                  Drag the handles on the map to set angles
+                </p>
+                <div className="grid grid-cols-2 gap-2 text-center">
+                  <div className="rounded px-2 py-1.5" style={{ background: "hsl(103,35%,14%)", border: "1.5px solid #84cc16" }}>
+                    <div className="text-[9px] mb-0.5" style={{ color: "hsl(42,15%,55%)" }}>Start</div>
+                    <div className="text-xs font-medium" style={{ color: "#84cc16" }}>{sectorDraft.startAngle}°</div>
+                  </div>
+                  <div className="rounded px-2 py-1.5" style={{ background: "hsl(103,35%,14%)", border: "1.5px solid #f97316" }}>
+                    <div className="text-[9px] mb-0.5" style={{ color: "hsl(42,15%,55%)" }}>End</div>
+                    <div className="text-xs font-medium" style={{ color: "#f97316" }}>{sectorDraft.endAngle}°</div>
+                  </div>
                 </div>
               </div>
 
