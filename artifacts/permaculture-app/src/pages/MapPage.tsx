@@ -1285,14 +1285,14 @@ export default function MapPage() {
           const b = parseInt(hx.slice(4, 6), 16);
           const fill = `rgba(${r},${g},${b},0.18)`;
 
-          const { outer, inner } = wedgeArcs(s.centerLng, s.centerLat, s.radiusKm, 0.04, s.startAngle, s.endAngle);
+          const { outer, inner } = wedgeArcs(s.centerLng, s.centerLat, radiusKm, 0.04, s.startAngle, s.endAngle);
           const span = ((s.endAngle - s.startAngle) + 360) % 360;
           const midAz = (s.startAngle + span / 2) % 360;
 
           addRibbon(ribbonPath(outer, inner), fill, st.border, 0.4, () => {
             const lPt = turf.destination(
               turf.point([s.centerLng, s.centerLat]),
-              s.radiusKm * 0.5, midAz, { units: "kilometers" },
+              radiusKm * 0.5, midAz, { units: "kilometers" },
             );
             const popup = L.popup({ closeButton: true })
               .setLatLng(L.latLng(lPt.geometry.coordinates[1], lPt.geometry.coordinates[0]))
@@ -1316,7 +1316,7 @@ export default function MapPage() {
           // Label sits on the outer circumference at the arc midpoint
           const lPt = turf.destination(
             turf.point([s.centerLng, s.centerLat]),
-            s.radiusKm * 0.92, midAz, { units: "kilometers" },
+            radiusKm * 0.92, midAz, { units: "kilometers" },
           );
           addArcLabel(s.label || st.label, lPt.geometry.coordinates[0], lPt.geometry.coordinates[1], midAz, 13, "rgba(18,18,18,0.92)");
         });
