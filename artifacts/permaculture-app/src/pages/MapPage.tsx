@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, type ReactNode } from "react";
 import { useLocation } from "wouter";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -1773,7 +1773,7 @@ export default function MapPage() {
         </div>
 
         {/* ── LAYER VISIBILITY ── */}
-        <SidebarSection label="Layer Visibility">
+        <SidebarSection label="Layer Visibility" defaultOpen>
           <div className="space-y-2">
             <LayerToggle label="Satellite Imagery" color="#4a9eff" active={showSatellite} onToggle={() => setShowSatellite((v) => !v)} />
             <LayerToggle
@@ -1823,6 +1823,13 @@ export default function MapPage() {
               color="#8B6914"
               active={showPathways}
               onToggle={() => setShowPathways((v) => !v)}
+              disabled={!activePropertyId}
+            />
+            <LayerToggle
+              label="Zone Mapping"
+              color="#CA8A04"
+              active={showZones}
+              onToggle={() => setShowZones((v) => !v)}
               disabled={!activePropertyId}
             />
           </div>
@@ -2634,22 +2641,6 @@ export default function MapPage() {
             <p className="text-[11px]" style={{ color: "hsl(42, 15%, 50%)" }}>Select a property to map zones.</p>
           ) : (
             <div className="space-y-2.5">
-              {/* Zone visibility toggle */}
-              <div className="flex items-center justify-between">
-                <span className="text-[11px]" style={{ color: "hsl(42, 20%, 70%)" }}>Zone polygons</span>
-                <button
-                  onClick={() => setShowZones((v) => !v)}
-                  className="text-[10px] px-2 py-0.5 rounded border"
-                  style={{
-                    borderColor: showZones ? "hsl(84, 38%, 38%)" : "hsl(103, 30%, 22%)",
-                    color: showZones ? "hsl(84, 55%, 65%)" : "hsl(42, 15%, 50%)",
-                    background: "transparent",
-                  }}
-                >
-                  {showZones ? "Visible" : "Hidden"}
-                </button>
-              </div>
-
               {role === "designer" && (
                 <>
                   {/* 5 free-form draw buttons */}
@@ -2814,13 +2805,31 @@ export default function MapPage() {
 
 // ─── SUBCOMPONENTS ────────────────────────────────────────────────────────────
 
-function SidebarSection({ label, children }: { label: string; children: React.ReactNode }) {
+function SidebarSection({ label, children, defaultOpen = false }: { label: string; children: ReactNode; defaultOpen?: boolean }) {
+  const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="px-4 py-3 border-b" style={{ borderColor: "hsl(103, 35%, 18%)" }}>
-      <div className="text-[10px] font-semibold uppercase tracking-widest mb-2.5" style={{ color: "hsl(84, 35%, 52%)" }}>
-        {label}
-      </div>
-      {children}
+    <div className="border-b" style={{ borderColor: "hsl(103, 35%, 18%)" }}>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="w-full px-4 py-2.5 flex items-center justify-between text-left"
+        style={{ background: "transparent", cursor: "pointer" }}
+      >
+        <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "hsl(84, 35%, 52%)" }}>
+          {label}
+        </span>
+        <span
+          style={{
+            color: "hsl(84, 35%, 45%)",
+            fontSize: 10,
+            display: "inline-block",
+            transform: open ? "rotate(180deg)" : "rotate(0deg)",
+            transition: "transform 0.15s ease",
+          }}
+        >
+          ▾
+        </span>
+      </button>
+      {open && <div className="px-4 pb-3">{children}</div>}
     </div>
   );
 }
