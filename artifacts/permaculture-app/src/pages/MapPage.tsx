@@ -1175,14 +1175,14 @@ export default function MapPage() {
         t.setAttribute("transform", `rotate(${rot.toFixed(1)},${fmt(p.x)},${fmt(p.y)})`);
         t.setAttribute("font-size", `${fontSize}px`);
         t.setAttribute("font-family", "ui-sans-serif,system-ui,-apple-system,sans-serif");
-        t.setAttribute("font-weight", "500");
-        t.setAttribute("letter-spacing", "0.05em");
+        t.setAttribute("font-weight", "600");
+        t.setAttribute("letter-spacing", "0.04em");
         t.setAttribute("pointer-events", "none");
         if (pass === 0) {
           // Dark outline for map readability
           t.setAttribute("fill", "none");
-          t.setAttribute("stroke", "rgba(0,0,0,0.78)");
-          t.setAttribute("stroke-width", "3");
+          t.setAttribute("stroke", "rgba(255,255,255,0.72)");
+          t.setAttribute("stroke-width", "4");
           t.setAttribute("stroke-linejoin", "round");
         } else {
           t.setAttribute("fill", color);
@@ -1203,58 +1203,43 @@ export default function MapPage() {
       const { radiusKm } = sectorDraft;
       const year = new Date().getFullYear();
 
-      // ── Solar arc ribbons (outermost two concentric bands) ───────────────
+      // ── Solar arc rings (full 360° concentric bands) ─────────────────────
+      // Rendered as complete rings so the diagram reads like a professional
+      // permaculture plan — summer sun outer, winter sun inner.
       if (showSolarArcs) {
         const SOLAR_SPECS = [
           {
-            month: 5, day: 21,            // June 21 — summer solstice
             outerFrac: 1.00, innerFrac: 0.80,
-            fill: "rgba(245,175,25,0.18)", stroke: "#C8A43C",
-            label: "Summer Sun", color: "#E8C44A", fs: 10,
+            fill: "rgba(240,170,20,0.42)", stroke: "#C8A43C", strokeW: 1.8,
+            label: "Summer Sun", labelBearing: 355,
           },
           {
-            month: 11, day: 21,           // Dec 21 — winter solstice
-            outerFrac: 0.80, innerFrac: 0.60,
-            fill: "rgba(148,185,220,0.18)", stroke: "#8BAFC8",
-            label: "Winter Sun", color: "#A8C8DC", fs: 9.5,
+            outerFrac: 0.80, innerFrac: 0.62,
+            fill: "rgba(140,180,215,0.38)", stroke: "#7AAAC0", strokeW: 1.5,
+            label: "Winter Sun", labelBearing: 355,
           },
         ] as const;
 
-        SOLAR_SPECS.forEach(({ month, day, outerFrac, innerFrac, fill, stroke, label, color, fs }) => {
-          const date = new Date(year, month, day, 12, 0, 0);
-          const times = SunCalc.getTimes(date, cLat, cLng);
-          const srMs = times.sunrise?.getTime();
-          const ssMs = times.sunset?.getTime();
-          if (!srMs || !ssMs || !isFinite(srMs) || !isFinite(ssMs) || ssMs <= srMs) return;
+        const STEPS = 128;
+        const c = turf.point([cLng, cLat]);
 
-          const STEPS = 120;
-          const c = turf.point([cLng, cLat]);
+        SOLAR_SPECS.forEach(({ outerFrac, innerFrac, fill, stroke, strokeW, label, labelBearing }) => {
           const outerPts: [number, number][] = [];
           const innerPts: [number, number][] = [];
-
+          // Full 360° ring — step from 0° back to 0°
           for (let i = 0; i <= STEPS; i++) {
-            const t = new Date(srMs + ((ssMs - srMs) * i) / STEPS);
-            const pos = SunCalc.getPosition(t, cLat, cLng);
-            if (pos.altitude < 0.005) continue;
-            // suncalc azimuth: 0=south, +π/2=west → compass bearing (0=N, CW)
-            const bearing = ((pos.azimuth * 180 / Math.PI) + 180 + 360) % 360;
+            const bearing = (360 * i) / STEPS;
             outerPts.push(turf.destination(c, radiusKm * outerFrac, bearing, { units: "kilometers" }).geometry.coordinates as [number, number]);
             innerPts.push(turf.destination(c, radiusKm * innerFrac, bearing, { units: "kilometers" }).geometry.coordinates as [number, number]);
           }
-          if (outerPts.length < 2) return;
 
-          addRibbon(ribbonPath(outerPts, innerPts), fill, stroke, 1.2);
+          addRibbon(ribbonPath(outerPts, innerPts), fill, stroke, strokeW);
 
-          // Label at geometric midpoint of the arc
-          const mi = Math.floor(outerPts.length / 2);
-          const mOuter = outerPts[mi];
-          const mInner = innerPts[Math.min(mi, innerPts.length - 1)];
-          const lLng = (mOuter[0] + mInner[0]) / 2;
-          const lLat = (mOuter[1] + mInner[1]) / 2;
-          const centerPx = cPt(cLng, cLat);
-          const midPx = cPt(mOuter[0], mOuter[1]);
-          const midAz = ((Math.atan2(midPx.x - centerPx.x, -(midPx.y - centerPx.y)) * 180 / Math.PI) + 360) % 360;
-          addArcLabel(label, lLng, lLat, midAz, fs, color);
+          // Label at the top of the ring (north / slightly west of north)
+          const labelR = radiusKm * (outerFrac + innerFrac) / 2;
+          const lPt = turf.destination(c, labelR, labelBearing, { units: "kilometers" });
+          // Bearing ≈355° → tangent ≈90° → label is horizontal
+          addArcLabel(label, lPt.geometry.coordinates[0], lPt.geometry.coordinates[1], 90, 14, "rgba(18,18,18,0.92)");
         });
       }
 
@@ -1266,9 +1251,9 @@ export default function MapPage() {
           const r = parseInt(hx.slice(0, 2), 16);
           const g = parseInt(hx.slice(2, 4), 16);
           const b = parseInt(hx.slice(4, 6), 16);
-          const fill = `rgba(${r},${g},${b},0.18)`;
+          const fill = `rgba(${r},${g},${b},0.45)`;
 
-          const { outer, inner } = wedgeArcs(s.centerLng, s.centerLat, s.radiusKm, 0.08, s.startAngle, s.endAngle);
+          const { outer, inner } = wedgeArcs(s.centerLng, s.centerLat, s.radiusKm, 0.04, s.startAngle, s.endAngle);
           const span = ((s.endAngle - s.startAngle) + 360) % 360;
           const midAz = (s.startAngle + span / 2) % 360;
 
@@ -1298,7 +1283,7 @@ export default function MapPage() {
             turf.point([s.centerLng, s.centerLat]),
             s.radiusKm * 0.54, midAz, { units: "kilometers" },
           );
-          addArcLabel(s.label || st.label, lPt.geometry.coordinates[0], lPt.geometry.coordinates[1], midAz, 10, st.border);
+          addArcLabel(s.label || st.label, lPt.geometry.coordinates[0], lPt.geometry.coordinates[1], midAz, 14, "rgba(18,18,18,0.92)");
         });
       }
     }
