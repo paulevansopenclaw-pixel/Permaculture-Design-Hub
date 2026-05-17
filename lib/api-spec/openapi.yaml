@@ -16,6 +16,8 @@ tags:
     description: Feedback pins and comments
   - name: structures
     description: Property structure markers
+  - name: sectors
+    description: Permaculture sector analysis wedges
 
 paths:
   /healthz:
@@ -240,6 +242,102 @@ paths:
         "204":
           description: Deleted
 
+  /properties/{propertyId}/sectors:
+    get:
+      operationId: listSectors
+      tags: [sectors]
+      summary: List all sector wedges for a property
+      parameters:
+        - name: propertyId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of sectors
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Sector"
+
+    post:
+      operationId: createSector
+      tags: [sectors]
+      summary: Add a sector wedge to a property
+      parameters:
+        - name: propertyId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SectorInput"
+      responses:
+        "201":
+          description: Created sector
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Sector"
+
+  /properties/{propertyId}/sectors/{sectorId}:
+    patch:
+      operationId: updateSector
+      tags: [sectors]
+      summary: Update a sector wedge
+      parameters:
+        - name: propertyId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: sectorId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SectorUpdate"
+      responses:
+        "200":
+          description: Updated sector
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Sector"
+        "404":
+          description: Not found
+
+    delete:
+      operationId: deleteSector
+      tags: [sectors]
+      summary: Delete a sector wedge
+      parameters:
+        - name: propertyId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: sectorId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
   /properties/{propertyId}/comments:
     get:
       operationId: listComments
@@ -411,6 +509,68 @@ components:
           type: string
           minLength: 1
         structureType:
+          type: string
+
+    Sector:
+      type: object
+      required: [id, propertyId, sectorType, centerLng, centerLat, radiusKm, startAngle, endAngle, label, createdAt]
+      properties:
+        id:
+          type: string
+        propertyId:
+          type: string
+        sectorType:
+          type: string
+        centerLng:
+          type: number
+        centerLat:
+          type: number
+        radiusKm:
+          type: number
+        startAngle:
+          type: integer
+        endAngle:
+          type: integer
+        label:
+          type: string
+        createdAt:
+          type: string
+
+    SectorInput:
+      type: object
+      required: [sectorType, centerLng, centerLat, radiusKm, startAngle, endAngle, label]
+      properties:
+        sectorType:
+          type: string
+        centerLng:
+          type: number
+        centerLat:
+          type: number
+        radiusKm:
+          type: number
+        startAngle:
+          type: integer
+        endAngle:
+          type: integer
+        label:
+          type: string
+
+    SectorUpdate:
+      type: object
+      properties:
+        sectorType:
+          type: string
+        centerLng:
+          type: number
+        centerLat:
+          type: number
+        radiusKm:
+          type: number
+        startAngle:
+          type: integer
+        endAngle:
+          type: integer
+        label:
           type: string
 
     Comment:

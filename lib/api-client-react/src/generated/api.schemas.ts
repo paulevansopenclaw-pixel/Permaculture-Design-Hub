@@ -91,6 +91,39 @@ export interface StructureUpdate {
   structureType?: string;
 }
 
+export interface Sector {
+  id: string;
+  propertyId: string;
+  sectorType: string;
+  centerLng: number;
+  centerLat: number;
+  radiusKm: number;
+  startAngle: number;
+  endAngle: number;
+  label: string;
+  createdAt: string;
+}
+
+export interface SectorInput {
+  sectorType: string;
+  centerLng: number;
+  centerLat: number;
+  radiusKm: number;
+  startAngle: number;
+  endAngle: number;
+  label: string;
+}
+
+export interface SectorUpdate {
+  sectorType?: string;
+  centerLng?: number;
+  centerLat?: number;
+  radiusKm?: number;
+  startAngle?: number;
+  endAngle?: number;
+  label?: string;
+}
+
 export interface Comment {
   id: string;
   propertyId: string;

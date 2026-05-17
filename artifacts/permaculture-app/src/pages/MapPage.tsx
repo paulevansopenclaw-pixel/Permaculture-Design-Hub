@@ -19,10 +19,15 @@ import {
   useListStructures,
   useCreateStructure,
   useDeleteStructure,
+  useListSectors,
+  useCreateSector,
+  useUpdateSector,
+  useDeleteSector,
   getListPropertiesQueryKey,
   getGetPropertyQueryKey,
   getListCommentsQueryKey,
   getListStructuresQueryKey,
+  getListSectorsQueryKey,
 } from "@workspace/api-client-react";
 import { useAppStore, type Role } from "@/store/useAppStore";
 import { generateContours } from "@/lib/contourEngine";
@@ -44,6 +49,23 @@ async function searchAddress(query: string, token: string) {
   if (!res.ok) return [];
   const data = await res.json();
   return data.features ?? [];
+}
+
+const SECTOR_TYPES = [
+  { value: "custom_view",  label: "Custom View Corridor", emoji: "👁",  color: "rgba(255,215,0,0.3)",   border: "#d4a800" },
+  { value: "noise",        label: "Nuisance/Road Noise",  emoji: "🔊",  color: "rgba(220,38,38,0.3)",   border: "#dc2626" },
+  { value: "wind",         label: "Damaging Winds",       emoji: "💨",  color: "rgba(59,130,246,0.3)",  border: "#3b82f6" },
+  { value: "winter_solar", label: "Winter Solar Arc",     emoji: "☀️",  color: "rgba(249,115,22,0.3)",  border: "#f97316" },
+];
+
+function sectorWedge(centerLng: number, centerLat: number, radiusKm: number, startAngle: number, endAngle: number) {
+  try {
+    const center = turf.point([centerLng, centerLat]);
+    const sector = turf.sector(center, radiusKm, startAngle, endAngle, { units: "kilometers", steps: 64 });
+    return sector;
+  } catch {
+    return null;
+  }
 }
 
 const STRUCTURE_TYPES = [
@@ -121,6 +143,9 @@ export default function MapPage() {
   const pendingPinMarkerRef = useRef<L.Marker | null>(null);
   const structureMarkersRef = useRef<L.Marker[]>([]);
   const pendingStructureMarkerRef = useRef<L.Marker | null>(null);
+  const sectorLayersRef = useRef<Map<string, L.GeoJSON>>(new Map());
+  const sectorPreviewLayerRef = useRef<L.GeoJSON | null>(null);
+  const sectorCenterMarkerRef = useRef<L.Marker | null>(null);
 
   const [mapboxToken, setMapboxToken] = useState("");
   const [mapLoaded, setMapLoaded] = useState(false);
@@ -133,6 +158,11 @@ export default function MapPage() {
   const [pendingStructure, setPendingStructure] = useState<{ lng: number; lat: number } | null>(null);
   const [structureLabel, setStructureLabel] = useState("");
   const [structureType, setStructureType] = useState("house");
+  const [showSectors, setShowSectors] = useState(true);
+  const [dropSectorCenterMode, setDropSectorCenterMode] = useState(false);
+  const [sectorCenter, setSectorCenter] = useState<{ lng: number; lat: number } | null>(null);
+  const [sectorDraft, setSectorDraft] = useState({ sectorType: "custom_view", radiusKm: 0.5, startAngle: 0, endAngle: 90, label: "" });
+  const [editingSectorId, setEditingSectorId] = useState<string | null>(null);
   const [isGeneratingContours, setIsGeneratingContours] = useState(false);
   const [dropPinMode, setDropPinMode] = useState(false);
   const [pendingPin, setPendingPin] = useState<{ lng: number; lat: number } | null>(null);
@@ -172,6 +202,17 @@ export default function MapPage() {
   const deleteComment = useDeleteComment();
   const createStructure = useCreateStructure();
   const deleteStructure = useDeleteStructure();
+
+  const { data: sectors = [] } = useListSectors(activePropertyId ?? "", {
+    query: {
+      enabled: !!activePropertyId,
+      queryKey: getListSectorsQueryKey(activePropertyId ?? ""),
+      refetchInterval: 15_000,
+    },
+  });
+  const createSector = useCreateSector();
+  const updateSector = useUpdateSector();
+  const deleteSector = useDeleteSector();
 
   // ─── FETCH TOKEN ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -477,6 +518,113 @@ export default function MapPage() {
     });
   }, [structures, activePropertyId, mapLoaded, role, showStructures, handleDeleteStructure]);
 
+  // ─── SECTOR CENTER CLICK HANDLER ─────────────────────────────────────────
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapLoaded || role !== "designer" || !dropSectorCenterMode) return;
+    const container = map.getContainer();
+    container.style.cursor = "crosshair";
+    const handleClick = (e: L.LeafletMouseEvent) => {
+      const { lat, lng } = e.latlng;
+      if (sectorCenterMarkerRef.current) { map.removeLayer(sectorCenterMarkerRef.current); sectorCenterMarkerRef.current = null; }
+      const marker = L.circleMarker([lat, lng], { radius: 7, color: "#fff", weight: 2, fillColor: "#1e3a5f", fillOpacity: 1 }).addTo(map);
+      (sectorCenterMarkerRef as any).current = marker;
+      setSectorCenter({ lng, lat });
+      setDropSectorCenterMode(false);
+    };
+    map.on("click", handleClick);
+    return () => { map.off("click", handleClick); container.style.cursor = ""; };
+  }, [role, dropSectorCenterMode, mapLoaded]);
+
+  // ─── SECTOR PREVIEW (live wedge while editing) ────────────────────────────
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapLoaded) return;
+    if (sectorPreviewLayerRef.current) { map.removeLayer(sectorPreviewLayerRef.current); sectorPreviewLayerRef.current = null; }
+    if (!sectorCenter) return;
+    const { sectorType, radiusKm, startAngle, endAngle } = sectorDraft;
+    const feature = sectorWedge(sectorCenter.lng, sectorCenter.lat, radiusKm, startAngle, endAngle);
+    if (!feature) return;
+    const st = SECTOR_TYPES.find((t) => t.value === sectorType) ?? SECTOR_TYPES[0];
+    const layer = L.geoJSON(feature as any, {
+      style: () => ({ color: st.border, weight: 1.5, fillColor: st.border, fillOpacity: 0.28, opacity: 0.8 }),
+    }).addTo(map);
+    sectorPreviewLayerRef.current = layer;
+    return () => { if (sectorPreviewLayerRef.current) { map.removeLayer(sectorPreviewLayerRef.current); sectorPreviewLayerRef.current = null; } };
+  }, [sectorCenter, sectorDraft, mapLoaded]);
+
+  // ─── SAVED SECTORS RENDERING ──────────────────────────────────────────────
+  const handleDeleteSector = useCallback(
+    (sectorId: string) => {
+      if (!activePropertyId) return;
+      deleteSector.mutate(
+        { propertyId: activePropertyId, sectorId },
+        { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListSectorsQueryKey(activePropertyId) }) },
+      );
+    },
+    [activePropertyId, deleteSector, queryClient],
+  );
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapLoaded) return;
+    sectorLayersRef.current.forEach((layer) => map.removeLayer(layer));
+    sectorLayersRef.current.clear();
+    if (!activePropertyId || !showSectors) return;
+    sectors.forEach((s) => {
+      const feature = sectorWedge(s.centerLng, s.centerLat, s.radiusKm, s.startAngle, s.endAngle);
+      if (!feature) return;
+      const st = SECTOR_TYPES.find((t) => t.value === s.sectorType) ?? SECTOR_TYPES[0];
+      const el = document.createElement("div");
+      el.innerHTML = `
+        <div style="font-size:12px;padding:2px 4px;min-width:140px;max-width:220px;">
+          <div style="font-weight:700;color:#111;margin-bottom:2px;">${st.emoji} ${s.label || st.label}</div>
+          <div style="font-size:10px;color:#555;margin-bottom:2px;">${st.label} · R=${s.radiusKm}km · ${s.startAngle}°→${s.endAngle}°</div>
+          ${role === "designer" ? `<button class="del-btn" style="margin-top:4px;padding:2px 8px;border:1px solid #c00;color:#c00;border-radius:3px;cursor:pointer;font-size:10px;background:none;">Delete</button>` : ""}
+        </div>`;
+      const layer = L.geoJSON(feature as any, {
+        style: () => ({ color: st.border, weight: 1.5, fillColor: st.border, fillOpacity: 0.28, opacity: 0.8 }),
+      });
+      layer.bindPopup(el);
+      el.querySelector(".del-btn")?.addEventListener("click", () => { handleDeleteSector(s.id); layer.closePopup(); });
+      layer.addTo(map);
+      sectorLayersRef.current.set(s.id, layer);
+    });
+  }, [sectors, activePropertyId, mapLoaded, role, showSectors, handleDeleteSector]);
+
+  // ─── SAVE SECTOR ─────────────────────────────────────────────────────────
+  function handleSaveSector() {
+    if (!activePropertyId || !sectorCenter) return;
+    const payload = {
+      sectorType: sectorDraft.sectorType,
+      centerLng: sectorCenter.lng,
+      centerLat: sectorCenter.lat,
+      radiusKm: sectorDraft.radiusKm,
+      startAngle: sectorDraft.startAngle,
+      endAngle: sectorDraft.endAngle,
+      label: sectorDraft.label.trim(),
+    };
+    if (editingSectorId) {
+      updateSector.mutate(
+        { propertyId: activePropertyId, sectorId: editingSectorId, data: payload },
+        { onSuccess: () => { queryClient.invalidateQueries({ queryKey: getListSectorsQueryKey(activePropertyId) }); handleCancelSectorDraft(); } },
+      );
+    } else {
+      createSector.mutate(
+        { propertyId: activePropertyId, data: payload },
+        { onSuccess: () => { queryClient.invalidateQueries({ queryKey: getListSectorsQueryKey(activePropertyId) }); handleCancelSectorDraft(); } },
+      );
+    }
+  }
+
+  function handleCancelSectorDraft() {
+    setSectorCenter(null);
+    setEditingSectorId(null);
+    setSectorDraft({ sectorType: "custom_view", radiusKm: 0.5, startAngle: 0, endAngle: 90, label: "" });
+    if (sectorCenterMarkerRef.current) { mapRef.current?.removeLayer(sectorCenterMarkerRef.current); (sectorCenterMarkerRef as any).current = null; }
+    if (sectorPreviewLayerRef.current) { mapRef.current?.removeLayer(sectorPreviewLayerRef.current); sectorPreviewLayerRef.current = null; }
+  }
+
   // ─── GEOCODING SEARCH ────────────────────────────────────────────────────
   useEffect(() => {
     if (!searchQuery.trim()) {
@@ -645,7 +793,7 @@ export default function MapPage() {
             {(["designer", "client"] as Role[]).map((r) => (
               <button
                 key={r}
-                onClick={() => { setRole(r); setDropPinMode(false); setPendingPin(null); }}
+                onClick={() => { setRole(r); setDropPinMode(false); setPendingPin(null); setDropSectorCenterMode(false); setSectorCenter(null); setEditingSectorId(null); }}
                 className="flex-1 py-1.5 text-[11px] font-medium transition-colors capitalize"
                 style={{
                   background: role === r ? "hsl(84, 38%, 42%)" : "transparent",
@@ -754,6 +902,13 @@ export default function MapPage() {
               disabled={!activeProperty?.boundaryGeojson}
             />
             <LayerToggle
+              label="Sectors"
+              color="#d4a800"
+              active={showSectors}
+              onToggle={() => setShowSectors((v) => !v)}
+              disabled={!activePropertyId}
+            />
+            <LayerToggle
               label="Structures"
               color="#1e3a5f"
               active={showStructures}
@@ -832,8 +987,147 @@ export default function MapPage() {
           ) : null}
         </SidebarSection>
 
-        {/* ── LAYER 3: FEEDBACK PINS ── */}
-        <SidebarSection label="Layer 3 — Feedback Pins">
+        {/* ── LAYER 3: SECTOR ANALYSIS ── */}
+        <SidebarSection label="Layer 3 — Sector Analysis">
+          {!activePropertyId ? (
+            <p className="text-[11px]" style={{ color: "hsl(42, 15%, 50%)" }}>Select a property to add sector overlays.</p>
+          ) : role !== "designer" ? (
+            <div>
+              {sectors.length === 0 ? (
+                <p className="text-[11px]" style={{ color: "hsl(42, 15%, 50%)" }}>No sector overlays mapped yet.</p>
+              ) : (
+                <div className="space-y-1 max-h-44 overflow-y-auto">
+                  {sectors.map((s) => {
+                    const st = SECTOR_TYPES.find((t) => t.value === s.sectorType) ?? SECTOR_TYPES[0];
+                    return (
+                      <div key={s.id} className="flex items-center gap-2 px-2 py-1.5 rounded" style={{ background: "hsl(103, 35%, 14%)" }}>
+                        <span className="text-sm">{st.emoji}</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[11px] font-medium truncate" style={{ color: "hsl(42, 28%, 85%)" }}>{s.label || st.label}</div>
+                          <div className="text-[10px]" style={{ color: "hsl(42, 15%, 50%)" }}>{s.radiusKm}km · {s.startAngle}°→{s.endAngle}°</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          ) : sectorCenter ? (
+            <div className="space-y-2.5">
+              <p className="text-[11px]" style={{ color: "hsl(42, 28%, 80%)" }}>Center placed. Configure the wedge:</p>
+
+              <div>
+                <label className="text-[10px] font-medium mb-1 block" style={{ color: "hsl(42, 15%, 55%)" }}>Sector Type</label>
+                <select
+                  className="w-full text-xs px-2 py-1.5 rounded border outline-none"
+                  style={{ background: "hsl(103, 35%, 17%)", borderColor: "hsl(103, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
+                  value={sectorDraft.sectorType}
+                  onChange={(e) => setSectorDraft((d) => ({ ...d, sectorType: e.target.value }))}
+                >
+                  {SECTOR_TYPES.map((t) => <option key={t.value} value={t.value}>{t.emoji} {t.label}</option>)}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-medium mb-1 block" style={{ color: "hsl(42, 15%, 55%)" }}>Label (optional)</label>
+                <input
+                  className="w-full text-xs px-2.5 py-1.5 rounded border outline-none"
+                  style={{ background: "hsl(103, 35%, 17%)", borderColor: "hsl(103, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
+                  placeholder="e.g. NW Prevailing Wind"
+                  value={sectorDraft.label}
+                  onChange={(e) => setSectorDraft((d) => ({ ...d, label: e.target.value }))}
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] font-medium mb-1 flex justify-between" style={{ color: "hsl(42, 15%, 55%)" }}>
+                  <span>Radius</span><span style={{ color: "hsl(42, 28%, 80%)" }}>{sectorDraft.radiusKm} km</span>
+                </label>
+                <input type="range" min="0.05" max="5" step="0.05"
+                  className="w-full h-1.5 rounded appearance-none"
+                  style={{ accentColor: "#84cc16" }}
+                  value={sectorDraft.radiusKm}
+                  onChange={(e) => setSectorDraft((d) => ({ ...d, radiusKm: parseFloat(e.target.value) }))}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[10px] font-medium mb-1 block" style={{ color: "hsl(42, 15%, 55%)" }}>Start °</label>
+                  <input type="number" min="0" max="360"
+                    className="w-full text-xs px-2 py-1.5 rounded border outline-none"
+                    style={{ background: "hsl(103, 35%, 17%)", borderColor: "hsl(103, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
+                    value={sectorDraft.startAngle}
+                    onChange={(e) => setSectorDraft((d) => ({ ...d, startAngle: Math.min(360, Math.max(0, parseInt(e.target.value) || 0)) }))}
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-medium mb-1 block" style={{ color: "hsl(42, 15%, 55%)" }}>End °</label>
+                  <input type="number" min="0" max="360"
+                    className="w-full text-xs px-2 py-1.5 rounded border outline-none"
+                    style={{ background: "hsl(103, 35%, 17%)", borderColor: "hsl(103, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
+                    value={sectorDraft.endAngle}
+                    onChange={(e) => setSectorDraft((d) => ({ ...d, endAngle: Math.min(360, Math.max(0, parseInt(e.target.value) || 0)) }))}
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-1.5 pt-1">
+                <button
+                  onClick={handleSaveSector}
+                  disabled={createSector.isPending || updateSector.isPending}
+                  className="flex-1 text-xs py-1.5 rounded font-medium"
+                  style={{ background: "hsl(84, 38%, 42%)", color: "#fff" }}
+                >
+                  {(createSector.isPending || updateSector.isPending) ? "Saving…" : editingSectorId ? "Update Sector" : "Save Sector"}
+                </button>
+                <button onClick={handleCancelSectorDraft} className="px-3 text-xs py-1.5 rounded" style={{ color: "hsl(42, 15%, 55%)" }}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-2.5">
+              <button
+                onClick={() => setDropSectorCenterMode(true)}
+                className="w-full text-xs px-3 py-2 rounded font-medium transition-colors"
+                style={{
+                  background: dropSectorCenterMode ? "hsl(220, 60%, 30%)" : "hsl(103, 35%, 17%)",
+                  border: "1px solid hsl(103, 30%, 22%)",
+                  color: dropSectorCenterMode ? "#fff" : "hsl(42, 28%, 88%)",
+                }}
+              >
+                {dropSectorCenterMode ? "Click on map to place Zone 0 center…" : "Place Sector Center (Zone 0)"}
+              </button>
+
+              {sectors.length > 0 && (
+                <div>
+                  <div className="text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: "hsl(42, 15%, 50%)" }}>
+                    {sectors.length} {sectors.length === 1 ? "Sector" : "Sectors"}
+                  </div>
+                  <div className="space-y-1 max-h-40 overflow-y-auto">
+                    {sectors.map((s) => {
+                      const st = SECTOR_TYPES.find((t) => t.value === s.sectorType) ?? SECTOR_TYPES[0];
+                      return (
+                        <div key={s.id} className="flex items-center gap-2 px-2 py-1.5 rounded" style={{ background: "hsl(103, 35%, 14%)" }}>
+                          <span className="text-sm">{st.emoji}</span>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-[11px] font-medium truncate" style={{ color: "hsl(42, 28%, 85%)" }}>{s.label || st.label}</div>
+                            <div className="text-[10px]" style={{ color: "hsl(42, 15%, 50%)" }}>{s.radiusKm}km · {s.startAngle}°→{s.endAngle}°</div>
+                          </div>
+                          <button onClick={() => handleDeleteSector(s.id)} className="text-[10px] flex-shrink-0" style={{ color: "hsl(0, 55%, 50%)" }}>×</button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </SidebarSection>
+
+        {/* ── LAYER 4: FEEDBACK PINS ── */}
+        <SidebarSection label="Layer 4 — Feedback Pins">
           {!activePropertyId ? (
             <p className="text-[11px]" style={{ color: "hsl(42, 15%, 50%)" }}>Select a property to manage feedback.</p>
           ) : role === "client" ? (
@@ -925,8 +1219,8 @@ export default function MapPage() {
           )}
         </SidebarSection>
 
-        {/* ── LAYER 4: STRUCTURES ── */}
-        <SidebarSection label="Layer 4 — Structures">
+        {/* ── LAYER 5: STRUCTURES ── */}
+        <SidebarSection label="Layer 5 — Structures">
           {!activePropertyId ? (
             <p className="text-[11px]" style={{ color: "hsl(42, 15%, 50%)" }}>Select a property to manage structures.</p>
           ) : role === "designer" ? (

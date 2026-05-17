@@ -27,6 +27,9 @@ import type {
   PropertyInput,
   PropertyStats,
   PropertyUpdate,
+  Sector,
+  SectorInput,
+  SectorUpdate,
   Structure,
   StructureInput,
   StructureUpdate
@@ -858,6 +861,301 @@ export const useDeleteStructure = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getDeleteStructureMutationOptions(options));
+    }
+
+export const getListSectorsUrl = (propertyId: string,) => {
+
+
+
+
+  return `/api/properties/${propertyId}/sectors`
+}
+
+/**
+ * @summary List all sector wedges for a property
+ */
+export const listSectors = async (propertyId: string, options?: RequestInit): Promise<Sector[]> => {
+
+  return customFetch<Sector[]>(getListSectorsUrl(propertyId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListSectorsQueryKey = (propertyId: string,) => {
+    return [
+    `/api/properties/${propertyId}/sectors`
+    ] as const;
+    }
+
+
+export const getListSectorsQueryOptions = <TData = Awaited<ReturnType<typeof listSectors>>, TError = ErrorType<unknown>>(propertyId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSectors>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListSectorsQueryKey(propertyId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listSectors>>> = ({ signal }) => listSectors(propertyId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(propertyId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listSectors>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListSectorsQueryResult = NonNullable<Awaited<ReturnType<typeof listSectors>>>
+export type ListSectorsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List all sector wedges for a property
+ */
+
+export function useListSectors<TData = Awaited<ReturnType<typeof listSectors>>, TError = ErrorType<unknown>>(
+ propertyId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSectors>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListSectorsQueryOptions(propertyId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateSectorUrl = (propertyId: string,) => {
+
+
+
+
+  return `/api/properties/${propertyId}/sectors`
+}
+
+/**
+ * @summary Add a sector wedge to a property
+ */
+export const createSector = async (propertyId: string,
+    sectorInput: SectorInput, options?: RequestInit): Promise<Sector> => {
+
+  return customFetch<Sector>(getCreateSectorUrl(propertyId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      sectorInput,)
+  }
+);}
+
+
+
+
+export const getCreateSectorMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createSector>>, TError,{propertyId: string;data: BodyType<SectorInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createSector>>, TError,{propertyId: string;data: BodyType<SectorInput>}, TContext> => {
+
+const mutationKey = ['createSector'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createSector>>, {propertyId: string;data: BodyType<SectorInput>}> = (props) => {
+          const {propertyId,data} = props ?? {};
+
+          return  createSector(propertyId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateSectorMutationResult = NonNullable<Awaited<ReturnType<typeof createSector>>>
+    export type CreateSectorMutationBody = BodyType<SectorInput>
+    export type CreateSectorMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Add a sector wedge to a property
+ */
+export const useCreateSector = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createSector>>, TError,{propertyId: string;data: BodyType<SectorInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createSector>>,
+        TError,
+        {propertyId: string;data: BodyType<SectorInput>},
+        TContext
+      > => {
+      return useMutation(getCreateSectorMutationOptions(options));
+    }
+
+export const getUpdateSectorUrl = (propertyId: string,
+    sectorId: string,) => {
+
+
+
+
+  return `/api/properties/${propertyId}/sectors/${sectorId}`
+}
+
+/**
+ * @summary Update a sector wedge
+ */
+export const updateSector = async (propertyId: string,
+    sectorId: string,
+    sectorUpdate: SectorUpdate, options?: RequestInit): Promise<Sector> => {
+
+  return customFetch<Sector>(getUpdateSectorUrl(propertyId,sectorId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      sectorUpdate,)
+  }
+);}
+
+
+
+
+export const getUpdateSectorMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateSector>>, TError,{propertyId: string;sectorId: string;data: BodyType<SectorUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateSector>>, TError,{propertyId: string;sectorId: string;data: BodyType<SectorUpdate>}, TContext> => {
+
+const mutationKey = ['updateSector'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateSector>>, {propertyId: string;sectorId: string;data: BodyType<SectorUpdate>}> = (props) => {
+          const {propertyId,sectorId,data} = props ?? {};
+
+          return  updateSector(propertyId,sectorId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateSectorMutationResult = NonNullable<Awaited<ReturnType<typeof updateSector>>>
+    export type UpdateSectorMutationBody = BodyType<SectorUpdate>
+    export type UpdateSectorMutationError = ErrorType<void>
+
+    /**
+ * @summary Update a sector wedge
+ */
+export const useUpdateSector = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateSector>>, TError,{propertyId: string;sectorId: string;data: BodyType<SectorUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateSector>>,
+        TError,
+        {propertyId: string;sectorId: string;data: BodyType<SectorUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateSectorMutationOptions(options));
+    }
+
+export const getDeleteSectorUrl = (propertyId: string,
+    sectorId: string,) => {
+
+
+
+
+  return `/api/properties/${propertyId}/sectors/${sectorId}`
+}
+
+/**
+ * @summary Delete a sector wedge
+ */
+export const deleteSector = async (propertyId: string,
+    sectorId: string, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteSectorUrl(propertyId,sectorId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteSectorMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteSector>>, TError,{propertyId: string;sectorId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteSector>>, TError,{propertyId: string;sectorId: string}, TContext> => {
+
+const mutationKey = ['deleteSector'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteSector>>, {propertyId: string;sectorId: string}> = (props) => {
+          const {propertyId,sectorId} = props ?? {};
+
+          return  deleteSector(propertyId,sectorId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteSectorMutationResult = NonNullable<Awaited<ReturnType<typeof deleteSector>>>
+
+    export type DeleteSectorMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Delete a sector wedge
+ */
+export const useDeleteSector = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteSector>>, TError,{propertyId: string;sectorId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteSector>>,
+        TError,
+        {propertyId: string;sectorId: string},
+        TContext
+      > => {
+      return useMutation(getDeleteSectorMutationOptions(options));
     }
 
 export const getListCommentsUrl = (propertyId: string,) => {

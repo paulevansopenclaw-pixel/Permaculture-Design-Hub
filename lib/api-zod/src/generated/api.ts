@@ -195,6 +195,87 @@ export const DeleteStructureParams = zod.object({
 
 
 /**
+ * @summary List all sector wedges for a property
+ */
+export const ListSectorsParams = zod.object({
+  "propertyId": zod.coerce.string()
+})
+
+export const ListSectorsResponseItem = zod.object({
+  "id": zod.string(),
+  "propertyId": zod.string(),
+  "sectorType": zod.string(),
+  "centerLng": zod.number(),
+  "centerLat": zod.number(),
+  "radiusKm": zod.number(),
+  "startAngle": zod.number(),
+  "endAngle": zod.number(),
+  "label": zod.string(),
+  "createdAt": zod.string()
+})
+export const ListSectorsResponse = zod.array(ListSectorsResponseItem)
+
+
+/**
+ * @summary Add a sector wedge to a property
+ */
+export const CreateSectorParams = zod.object({
+  "propertyId": zod.coerce.string()
+})
+
+export const CreateSectorBody = zod.object({
+  "sectorType": zod.string(),
+  "centerLng": zod.number(),
+  "centerLat": zod.number(),
+  "radiusKm": zod.number(),
+  "startAngle": zod.number(),
+  "endAngle": zod.number(),
+  "label": zod.string()
+})
+
+
+/**
+ * @summary Update a sector wedge
+ */
+export const UpdateSectorParams = zod.object({
+  "propertyId": zod.coerce.string(),
+  "sectorId": zod.coerce.string()
+})
+
+export const UpdateSectorBody = zod.object({
+  "sectorType": zod.string().optional(),
+  "centerLng": zod.number().optional(),
+  "centerLat": zod.number().optional(),
+  "radiusKm": zod.number().optional(),
+  "startAngle": zod.number().optional(),
+  "endAngle": zod.number().optional(),
+  "label": zod.string().optional()
+})
+
+export const UpdateSectorResponse = zod.object({
+  "id": zod.string(),
+  "propertyId": zod.string(),
+  "sectorType": zod.string(),
+  "centerLng": zod.number(),
+  "centerLat": zod.number(),
+  "radiusKm": zod.number(),
+  "startAngle": zod.number(),
+  "endAngle": zod.number(),
+  "label": zod.string(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Delete a sector wedge
+ */
+export const DeleteSectorParams = zod.object({
+  "propertyId": zod.coerce.string(),
+  "sectorId": zod.coerce.string()
+})
+
+
+/**
  * @summary List all feedback pins for a property
  */
 export const ListCommentsParams = zod.object({

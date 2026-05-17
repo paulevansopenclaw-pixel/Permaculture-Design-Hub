@@ -3,6 +3,7 @@ import healthRouter from "./health";
 import propertiesRouter from "./properties";
 import commentsRouter from "./comments";
 import structuresRouter from "./structures";
+import sectorsRouter from "./sectors";
 import configRouter from "./config";
 
 const router: IRouter = Router();
@@ -12,5 +13,6 @@ router.use(configRouter);
 router.use(propertiesRouter);
 router.use(commentsRouter);
 router.use(structuresRouter);
+router.use(sectorsRouter);
 
 export default router;
