@@ -1316,7 +1316,7 @@ export default function MapPage() {
           // Label sits on the outer circumference at the arc midpoint
           const lPt = turf.destination(
             turf.point([s.centerLng, s.centerLat]),
-            radiusKm * 0.92, midAz, { units: "kilometers" },
+            radiusKm * 0.97, midAz, { units: "kilometers" },
           );
           addArcLabel(s.label || st.label, lPt.geometry.coordinates[0], lPt.geometry.coordinates[1], midAz, 13, "rgba(18,18,18,0.92)");
         });
