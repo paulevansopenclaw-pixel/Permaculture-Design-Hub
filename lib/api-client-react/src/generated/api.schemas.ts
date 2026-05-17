@@ -164,14 +164,14 @@ export interface SpatialRecommendation {
 
 export interface SiteAnalysisReport {
   propertyId: string;
-  /** 3-sentence site resilience summary */
-  ResilienceSummary: unknown;
-  /** Tank sizing and swale geometry recommendations */
-  WaterSecurity: unknown;
-  /** Solar and thermal autonomy recommendations */
-  EnergyAutonomy: unknown;
-  /** 7-layer food-yield matrix */
-  CaloricProduction: unknown;
+  /** Water catchment, tank sizing, and swale/drainage placement */
+  WaterStrategy: unknown;
+  /** Solar optimisation, microclimate, and thermal mass strategies */
+  SunAndEnergy: unknown;
+  /** Soil protection, erosion mitigation, and caloric planting */
+  LandAndBiodiversity: unknown;
+  /** Extreme-weather and grid-collapse resilience summary with immediate action steps */
+  ClimateResilience: unknown;
   generatedAt: string;
   rawJson: string;
 }

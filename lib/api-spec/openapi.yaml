@@ -1045,18 +1045,18 @@ components:
 
     SiteAnalysisReport:
       type: object
-      required: [propertyId, ResilienceSummary, WaterSecurity, EnergyAutonomy, CaloricProduction, generatedAt, rawJson]
+      required: [propertyId, WaterStrategy, SunAndEnergy, LandAndBiodiversity, ClimateResilience, generatedAt, rawJson]
       properties:
         propertyId:
           type: string
-        ResilienceSummary:
-          description: 3-sentence site resilience summary
-        WaterSecurity:
-          description: Tank sizing and swale geometry recommendations
-        EnergyAutonomy:
-          description: Solar and thermal autonomy recommendations
-        CaloricProduction:
-          description: 7-layer food-yield matrix
+        WaterStrategy:
+          description: Water catchment, tank sizing, and swale/drainage placement
+        SunAndEnergy:
+          description: Solar optimisation, microclimate, and thermal mass strategies
+        LandAndBiodiversity:
+          description: Soil protection, erosion mitigation, and caloric planting
+        ClimateResilience:
+          description: Extreme-weather and grid-collapse resilience summary with immediate action steps
         generatedAt:
           type: string
         rawJson:

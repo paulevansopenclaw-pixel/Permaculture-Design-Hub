@@ -11,12 +11,12 @@ interface Props {
 }
 
 const LOADING_MESSAGES = [
-  "Assessing grid-collapse threat profile…",
-  "Calculating rainfall capture capacity…",
+  "Assessing rainfall catchment capacity…",
   "Mapping solar and wind energy vectors…",
-  "Building 7-layer caloric production matrix…",
-  "Stress-testing water security infrastructure…",
-  "Finalising autonomy report…",
+  "Evaluating soil protection and erosion risk…",
+  "Modelling caloric planting strategy…",
+  "Stress-testing grid-collapse resilience…",
+  "Finalising resilience report…",
 ];
 
 export function AiAnalysisPanel({ propertyId, hasBrief, savedReport, savedAt, onReportSaved }: Props) {
@@ -109,33 +109,33 @@ export function AiAnalysisPanel({ propertyId, hasBrief, savedReport, savedAt, on
       {report && !isLoading && (
         <div className="space-y-3">
           <ReportCard
-            icon="🛡"
-            accent="hsl(210, 40%, 35%)"
-            accentBorder="hsl(210, 40%, 22%)"
-            title="Resilience Summary"
-            value={report.ResilienceSummary}
-          />
-          <ReportCard
             icon="💧"
             accent="hsl(200, 50%, 22%)"
             accentBorder="hsl(200, 50%, 18%)"
-            title="Water Security"
-            value={report.WaterSecurity}
+            title="Water Strategy"
+            value={report.WaterStrategy}
           />
           <ReportCard
-            icon="⚡"
+            icon="☀️"
             accent="hsl(45, 55%, 22%)"
             accentBorder="hsl(45, 55%, 18%)"
-            title="Energy Autonomy"
-            value={report.EnergyAutonomy}
+            title="Sun & Energy"
+            value={report.SunAndEnergy}
           />
           <ReportCard
             icon="🌾"
             accent="hsl(103, 35%, 20%)"
             accentBorder="hsl(103, 35%, 16%)"
-            title="Caloric Production Matrix"
-            value={report.CaloricProduction}
+            title="Land & Biodiversity"
+            value={report.LandAndBiodiversity}
             matrix
+          />
+          <ReportCard
+            icon="🛡"
+            accent="hsl(210, 40%, 25%)"
+            accentBorder="hsl(210, 40%, 18%)"
+            title="Climate Resilience"
+            value={report.ClimateResilience}
           />
         </div>
       )}

@@ -104,7 +104,7 @@ function buildPrompt(
 
   return `You are a Lead Resilience Engineer and Autonomous Site Architect. Your objective is to design a high-security, off-grid, autonomous property that maximizes resource capture, off-grid power generation, and caloric security.
 
-Analyse the following site data and return a highly technical, structured JSON report. Do not use generic gardening terminology; use infrastructure, yield, and security terminology.
+Analyse the following site data and return a highly technical, structured JSON report. Do not use generic gardening terminology; use infrastructure and resilience terminology.
 
 === SITE METRICS ===
 Project: ${property.name}
@@ -120,17 +120,14 @@ Thermal Minimum: ${brief.winterMinTempC != null ? `${brief.winterMinTempC} °C` 
 === SITE VULNERABILITIES ===
 ${challenges.length > 0 ? challenges.map(c => `  - ${c}`).join("\n") : "  - None mapped"}
 
-=== INFRASTRUCTURE CONSTRAINTS ===
-${utilities.length > 0 ? utilities.map(u => `  - ${u}`).join("\n") : "  - None mapped"}
-
 === SOLAR & WIND VECTORS ===
 ${sectorSummary}
 
-BASED ON THIS DATA, RETURN A JSON OBJECT WITH THE FOLLOWING STRUCTURE:
-1. "ResilienceSummary": A 3-sentence summary of the site's ability to survive grid collapse.
-2. "WaterSecurity": Recommendations for tank sizing and swale geometry based on the rainfall yield.
-3. "EnergyAutonomy": Solar and thermal recommendations based on the provided vectors and thermal extremes.
-4. "CaloricProduction": A 7-layer robust food-yield matrix tailored to this specific hardiness zone.
+BASED ON THIS DATA, RETURN A JSON OBJECT WITH THE EXACT FOLLOWING STRUCTURE:
+1. "WaterStrategy": Actionable advice on water catchment, tank sizing, and drainage/swale placement based on the rainfall yield and slope.
+2. "SunAndEnergy": Solar optimization, microclimate creation, and thermal mass strategies based on the provided vectors and temperature extremes.
+3. "LandAndBiodiversity": Soil protection, erosion mitigation, and defensive/caloric planting recommendations tailored to this specific hardiness zone.
+4. "ClimateResilience": A summary of the property's ability to survive extreme weather, grid collapse, or drought, and the immediate steps to secure it.
 Ensure the response is raw, valid JSON only.`;
 }
 
@@ -187,7 +184,7 @@ router.post(
     const result = await model.generateContent(prompt);
     const rawJson = result.response.text().trim();
 
-    let parsed: { ResilienceSummary: unknown; WaterSecurity: unknown; EnergyAutonomy: unknown; CaloricProduction: unknown };
+    let parsed: { WaterStrategy: unknown; SunAndEnergy: unknown; LandAndBiodiversity: unknown; ClimateResilience: unknown };
     try {
       parsed = JSON.parse(rawJson);
     } catch {
@@ -205,10 +202,10 @@ router.post(
 
     res.json({
       propertyId,
-      ResilienceSummary: parsed.ResilienceSummary ?? "",
-      WaterSecurity: parsed.WaterSecurity ?? "",
-      EnergyAutonomy: parsed.EnergyAutonomy ?? "",
-      CaloricProduction: parsed.CaloricProduction ?? "",
+      WaterStrategy: parsed.WaterStrategy ?? "",
+      SunAndEnergy: parsed.SunAndEnergy ?? "",
+      LandAndBiodiversity: parsed.LandAndBiodiversity ?? "",
+      ClimateResilience: parsed.ClimateResilience ?? "",
       generatedAt: generatedAt.toISOString(),
       rawJson,
     });

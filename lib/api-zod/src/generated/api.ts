@@ -288,10 +288,10 @@ export const AnalyzeSiteParams = zod.object({
 
 export const AnalyzeSiteResponse = zod.object({
   "propertyId": zod.string(),
-  "ResilienceSummary": zod.unknown().describe('3-sentence site resilience summary'),
-  "WaterSecurity": zod.unknown().describe('Tank sizing and swale geometry recommendations'),
-  "EnergyAutonomy": zod.unknown().describe('Solar and thermal autonomy recommendations'),
-  "CaloricProduction": zod.unknown().describe('7-layer food-yield matrix'),
+  "WaterStrategy": zod.unknown().describe('Water catchment, tank sizing, and swale\/drainage placement'),
+  "SunAndEnergy": zod.unknown().describe('Solar optimisation, microclimate, and thermal mass strategies'),
+  "LandAndBiodiversity": zod.unknown().describe('Soil protection, erosion mitigation, and caloric planting'),
+  "ClimateResilience": zod.unknown().describe('Extreme-weather and grid-collapse resilience summary with immediate action steps'),
   "generatedAt": zod.string(),
   "rawJson": zod.string()
 })
