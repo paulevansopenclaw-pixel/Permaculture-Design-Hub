@@ -1045,22 +1045,18 @@ components:
 
     SiteAnalysisReport:
       type: object
-      required: [propertyId, plant_palette, comprehensive_plant_list, spatial_recommendations, generatedAt, rawJson]
+      required: [propertyId, ResilienceSummary, WaterSecurity, EnergyAutonomy, CaloricProduction, generatedAt, rawJson]
       properties:
         propertyId:
           type: string
-        plant_palette:
-          type: array
-          items:
-            $ref: "#/components/schemas/PlantGuild"
-        comprehensive_plant_list:
-          type: array
-          items:
-            $ref: "#/components/schemas/ComprehensivePlant"
-        spatial_recommendations:
-          type: array
-          items:
-            $ref: "#/components/schemas/SpatialRecommendation"
+        ResilienceSummary:
+          description: 3-sentence site resilience summary
+        WaterSecurity:
+          description: Tank sizing and swale geometry recommendations
+        EnergyAutonomy:
+          description: Solar and thermal autonomy recommendations
+        CaloricProduction:
+          description: 7-layer food-yield matrix
         generatedAt:
           type: string
         rawJson:

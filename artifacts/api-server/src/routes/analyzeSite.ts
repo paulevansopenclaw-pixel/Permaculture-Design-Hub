@@ -102,92 +102,36 @@ function buildPrompt(
     return `  - ${s.label || s.sectorType} (${dir}, ${s.startAngle}°–${s.endAngle}°)`;
   }).join("\n") || "  - None mapped yet";
 
-  return `You are an expert Permaculture Designer with deep knowledge of ecological design, plant guilds, and site planning.
+  return `You are a Lead Resilience Engineer and Autonomous Site Architect. Your objective is to design a high-security, off-grid, autonomous property that maximizes resource capture, off-grid power generation, and caloric security.
 
-Analyse the following site data and return a structured JSON report.
+Analyse the following site data and return a highly technical, structured JSON report. Do not use generic gardening terminology; use infrastructure, yield, and security terminology.
 
-=== PROPERTY ===
-Name: ${property.name}
-Area: ${brief ? `${property.areaHectares?.toFixed(2) ?? "unknown"} ha / ${property.areaAcres?.toFixed(2) ?? "unknown"} acres` : "unknown"}
-Geographic region: ${region}
+=== SITE METRICS ===
+Project: ${property.name}
+Usable Area: ${brief ? `${property.areaHectares?.toFixed(2) ?? "unknown"} ha / ${property.areaAcres?.toFixed(2) ?? "unknown"} acres` : "unknown"}
+Geographic Threat Region: ${region}
 
-=== CLIMATE & ENVIRONMENT ===
-Climate zone (Köppen): ${brief.climateZone ?? "unknown"}
-Annual rainfall: ${brief.annualRainfallMm != null ? `${brief.annualRainfallMm} mm/yr` : "unknown"}
-Mean annual temperature: ${brief.meanAnnualTempC != null ? `${brief.meanAnnualTempC} °C` : "unknown"}
-Summer maximum: ${brief.summerMaxTempC != null ? `${brief.summerMaxTempC} °C` : "unknown"}
-Winter minimum: ${brief.winterMinTempC != null ? `${brief.winterMinTempC} °C` : "unknown"}
-Frost days per year: ${brief.frostDaysPerYear != null ? brief.frostDaysPerYear : "unknown"}
-Annual humidity: ${brief.annualHumidityPct != null ? `${brief.annualHumidityPct}%` : "unknown"}
-Elevation: ${brief.elevationM != null ? `${brief.elevationM} m ASL` : "unknown"}
-Solar irradiance: ${brief.solarIrradianceKwhM2 != null ? `${brief.solarIrradianceKwhM2} kWh/m²/yr` : "unknown"}
-Prevailing wind: ${brief.prevailingWindDir ?? "unknown"} at ${brief.meanWindSpeedMs != null ? `${brief.meanWindSpeedMs} m/s` : "unknown speed"}
+=== CLIMATE & THREAT DATA ===
+Köppen Classification: ${brief.climateZone ?? "unknown"}
+Annual Rainfall Yield: ${brief.annualRainfallMm != null ? `${brief.annualRainfallMm} mm/yr` : "unknown"}
+Thermal Maximum: ${brief.summerMaxTempC != null ? `${brief.summerMaxTempC} °C` : "unknown"}
+Thermal Minimum: ${brief.winterMinTempC != null ? `${brief.winterMinTempC} °C` : "unknown"}
 
-=== SOIL (0–5 cm) ===
-Texture class: ${brief.soilTextureClass ?? "unknown"}
-Clay: ${brief.soilClay != null ? `${brief.soilClay}%` : "unknown"}, Sand: ${brief.soilSand != null ? `${brief.soilSand}%` : "unknown"}, Silt: ${brief.soilSilt != null ? `${brief.soilSilt}%` : "unknown"}
-pH: ${brief.soilPH != null ? brief.soilPH : "unknown"}
-Organic carbon: ${brief.soilOrganicCarbonGkg != null ? `${brief.soilOrganicCarbonGkg} g/kg` : "unknown"}
-Climate-inferred soil order: ${brief.estimatedSoilType ?? "unknown"}
+=== SITE VULNERABILITIES ===
+${challenges.length > 0 ? challenges.map(c => `  - ${c}`).join("\n") : "  - None mapped"}
 
-=== SITE SECTORS (mapped compass arcs) ===
+=== INFRASTRUCTURE CONSTRAINTS ===
+${utilities.length > 0 ? utilities.map(u => `  - ${u}`).join("\n") : "  - None mapped"}
+
+=== SOLAR & WIND VECTORS ===
 ${sectorSummary}
 
-=== CONSTRAINTS ===
-Machinery access width: ${brief.machineryWidthM} m
-Utilities on site: ${utilities.length > 0 ? utilities.join(", ") : "none"}
-Site challenges: ${challenges.length > 0 ? challenges.join(", ") : "none identified"}
-
-=== DESIGN INTENT ===
-Primary goal: ${brief.primaryGoal ?? "not specified"}
-Maintenance capacity: ${brief.maintenanceCapacity ?? "not specified"}
-Permaculture zones mapped: ${zoneCount}
-
-=== INSTRUCTIONS ===
-Return ONLY a valid JSON object — no markdown, no explanation, no code fences. The JSON must conform exactly to this shape:
-
-{
-  "plant_palette": [
-    {
-      "role": "Overstory Tree" | "Nitrogen Fixer" | "Dynamic Accumulator" | "Insectary" | "Ground Cover" | "Root Crop",
-      "commonName": "string — use the locally recognised common name for the geographic region above",
-      "scientificName": "string",
-      "rationale": "1–2 sentences explaining why this plant suits the exact site conditions above",
-      "heightM": <mature height in metres, as a number>,
-      "spreadM": <mature canopy or ground-cover spread radius in metres, as a number>,
-      "yearsToMaturity": <approximate years to reach functional/productive maturity, as a number>
-    }
-  ],
-  "comprehensive_plant_list": [
-    {
-      "layer": "Canopy" | "Sub-Canopy" | "Shrub" | "Herbaceous" | "Ground Cover" | "Climber" | "Root Zone",
-      "role": "Overstory Tree" | "Fruit Tree" | "Nitrogen Fixer" | "Dynamic Accumulator" | "Insectary" | "Ground Cover" | "Root Crop" | "Windbreak" | "Coppice" | "Medicinal" | "Edible Foliage",
-      "commonName": "string — locally recognised name for the geographic region",
-      "scientificName": "string",
-      "heightM": <number>,
-      "spreadM": <number>,
-      "yearsToMaturity": <number>,
-      "notes": "One sentence on key uses, benefits, or important planting notes"
-    }
-  ],
-  "spatial_recommendations": [
-    {
-      "element": "Windbreak" | "Vegetable Beds" | "Chicken Coop" | "Fencing" | "Swale" | "Water Storage" | "Orchard" | "Nursery Area",
-      "placement": "Concise placement instruction referencing actual compass directions or zone numbers",
-      "rationale": "1–2 sentences of reasoning tied to the sectors and site data above"
-    }
-  ]
-}
-
-Rules:
-- plant_palette: 8–12 curated guild species (the best integrated picks for THIS site's conditions).
-- comprehensive_plant_list: 30–45 species covering ALL 7 layers — aim for: Canopy 6–8, Sub-Canopy 6–8, Shrub 5–7, Herbaceous 5–6, Ground Cover 4–5, Climber 3–4, Root Zone 3–4. Prioritise edible, medicinal, nitrogen-fixing, and multi-function species. Include both productive staples and ecological support species.
-- Include 5–8 spatial recommendations.
-- CRITICAL — Regional flora: All species in BOTH lists MUST be native to, endemic to, or long-proven non-invasive cultivars for the specified geographic region. Do NOT recommend plants from other continents when suitable local alternatives exist. Examples for Eastern Australia: use Acacia species (not Robinia/Black Locust), Allocasuarina/Casuarina (not Alder), Eucalyptus/Angophora/Corymbia (not foreign oaks), Lomandra/Microlaena (not foreign grasses), native Kennedia/Hardenbergia (not exotic legume vines). For other regions, apply the same principle — always prefer locally native or well-adapted species.
-- heightM, spreadM, and yearsToMaturity must be realistic numeric values for the specific species and local growing conditions.
-- All species must be suited to the identified climate zone and hardiness conditions.
-- Reference actual sector bearings and challenges in your reasoning (plant_palette rationale + spatial_recommendations).
-- Do not include any text outside the JSON object.`;
+BASED ON THIS DATA, RETURN A JSON OBJECT WITH THE FOLLOWING STRUCTURE:
+1. "ResilienceSummary": A 3-sentence summary of the site's ability to survive grid collapse.
+2. "WaterSecurity": Recommendations for tank sizing and swale geometry based on the rainfall yield.
+3. "EnergyAutonomy": Solar and thermal recommendations based on the provided vectors and thermal extremes.
+4. "CaloricProduction": A 7-layer robust food-yield matrix tailored to this specific hardiness zone.
+Ensure the response is raw, valid JSON only.`;
 }
 
 const analyzeRateLimit = rateLimit({
@@ -243,7 +187,7 @@ router.post(
     const result = await model.generateContent(prompt);
     const rawJson = result.response.text().trim();
 
-    let parsed: { plant_palette: unknown[]; comprehensive_plant_list: unknown[]; spatial_recommendations: unknown[] };
+    let parsed: { ResilienceSummary: unknown; WaterSecurity: unknown; EnergyAutonomy: unknown; CaloricProduction: unknown };
     try {
       parsed = JSON.parse(rawJson);
     } catch {
@@ -261,9 +205,10 @@ router.post(
 
     res.json({
       propertyId,
-      plant_palette: parsed.plant_palette ?? [],
-      comprehensive_plant_list: parsed.comprehensive_plant_list ?? [],
-      spatial_recommendations: parsed.spatial_recommendations ?? [],
+      ResilienceSummary: parsed.ResilienceSummary ?? "",
+      WaterSecurity: parsed.WaterSecurity ?? "",
+      EnergyAutonomy: parsed.EnergyAutonomy ?? "",
+      CaloricProduction: parsed.CaloricProduction ?? "",
       generatedAt: generatedAt.toISOString(),
       rawJson,
     });

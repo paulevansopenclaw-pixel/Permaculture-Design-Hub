@@ -288,30 +288,10 @@ export const AnalyzeSiteParams = zod.object({
 
 export const AnalyzeSiteResponse = zod.object({
   "propertyId": zod.string(),
-  "plant_palette": zod.array(zod.object({
-  "role": zod.string(),
-  "commonName": zod.string(),
-  "scientificName": zod.string(),
-  "rationale": zod.string(),
-  "heightM": zod.number().describe('Mature height in metres'),
-  "spreadM": zod.number().describe('Mature canopy or ground-cover spread radius in metres'),
-  "yearsToMaturity": zod.number().describe('Approximate years to reach functional maturity')
-})),
-  "comprehensive_plant_list": zod.array(zod.object({
-  "layer": zod.string().describe('Forest garden layer — Canopy | Sub-Canopy | Shrub | Herbaceous | Ground Cover | Climber | Root Zone'),
-  "role": zod.string(),
-  "commonName": zod.string(),
-  "scientificName": zod.string(),
-  "heightM": zod.number().describe('Mature height in metres'),
-  "spreadM": zod.number().describe('Mature canopy or ground-cover spread radius in metres'),
-  "yearsToMaturity": zod.number().describe('Approximate years to reach functional maturity'),
-  "notes": zod.string().describe('Brief note on uses, benefits, or planting considerations')
-})),
-  "spatial_recommendations": zod.array(zod.object({
-  "element": zod.string(),
-  "placement": zod.string(),
-  "rationale": zod.string()
-})),
+  "ResilienceSummary": zod.unknown().describe('3-sentence site resilience summary'),
+  "WaterSecurity": zod.unknown().describe('Tank sizing and swale geometry recommendations'),
+  "EnergyAutonomy": zod.unknown().describe('Solar and thermal autonomy recommendations'),
+  "CaloricProduction": zod.unknown().describe('7-layer food-yield matrix'),
   "generatedAt": zod.string(),
   "rawJson": zod.string()
 })

@@ -164,9 +164,14 @@ export interface SpatialRecommendation {
 
 export interface SiteAnalysisReport {
   propertyId: string;
-  plant_palette: PlantGuild[];
-  comprehensive_plant_list: ComprehensivePlant[];
-  spatial_recommendations: SpatialRecommendation[];
+  /** 3-sentence site resilience summary */
+  ResilienceSummary: unknown;
+  /** Tank sizing and swale geometry recommendations */
+  WaterSecurity: unknown;
+  /** Solar and thermal autonomy recommendations */
+  EnergyAutonomy: unknown;
+  /** 7-layer food-yield matrix */
+  CaloricProduction: unknown;
   generatedAt: string;
   rawJson: string;
 }
