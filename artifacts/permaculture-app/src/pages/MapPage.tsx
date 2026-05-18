@@ -1644,23 +1644,49 @@ export default function MapPage() {
       }
 
       // ── Custom sector wedge ribbons ──────────────────────────────────────
+      // Renders as proper annular ring bands (not full wedges): inner radius ~55%,
+      // radial arm lines from centre, strokes on both arcs, curved label inside band.
       if (showSectors && sectors.length > 0) {
+        // Hex → rgb helper
+        function hexToRgb(hex: string): [number, number, number] {
+          const h = hex.replace("#", "");
+          return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+        }
+
+        // Draw a radial arm line from centre to the arc edge at a given bearing
+        function addRadialArm(cLng: number, cLat: number, bearing: number, innerR: number, outerR: number, stroke: string) {
+          const c = turf.point([cLng, cLat]);
+          const p0 = turf.destination(c, innerR, bearing, { units: "kilometers" }).geometry.coordinates as [number, number];
+          const p1 = turf.destination(c, outerR, bearing, { units: "kilometers" }).geometry.coordinates as [number, number];
+          const px0 = cPt(p0[0], p0[1]);
+          const px1 = cPt(p1[0], p1[1]);
+          const el = document.createElementNS(SVG_NS, "line");
+          el.setAttribute("x1", fmt(px0.x)); el.setAttribute("y1", fmt(px0.y));
+          el.setAttribute("x2", fmt(px1.x)); el.setAttribute("y2", fmt(px1.y));
+          el.setAttribute("stroke", stroke);
+          el.setAttribute("stroke-width", "1.2");
+          el.setAttribute("stroke-opacity", "0.7");
+          el.setAttribute("pointer-events", "none");
+          svgEl.appendChild(el);
+        }
+
+        const INNER_FRAC = 0.55; // annular inner radius — 55% of the outer radius
+
         sectors.forEach((s) => {
           const st = SECTOR_TYPES.find((t) => t.value === s.sectorType) ?? SECTOR_TYPES[0];
-          const hx = st.border.replace("#", "");
-          const r = parseInt(hx.slice(0, 2), 16);
-          const g = parseInt(hx.slice(2, 4), 16);
-          const b = parseInt(hx.slice(4, 6), 16);
-          const fill = `rgba(${r},${g},${b},0.18)`;
+          const [r, g, b] = hexToRgb(st.border);
+          const fill = `rgba(${r},${g},${b},0.14)`;
+          const innerR = s.radiusKm * INNER_FRAC;
 
-          const { outer, inner } = wedgeArcs(s.centerLng, s.centerLat, radiusKm, 0.04, s.startAngle, s.endAngle);
+          const { outer, inner } = wedgeArcs(s.centerLng, s.centerLat, s.radiusKm, INNER_FRAC, s.startAngle, s.endAngle);
           const span = ((s.endAngle - s.startAngle) + 360) % 360;
           const midAz = (s.startAngle + span / 2) % 360;
 
-          addRibbon(ribbonPath(outer, inner), fill, st.border, 0.4, () => {
+          // Filled ribbon (clickable)
+          addRibbon(ribbonPath(outer, inner), fill, st.border, 0, () => {
             const lPt = turf.destination(
               turf.point([s.centerLng, s.centerLat]),
-              radiusKm * 0.5, midAz, { units: "kilometers" },
+              s.radiusKm * 0.775, midAz, { units: "kilometers" },
             );
             const popup = L.popup({ closeButton: true })
               .setLatLng(L.latLng(lPt.geometry.coordinates[1], lPt.geometry.coordinates[0]))
@@ -1678,11 +1704,25 @@ export default function MapPage() {
             popup.openOn(map!);
           });
 
-          // Thick outer arc stroke — the defining visual edge of the sector
-          addArcStroke(outer, st.border, 3.5);
+          // Outer arc stroke (thick coloured edge)
+          addArcStroke(outer, st.border, 2.0);
+          // Inner arc stroke (thinner, same colour)
+          addArcStroke(inner, st.border, 1.0);
+          // Radial arm lines at start and end angles
+          addRadialArm(s.centerLng, s.centerLat, s.startAngle, innerR, s.radiusKm, st.border);
+          addRadialArm(s.centerLng, s.centerLat, s.endAngle,   innerR, s.radiusKm, st.border);
 
-          // Curved label flowing along the outer arc
-          addCurvedLabel(s.label || st.label, outer, midAz, 13, "rgba(18,18,18,0.92)");
+          // Curved label flowing along mid-arc of the band
+          const midArcPts: [number, number][] = [];
+          const midFrac = (INNER_FRAC + 1.0) / 2; // halfway between inner and outer
+          const c = turf.point([s.centerLng, s.centerLat]);
+          const arcSpan = span < 1 ? 360 : span;
+          const arcSteps = Math.max(32, Math.round(arcSpan));
+          for (let i = 0; i <= arcSteps; i++) {
+            const a = s.startAngle + (arcSpan * i) / arcSteps;
+            midArcPts.push(turf.destination(c, s.radiusKm * midFrac, a, { units: "kilometers" }).geometry.coordinates as [number, number]);
+          }
+          addCurvedLabel(s.label || st.label, midArcPts, midAz, 12, st.border);
         });
       }
     }
