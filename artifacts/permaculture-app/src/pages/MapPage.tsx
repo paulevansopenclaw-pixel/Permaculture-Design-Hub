@@ -73,6 +73,39 @@ async function searchAddress(query: string, token: string) {
   return data.features ?? [];
 }
 
+async function fetchParcelBoundary(lat: number, lng: number): Promise<GeoJSON.Polygon | null> {
+  const query = `[out:json][timeout:12];(way["landuse"](around:500,${lat},${lng});way["boundary"="cadastral"](around:500,${lat},${lng});way["natural"~"^(wood|scrub|grassland|heath|wetland|water)$"](around:300,${lat},${lng}););(._;>;);out body;`;
+  try {
+    const res = await fetch("https://overpass-api.de/api/interpreter", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: "data=" + encodeURIComponent(query),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const nodeMap = new Map<number, [number, number]>();
+    for (const el of data.elements) {
+      if (el.type === "node") nodeMap.set(el.id, [el.lon, el.lat]);
+    }
+    const candidates: GeoJSON.Polygon[] = [];
+    for (const el of data.elements) {
+      if (el.type !== "way" || !el.nodes || el.nodes.length < 4) continue;
+      const coords: [number, number][] = [];
+      for (const nid of el.nodes) { const c = nodeMap.get(nid); if (c) coords.push(c); }
+      if (coords.length < 4) continue;
+      const f = coords[0], l = coords[coords.length - 1];
+      if (f[0] !== l[0] || f[1] !== l[1]) coords.push([f[0], f[1]]);
+      candidates.push({ type: "Polygon", coordinates: [coords] });
+    }
+    if (!candidates.length) return null;
+    const pt = turf.point([lng, lat]);
+    const containing = candidates.filter(p => { try { return turf.booleanPointInPolygon(pt, turf.feature(p)); } catch { return false; } });
+    const pool = containing.length ? containing : candidates;
+    pool.sort((a, b) => { try { return turf.area(turf.feature(a)) - turf.area(turf.feature(b)); } catch { return 0; } });
+    return pool[0] ?? null;
+  } catch { return null; }
+}
+
 const SECTOR_TYPES = [
   { value: "custom_view",  label: "Custom View Corridor", emoji: "👁",  color: "rgba(255,215,0,0.3)",   border: "#d4a800" },
   { value: "noise",        label: "Nuisance/Road Noise",  emoji: "🔊",  color: "rgba(220,38,38,0.3)",   border: "#dc2626" },
@@ -217,6 +250,7 @@ export default function MapPage() {
   const zonesEditGroupRef = useRef<L.FeatureGroup | null>(null);
   const zoneEditHandlerRef = useRef<any>(null);
   const zoneLayerToIdRef = useRef<Map<number, { id: string; zoneNumber: number }>>(new Map());
+  const overpassLayerRef = useRef<L.GeoJSON | null>(null);
 
   const [mapboxToken, setMapboxToken] = useState("");
   const [mapLoaded, setMapLoaded] = useState(false);
@@ -271,6 +305,8 @@ export default function MapPage() {
   const [showDropdown, setShowDropdown] = useState(false);
   const [showNewPropForm, setShowNewPropForm] = useState(false);
   const [newPropName, setNewPropName] = useState("");
+  const [overpassPreview, setOverpassPreview] = useState<GeoJSON.Polygon | null>(null);
+  const [isFetchingParcel, setIsFetchingParcel] = useState(false);
 
   const { data: properties = [] } = useListProperties();
   const { data: activeProperty, refetch: refetchProperty } = useGetProperty(
@@ -513,6 +549,19 @@ export default function MapPage() {
       if (map.hasLayer(tile)) map.removeLayer(tile);
     }
   }, [showSatellite, mapLoaded]);
+
+  // ─── OVERPASS PARCEL PREVIEW LAYER ────────────────────────────────────────
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    if (overpassLayerRef.current) { map.removeLayer(overpassLayerRef.current); overpassLayerRef.current = null; }
+    if (!overpassPreview || !mapLoaded) return;
+    const layer = L.geoJSON(overpassPreview as any, {
+      style: { color: "#3b82f6", weight: 2.5, opacity: 1, fillColor: "#3b82f6", fillOpacity: 0.08, dashArray: "8 5" },
+    }).addTo(map);
+    overpassLayerRef.current = layer;
+    try { map.fitBounds(layer.getBounds(), { padding: [40, 40] }); } catch { /* no-op */ }
+  }, [overpassPreview, mapLoaded]);
 
   // ─── BOUNDARY VISIBILITY ──────────────────────────────────────────────────
   useEffect(() => {
@@ -1766,10 +1815,28 @@ export default function MapPage() {
     const map = mapRef.current;
     if (!map) return;
     const [lng, lat] = result.center;
-    map.flyTo([lat, lng], 14);
+    map.flyTo([lat, lng], 16);
     setSearchQuery(result.place_name ?? "");
     setShowDropdown(false);
     setSearchResults([]);
+    setOverpassPreview(null);
+    setIsFetchingParcel(true);
+    fetchParcelBoundary(lat, lng).then((polygon) => {
+      setIsFetchingParcel(false);
+      if (polygon) setOverpassPreview(polygon);
+    });
+  }
+
+  // ─── IMPORT OVERPASS PARCEL BOUNDARY ─────────────────────────────────────
+  function handleImportOverpassBoundary() {
+    if (!overpassPreview) return;
+    const areaM2 = turf.area(turf.feature(overpassPreview));
+    const ha = areaM2 / 10_000;
+    const ac = ha * 2.47105;
+    setPendingBoundary(overpassPreview);
+    setPendingAreaHa(ha);
+    setPendingAreaAc(ac);
+    setOverpassPreview(null);
   }
 
   // ─── SAVE BOUNDARY ────────────────────────────────────────────────────────
@@ -2158,6 +2225,17 @@ export default function MapPage() {
               ))}
             </div>
           )}
+          {isFetchingParcel && (
+            <p className="text-[10px] mt-1.5 animate-pulse" style={{ color: "#3b82f6" }}>Searching for parcel boundary…</p>
+          )}
+          {!isFetchingParcel && overpassPreview && (
+            <p className="text-[10px] mt-1.5" style={{ color: "#60a5fa" }}>
+              ● Parcel boundary found — shown in blue. Select a property below then import it.
+            </p>
+          )}
+          {!isFetchingParcel && searchQuery && !overpassPreview && !showDropdown && (
+            <p className="text-[10px] mt-1.5" style={{ color: "hsl(42, 15%, 45%)" }}>No parcel data found — draw boundary manually.</p>
+          )}
         </div>
 
         {/* ── LAYER VISIBILITY ── */}
@@ -2378,6 +2456,27 @@ export default function MapPage() {
             <p className="text-[11px]" style={{ color: "hsl(42, 15%, 50%)" }}>Select a property to manage its boundary.</p>
           ) : role === "designer" ? (
             <div className="space-y-2.5">
+              {overpassPreview && (
+                <div className="rounded p-2.5 space-y-2" style={{ background: "hsl(220, 60%, 10%)", border: "1px solid hsl(220, 50%, 28%)" }}>
+                  <p className="text-[10px] font-semibold" style={{ color: "#60a5fa" }}>
+                    Parcel boundary detected from map data (shown in blue).
+                  </p>
+                  <button
+                    onClick={handleImportOverpassBoundary}
+                    className="w-full text-xs px-3 py-2 rounded font-semibold transition-colors"
+                    style={{ background: "#1d4ed8", color: "#fff", border: "1px solid #3b82f6" }}
+                  >
+                    Import This Boundary
+                  </button>
+                  <button
+                    onClick={() => setOverpassPreview(null)}
+                    className="w-full text-xs px-3 py-1.5 rounded transition-colors"
+                    style={{ background: "transparent", color: "hsl(42, 15%, 50%)", border: "1px solid hsl(103, 30%, 22%)" }}
+                  >
+                    Dismiss — I'll draw manually
+                  </button>
+                </div>
+              )}
               <button
                 onClick={() => drawPolygonHandlerRef.current?.enable()}
                 className="w-full text-xs px-3 py-2 rounded font-medium text-left transition-colors"
