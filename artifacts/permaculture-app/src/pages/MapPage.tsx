@@ -189,9 +189,24 @@ const STRUCTURE_TYPES = [
   { value: "other",      label: "Other",       emoji: "📍" },
 ];
 
-function structureIcon(type: string, label: string, mode: "icon+label" | "icon-only" | "text-inside" = "icon+label") {
+function structureIcon(type: string, label: string, mode: "icon+label" | "icon-only" | "text-inside" | "dot" = "icon+label") {
   const entry = STRUCTURE_TYPES.find((t) => t.value === type) ?? STRUCTURE_TYPES[STRUCTURE_TYPES.length - 1];
   const maxLabel = label.length > 12 ? label.slice(0, 12) + "…" : label;
+
+  if (mode === "dot") {
+    return L.divIcon({
+      className: "",
+      html: `<div style="
+        width:10px;height:10px;border-radius:50%;
+        background:#1e3a5f;border:2px solid #fff;
+        box-shadow:0 1px 4px rgba(0,0,0,0.6);
+        pointer-events:none;
+      "></div>`,
+      iconSize: [10, 10],
+      iconAnchor: [5, 5],
+      popupAnchor: [0, -8],
+    });
+  }
 
   if (mode === "text-inside") {
     // Wider box with label text centred inside, no emoji
@@ -339,7 +354,7 @@ export default function MapPage() {
   const [pathwayLabel, setPathwayLabel] = useState("");
   const [pathwayType, setPathwayType] = useState("footpath");
   const [showStructures, setShowStructures] = useState(true);
-  const [structureLabelMode, setStructureLabelMode] = useState<"icon+label" | "icon-only" | "text-inside">("icon+label");
+  const [structureLabelMode, setStructureLabelMode] = useState<"icon+label" | "icon-only" | "text-inside" | "dot">("icon+label");
   const [dropStructureMode, setDropStructureMode] = useState(false);
   const [drawBuildingOutlineMode, setDrawBuildingOutlineMode] = useState(false);
   const [pendingStructure, setPendingStructure] = useState<{ lng: number; lat: number } | null>(null);
@@ -3119,7 +3134,7 @@ export default function MapPage() {
                     Label Style
                   </div>
                   <div className="flex rounded-lg overflow-hidden" style={{ border: "1px solid hsl(103, 22%, 20%)" }}>
-                    {(["icon+label", "icon-only", "text-inside"] as const).map((mode) => (
+                    {(["icon+label", "icon-only", "text-inside", "dot"] as const).map((mode, i, arr) => (
                       <button
                         key={mode}
                         onClick={() => setStructureLabelMode(mode)}
@@ -3127,10 +3142,10 @@ export default function MapPage() {
                         style={{
                           background: structureLabelMode === mode ? "hsl(103, 35%, 20%)" : "hsl(103, 20%, 10%)",
                           color: structureLabelMode === mode ? "hsl(103, 50%, 70%)" : "hsl(42, 15%, 45%)",
-                          borderRight: mode !== "text-inside" ? "1px solid hsl(103, 22%, 20%)" : "none",
+                          borderRight: i < arr.length - 1 ? "1px solid hsl(103, 22%, 20%)" : "none",
                         }}
                       >
-                        {mode === "icon+label" ? "🏷 Icon+Label" : mode === "icon-only" ? "🔲 Icon" : "Aa Text"}
+                        {mode === "icon+label" ? "🏷 Icon+Label" : mode === "icon-only" ? "🔲 Icon" : mode === "text-inside" ? "Aa Text" : "· Dot"}
                       </button>
                     ))}
                   </div>
