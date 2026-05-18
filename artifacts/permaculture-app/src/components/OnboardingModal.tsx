@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import * as turf from "@turf/turf";
-import { useUpsertClientBrief } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useUpsertClientBrief, getGetClientBriefQueryKey } from "@workspace/api-client-react";
 import { fetchClimateBaseline, type SiteBaseline } from "@/lib/fetchClimateBaseline";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -157,6 +158,8 @@ export function OnboardingModal({ propertyId, propertyName, boundaryGeojson, onC
   const [maintenanceCapacity, setMaintenanceCapacity] = useState("");
 
   const upsert = useUpsertClientBrief();
+  const queryClient = useQueryClient();
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   // Fetch climate baseline on mount
   useEffect(() => {
@@ -226,9 +229,12 @@ export function OnboardingModal({ propertyId, propertyName, boundaryGeojson, onC
           maintenanceCapacity: maintenanceCapacity || null,
         },
       });
+      // Refresh the sidebar so Property Details appear immediately
+      await queryClient.invalidateQueries({ queryKey: getGetClientBriefQueryKey(propertyId) });
       onClose();
     } catch (e) {
       console.error("Failed to save client brief:", e);
+      setSaveError("Save failed — please try again.");
     } finally {
       setSaving(false);
     }
@@ -473,6 +479,11 @@ export function OnboardingModal({ propertyId, propertyName, boundaryGeojson, onC
         </div>
 
         {/* Footer */}
+        {saveError && (
+          <div className="px-6 py-2 text-[11px] font-medium" style={{ color: "#f87171", background: "hsl(0, 30%, 10%)", borderTop: "1px solid hsl(0, 30%, 18%)" }}>
+            ✗ {saveError}
+          </div>
+        )}
         <div className="px-6 py-5 flex items-center justify-between gap-3" style={{ borderTop: "1px solid hsl(103, 20%, 14%)" }}>
           <button
             onClick={handleBack}
