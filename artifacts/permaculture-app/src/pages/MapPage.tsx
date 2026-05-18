@@ -339,6 +339,7 @@ export default function MapPage() {
   const [overpassSelectedIdx, setOverpassSelectedIdx] = useState(0);
   const [isFetchingParcel, setIsFetchingParcel] = useState(false);
   const [geoImportError, setGeoImportError] = useState<string | null>(null);
+  const [isBoundaryDrawing, setIsBoundaryDrawing] = useState(false);
   const overpassPreview = overpassCandidates[overpassSelectedIdx] ?? null;
 
   const { data: properties = [] } = useListProperties();
@@ -522,6 +523,7 @@ export default function MapPage() {
         const ha = turf.area(feature) / 10000;
         setPendingAreaHa(ha);
         setPendingAreaAc(ha * 2.47105);
+        setIsBoundaryDrawing(false);
       }
     });
 
@@ -2520,7 +2522,7 @@ export default function MapPage() {
         )}
 
         {/* ── LAYER 1: BOUNDARY ── */}
-        <SidebarSection label="Layer 1 — Property Boundary">
+        <SidebarSection label="Layer 1 — Property Boundary" defaultOpen>
           {!activePropertyId ? (
             <p className="text-[11px]" style={{ color: "hsl(42, 15%, 50%)" }}>Select a property to manage its boundary.</p>
           ) : role === "designer" ? (
@@ -2587,13 +2589,39 @@ export default function MapPage() {
                 </p>
               </div>
 
-              <button
-                onClick={() => drawPolygonHandlerRef.current?.enable()}
-                className="w-full text-xs px-3 py-2 rounded font-medium text-left transition-colors"
-                style={{ background: "hsl(103, 35%, 17%)", border: "1px solid hsl(103, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
-              >
-                Draw Property Boundary
-              </button>
+              {isBoundaryDrawing ? (
+                <div className="space-y-2">
+                  <div className="rounded p-2.5" style={{ background: "hsl(103, 40%, 12%)", border: "1px solid hsl(84, 50%, 35%)" }}>
+                    <p className="text-[10px] font-semibold mb-1" style={{ color: "hsl(84, 60%, 65%)" }}>
+                      ✏ Drawing active
+                    </p>
+                    <p className="text-[10px]" style={{ color: "hsl(42, 15%, 60%)" }}>
+                      Click on the map to place corner points. Double-click the last point to finish the polygon.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      drawPolygonHandlerRef.current?.disable();
+                      setIsBoundaryDrawing(false);
+                    }}
+                    className="w-full text-xs px-3 py-1.5 rounded transition-colors"
+                    style={{ background: "transparent", color: "hsl(0, 70%, 60%)", border: "1px solid hsl(0, 50%, 35%)" }}
+                  >
+                    Cancel Drawing
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => {
+                    drawPolygonHandlerRef.current?.enable();
+                    setIsBoundaryDrawing(true);
+                  }}
+                  className="w-full text-xs px-3 py-2 rounded font-medium text-left transition-colors"
+                  style={{ background: "hsl(103, 35%, 17%)", border: "1px solid hsl(103, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
+                >
+                  ✏ Draw Property Boundary
+                </button>
+              )}
 
               {(displayAreaHa || displayAreaAc) && (
                 <div className="rounded p-2.5" style={{ background: "hsl(103, 35%, 14%)", border: "1px solid hsl(84, 35%, 28%)" }}>
