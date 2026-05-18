@@ -31,10 +31,10 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 
   if (isLoading) {
     return (
-      <div className="h-screen w-screen flex items-center justify-center" style={{ background: "hsl(103, 18%, 8%)" }}>
+      <div className="h-screen w-screen flex items-center justify-center bg-slate-950">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: "hsl(103, 40%, 35%)" }} />
-          <span className="text-[13px]" style={{ color: "hsl(42, 20%, 50%)" }}>Loading…</span>
+          <div className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin border-emerald-500" />
+          <span className="text-[13px] text-slate-400 font-mono uppercase tracking-widest">INITIALIZING SECURE UPLINK...</span>
         </div>
       </div>
     );
@@ -42,29 +42,23 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 
   if (!isAuthenticated) {
     return (
-      <div className="h-screen w-screen flex items-center justify-center" style={{ background: "hsl(103, 18%, 8%)" }}>
+      <div className="h-screen w-screen flex items-center justify-center bg-slate-950 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black">
         <div className="flex flex-col items-center gap-6 max-w-sm w-full px-6">
           <div className="text-center space-y-2">
-            <div className="text-4xl mb-3">🛡</div>
-            <h1 className="text-[22px] font-bold" style={{ color: "hsl(42, 28%, 88%)" }}>TerraGuard</h1>
-            <p className="text-[13px]" style={{ color: "hsl(42, 15%, 52%)" }}>
-              Land Security & Autonomous Property Architect
+            <div className="text-4xl mb-3 text-slate-300">🛡</div>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-100">TerraGuard OS</h1>
+            <p className="text-[13px] text-slate-400 font-mono">
+              Autonomous Property Resilience & Security
             </p>
           </div>
           <button
             onClick={login}
-            className="w-full py-3 rounded-xl text-[14px] font-semibold transition-all"
-            style={{
-              background: "linear-gradient(135deg, #1a4a0d, #3a8220)",
-              color: "#e8f5e2",
-              border: "1px solid #4a9a28",
-              boxShadow: "0 4px 18px rgba(45,106,26,0.45)",
-            }}
+            className="w-full py-3 rounded-md text-[14px] font-bold tracking-wide uppercase transition-all bg-emerald-600/10 text-emerald-500 hover:bg-emerald-600/20 border border-emerald-600/30 shadow-[0_0_15px_rgba(16,185,129,0.15)] hover:shadow-[0_0_25px_rgba(16,185,129,0.3)]"
           >
-            Log in to continue
+            Authenticate Access
           </button>
-          <p className="text-[11px] text-center" style={{ color: "hsl(42, 10%, 38%)" }}>
-            Your designs, properties, and AI reports are private to your account.
+          <p className="text-[11px] text-center text-slate-500 font-mono">
+            Encrypted connection. Topographical data is secured.
           </p>
         </div>
       </div>
