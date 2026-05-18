@@ -189,9 +189,48 @@ const STRUCTURE_TYPES = [
   { value: "other",      label: "Other",       emoji: "📍" },
 ];
 
-function structureIcon(type: string, label: string) {
+function structureIcon(type: string, label: string, mode: "icon+label" | "icon-only" | "text-inside" = "icon+label") {
   const entry = STRUCTURE_TYPES.find((t) => t.value === type) ?? STRUCTURE_TYPES[STRUCTURE_TYPES.length - 1];
   const maxLabel = label.length > 12 ? label.slice(0, 12) + "…" : label;
+
+  if (mode === "text-inside") {
+    // Wider box with label text centred inside, no emoji
+    const short = label.length > 10 ? label.slice(0, 10) + "…" : label;
+    return L.divIcon({
+      className: "",
+      html: `<div style="
+        min-width:52px;max-width:80px;height:26px;border-radius:5px;
+        background:#1e3a5f;border:2px solid #fff;
+        box-shadow:0 2px 6px rgba(0,0,0,0.55);
+        display:flex;align-items:center;justify-content:center;
+        padding:0 6px;pointer-events:none;
+        font-size:9px;font-weight:700;color:#fff;
+        white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+        letter-spacing:0.02em;
+      ">${short}</div>`,
+      iconSize: [72, 26],
+      iconAnchor: [36, 13],
+      popupAnchor: [0, -16],
+    });
+  }
+
+  if (mode === "icon-only") {
+    return L.divIcon({
+      className: "",
+      html: `<div style="
+        width:34px;height:34px;border-radius:6px;
+        background:#1e3a5f;border:2px solid #fff;
+        box-shadow:0 2px 6px rgba(0,0,0,0.55);
+        display:flex;align-items:center;justify-content:center;
+        font-size:18px;line-height:1;pointer-events:none;
+      ">${entry.emoji}</div>`,
+      iconSize: [34, 34],
+      iconAnchor: [17, 17],
+      popupAnchor: [0, -20],
+    });
+  }
+
+  // Default: icon + label below
   return L.divIcon({
     className: "",
     html: `
@@ -300,6 +339,7 @@ export default function MapPage() {
   const [pathwayLabel, setPathwayLabel] = useState("");
   const [pathwayType, setPathwayType] = useState("footpath");
   const [showStructures, setShowStructures] = useState(true);
+  const [structureLabelMode, setStructureLabelMode] = useState<"icon+label" | "icon-only" | "text-inside">("icon+label");
   const [dropStructureMode, setDropStructureMode] = useState(false);
   const [drawBuildingOutlineMode, setDrawBuildingOutlineMode] = useState(false);
   const [pendingStructure, setPendingStructure] = useState<{ lng: number; lat: number } | null>(null);
@@ -962,7 +1002,7 @@ export default function MapPage() {
     if (!activePropertyId || !showStructures) return;
 
     structureMarkersRef.current = structures.map((s) => {
-      const marker = L.marker([s.lat, s.lng], { icon: structureIcon(s.structureType, s.label) });
+      const marker = L.marker([s.lat, s.lng], { icon: structureIcon(s.structureType, s.label, structureLabelMode) });
 
       const el = document.createElement("div");
       el.style.cssText = "font-size:12px;padding:2px 4px;min-width:130px;max-width:200px;";
@@ -979,7 +1019,7 @@ export default function MapPage() {
       marker.bindPopup(el).addTo(map);
       return marker;
     });
-  }, [structures, activePropertyId, mapLoaded, role, showStructures, handleDeleteStructure]);
+  }, [structures, activePropertyId, mapLoaded, role, showStructures, structureLabelMode, handleDeleteStructure]);
 
   // ─── PATHWAY HANDLERS ────────────────────────────────────────────────────
   const handleDeletePathway = useCallback(
@@ -3072,6 +3112,31 @@ export default function MapPage() {
                   </button>
                 </div>
               )}
+              {/* Label mode toggle */}
+              {structures.length > 0 && (
+                <div>
+                  <div className="text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: "hsl(42, 15%, 45%)" }}>
+                    Label Style
+                  </div>
+                  <div className="flex rounded-lg overflow-hidden" style={{ border: "1px solid hsl(103, 22%, 20%)" }}>
+                    {(["icon+label", "icon-only", "text-inside"] as const).map((mode) => (
+                      <button
+                        key={mode}
+                        onClick={() => setStructureLabelMode(mode)}
+                        className="flex-1 py-1.5 text-[10px] font-medium transition-colors"
+                        style={{
+                          background: structureLabelMode === mode ? "hsl(103, 35%, 20%)" : "hsl(103, 20%, 10%)",
+                          color: structureLabelMode === mode ? "hsl(103, 50%, 70%)" : "hsl(42, 15%, 45%)",
+                          borderRight: mode !== "text-inside" ? "1px solid hsl(103, 22%, 20%)" : "none",
+                        }}
+                      >
+                        {mode === "icon+label" ? "🏷 Icon+Label" : mode === "icon-only" ? "🔲 Icon" : "Aa Text"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {structures.length > 0 && !pendingStructure && (
                 <div>
                   <div className="text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: "hsl(42, 15%, 50%)" }}>
