@@ -46,6 +46,10 @@ import {
   useDeleteZone,
   getListZonesQueryKey,
   useUpsertClientBrief,
+  useListSensoryVectors,
+  useCreateSensoryVector,
+  useDeleteSensoryVector,
+  getListSensoryVectorsQueryKey,
 } from "@workspace/api-client-react";
 import { useAppStore, type Role } from "@/store/useAppStore";
 import { generateContours } from "@/lib/contourEngine";
@@ -335,6 +339,10 @@ export default function MapPage() {
   const zoneEditHandlerRef = useRef<any>(null);
   const zoneLayerToIdRef = useRef<Map<number, { id: string; zoneNumber: number }>>(new Map());
   const overpassLayerRef = useRef<L.GeoJSON | null>(null);
+  const sensoryVectorLayersRef = useRef<(L.Marker | L.Polyline)[]>([]);
+  const pendingSensoryLinePreviewRef = useRef<L.Polyline | null>(null);
+  const sensoryLineHandlerRef = useRef<any>(null);
+  const sensoryLineDrawActiveRef = useRef(false);
 
   const [mapboxToken, setMapboxToken] = useState("");
   const [mapLoaded, setMapLoaded] = useState(false);
@@ -373,6 +381,13 @@ export default function MapPage() {
   const [show3D, setShow3D] = useState(false);
   const [isSyncingSiteData, setIsSyncingSiteData] = useState(false);
   const [syncSiteDataStatus, setSyncSiteDataStatus] = useState<"idle" | "ok" | "error">("idle");
+  const [showSensoryVectors, setShowSensoryVectors] = useState(true);
+  const [dropSensoryPointMode, setDropSensoryPointMode] = useState(false);
+  const [drawSensoryLineMode, setDrawSensoryLineMode] = useState(false);
+  const [pendingSensoryPoint, setPendingSensoryPoint] = useState<{ lng: number; lat: number } | null>(null);
+  const [pendingSensoryLine, setPendingSensoryLine] = useState<GeoJSON.LineString | null>(null);
+  const [sensoryVectorType, setSensoryVectorType] = useState<"road_noise" | "view_corridor" | "privacy_threat">("road_noise");
+  const [sensoryVectorLabel, setSensoryVectorLabel] = useState("");
   const [showWater, setShowWater] = useState(true);
   const [waterAnalysis, setWaterAnalysis] = useState<WaterAnalysisResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -478,6 +493,16 @@ export default function MapPage() {
   const bulkReplaceZones = useBulkReplaceZones();
   const deleteZone = useDeleteZone();
 
+  const { data: sensoryVectors = [] } = useListSensoryVectors(activePropertyId ?? "", {
+    query: {
+      enabled: !!activePropertyId,
+      queryKey: getListSensoryVectorsQueryKey(activePropertyId ?? ""),
+      refetchInterval: 30_000,
+    },
+  });
+  const createSensoryVector = useCreateSensoryVector();
+  const deleteSensoryVector = useDeleteSensoryVector();
+
   // ─── FETCH TOKEN ──────────────────────────────────────────────────────────
   useEffect(() => {
     fetchMapboxToken().then(setMapboxToken);
@@ -548,6 +573,13 @@ export default function MapPage() {
     });
     pathwayPolylineHandlerRef.current = pathwayPolylineHandler;
 
+    // Sensory vector line handler — dashed red-orange stroke
+    const sensoryLineHandler = new PolylineHandler(map, {
+      shapeOptions: { color: "#ef4444", weight: 2.5, opacity: 0.9, dashArray: "8 5" },
+      allowIntersection: true,
+    });
+    sensoryLineHandlerRef.current = sensoryLineHandler;
+
     map.on((L as any).Draw.Event.CREATED, (e: any) => {
       const layer = e.layer as L.Polygon | L.Polyline;
       const feature = layer.toGeoJSON();
@@ -573,6 +605,11 @@ export default function MapPage() {
         const geometry = feature.geometry as GeoJSON.LineString;
         setPendingPathway(geometry);
         setDrawPathwayMode(false);
+      } else if (sensoryLineDrawActiveRef.current) {
+        sensoryLineDrawActiveRef.current = false;
+        const geometry = feature.geometry as GeoJSON.LineString;
+        setPendingSensoryLine(geometry);
+        setDrawSensoryLineMode(false);
       } else {
         drawnItems.clearLayers();
         drawnItems.addLayer(layer as L.Polygon);
@@ -963,6 +1000,78 @@ export default function MapPage() {
       pathwayPolylineHandlerRef.current?.disable();
     };
   }, [drawPathwayMode, mapLoaded]);
+
+  // ─── SENSORY VECTOR POINT DROP ────────────────────────────────────────────
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapLoaded || role !== "designer" || !dropSensoryPointMode) return;
+    const container = map.getContainer();
+    container.style.cursor = "crosshair";
+    const handleClick = (e: L.LeafletMouseEvent) => {
+      const { lat, lng } = e.latlng;
+      setPendingSensoryPoint({ lng, lat });
+      setDropSensoryPointMode(false);
+    };
+    map.on("click", handleClick);
+    return () => { map.off("click", handleClick); container.style.cursor = ""; };
+  }, [role, dropSensoryPointMode, mapLoaded]);
+
+  // ─── SENSORY VECTOR LINE DRAW ─────────────────────────────────────────────
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapLoaded || role !== "designer" || !drawSensoryLineMode) return;
+    sensoryLineDrawActiveRef.current = true;
+    sensoryLineHandlerRef.current?.enable();
+    return () => {
+      sensoryLineDrawActiveRef.current = false;
+      sensoryLineHandlerRef.current?.disable();
+    };
+  }, [drawSensoryLineMode, mapLoaded, role]);
+
+  // ─── SENSORY VECTOR MAP RENDERING ────────────────────────────────────────
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapLoaded) return;
+
+    sensoryVectorLayersRef.current.forEach((l) => map.removeLayer(l));
+    sensoryVectorLayersRef.current = [];
+
+    if (!activePropertyId || !showSensoryVectors) return;
+
+    const typeConfig: Record<string, { color: string; emoji: string }> = {
+      road_noise:       { color: "#ef4444", emoji: "🔊" },
+      view_corridor:    { color: "#22c55e", emoji: "👁" },
+      privacy_threat:   { color: "#a855f7", emoji: "🚫" },
+    };
+
+    sensoryVectors.forEach((sv) => {
+      const cfg = typeConfig[sv.vectorType] ?? { color: "#94a3b8", emoji: "?" };
+      let geom: GeoJSON.Geometry | null = null;
+      try { geom = JSON.parse(sv.geojsonGeometry); } catch { return; }
+
+      if (geom?.type === "Point") {
+        const [lng, lat] = (geom as GeoJSON.Point).coordinates;
+        const icon = L.divIcon({
+          className: "",
+          html: `<div style="width:26px;height:26px;border-radius:50%;background:${cfg.color}22;border:2px solid ${cfg.color};display:flex;align-items:center;justify-content:center;font-size:13px;box-shadow:0 2px 6px rgba(0,0,0,0.45);">${cfg.emoji}</div>`,
+          iconSize: [26, 26],
+          iconAnchor: [13, 13],
+        });
+        const marker = L.marker([lat, lng], { icon });
+        const label = sv.label || sv.vectorType.replace(/_/g, " ");
+        marker.bindPopup(`<div style="font-size:12px;"><b>${label}</b><br/><span style="color:#666;font-size:10px;">${sv.vectorType}</span></div>`);
+        marker.addTo(map);
+        sensoryVectorLayersRef.current.push(marker);
+      } else if (geom?.type === "LineString") {
+        const coords = (geom as GeoJSON.LineString).coordinates.map(([lng, lat]) => [lat, lng] as [number, number]);
+        const line = L.polyline(coords, { color: cfg.color, weight: 3, dashArray: "8 5", opacity: 0.85 });
+        const label = sv.label || sv.vectorType.replace(/_/g, " ");
+        line.bindPopup(`<div style="font-size:12px;"><b>${cfg.emoji} ${label}</b><br/><span style="color:#666;font-size:10px;">${sv.vectorType}</span></div>`);
+        line.addTo(map);
+        sensoryVectorLayersRef.current.push(line as unknown as L.Marker);
+      }
+    });
+  }, [sensoryVectors, activePropertyId, mapLoaded, showSensoryVectors]);
 
   // ─── STRUCTURE CLICK HANDLER (Designer mode) ─────────────────────────────
   useEffect(() => {
@@ -2482,6 +2591,13 @@ export default function MapPage() {
               onToggle={() => setShowZones((v) => !v)}
               disabled={!activePropertyId}
             />
+            <LayerToggle
+              label="Sensory Vectors"
+              color="#a855f7"
+              active={showSensoryVectors}
+              onToggle={() => setShowSensoryVectors((v) => !v)}
+              disabled={!activePropertyId}
+            />
           </div>
           {isGeneratingContours && (
             <div className="flex items-center gap-2 mt-2.5">
@@ -3488,6 +3604,176 @@ export default function MapPage() {
                       Click any zone on the map to leave a comment about that area.
                     </p>
                   )}
+                </div>
+              )}
+            </div>
+          )}
+        </SidebarSection>
+
+        {/* ── LAYER 9: SENSORY VECTORS ── */}
+        <SidebarSection label="Layer 9 — Sensory Vectors">
+          {!activePropertyId ? (
+            <p className="text-[11px]" style={{ color: "hsl(42, 15%, 50%)" }}>Select a property to manage sensory vectors.</p>
+          ) : (
+            <div className="space-y-2.5">
+              {/* Type selector */}
+              <div className="space-y-1">
+                <div className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "hsl(42, 15%, 55%)" }}>Vector Type</div>
+                <div className="grid grid-cols-1 gap-1">
+                  {(["road_noise", "view_corridor", "privacy_threat"] as const).map((t) => {
+                    const labels: Record<string, string> = { road_noise: "🔊 Road Noise", view_corridor: "👁 View Corridor", privacy_threat: "🚫 Privacy Threat" };
+                    const colors: Record<string, string> = { road_noise: "#ef4444", view_corridor: "#22c55e", privacy_threat: "#a855f7" };
+                    const active = sensoryVectorType === t;
+                    return (
+                      <button
+                        key={t}
+                        onClick={() => setSensoryVectorType(t)}
+                        className="w-full text-left text-[11px] px-2.5 py-1.5 rounded-lg font-medium transition-colors"
+                        style={{
+                          background: active ? `${colors[t]}22` : "hsl(103, 22%, 11%)",
+                          border: `1px solid ${active ? colors[t] : "hsl(103, 22%, 20%)"}`,
+                          color: active ? colors[t] : "hsl(42, 15%, 55%)",
+                        }}
+                      >
+                        {labels[t]}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Label */}
+              <input
+                className="w-full text-[11px] px-2.5 py-1.5 rounded border outline-none"
+                style={{ background: "hsl(103, 35%, 14%)", borderColor: "hsl(103, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
+                placeholder="Label (optional)"
+                value={sensoryVectorLabel}
+                onChange={(e) => setSensoryVectorLabel(e.target.value)}
+              />
+
+              {/* Draw buttons */}
+              {role === "designer" && (
+                <div className="flex gap-1.5">
+                  <button
+                    onClick={() => { setDropSensoryPointMode(true); setDrawSensoryLineMode(false); }}
+                    className="flex-1 text-[11px] py-1.5 rounded font-medium transition-colors"
+                    style={{
+                      background: dropSensoryPointMode ? "hsl(270, 40%, 18%)" : "hsl(103, 22%, 12%)",
+                      border: `1px solid ${dropSensoryPointMode ? "#a855f7" : "hsl(103, 22%, 22%)"}`,
+                      color: dropSensoryPointMode ? "#c084fc" : "hsl(42, 15%, 55%)",
+                    }}
+                  >
+                    {dropSensoryPointMode ? "Click map…" : "Drop Point"}
+                  </button>
+                  <button
+                    onClick={() => { setDrawSensoryLineMode(true); setDropSensoryPointMode(false); }}
+                    className="flex-1 text-[11px] py-1.5 rounded font-medium transition-colors"
+                    style={{
+                      background: drawSensoryLineMode ? "hsl(270, 40%, 18%)" : "hsl(103, 22%, 12%)",
+                      border: `1px solid ${drawSensoryLineMode ? "#a855f7" : "hsl(103, 22%, 22%)"}`,
+                      color: drawSensoryLineMode ? "#c084fc" : "hsl(42, 15%, 55%)",
+                    }}
+                  >
+                    {drawSensoryLineMode ? "Drawing…" : "Draw Line"}
+                  </button>
+                </div>
+              )}
+
+              {/* Pending point confirm */}
+              {pendingSensoryPoint && (
+                <div className="space-y-1.5 rounded-lg p-2" style={{ background: "hsl(270, 30%, 12%)", border: "1px solid #a855f733" }}>
+                  <p className="text-[11px]" style={{ color: "#c084fc" }}>Point placed — save?</p>
+                  <div className="flex gap-1.5">
+                    <button
+                      disabled={createSensoryVector.isPending}
+                      onClick={() => {
+                        if (!activePropertyId) return;
+                        const geojsonGeometry = JSON.stringify({ type: "Point", coordinates: [pendingSensoryPoint.lng, pendingSensoryPoint.lat] });
+                        createSensoryVector.mutate(
+                          { propertyId: activePropertyId, data: { vectorType: sensoryVectorType, geometryType: "point", geojsonGeometry, label: sensoryVectorLabel || undefined } },
+                          { onSuccess: () => { setPendingSensoryPoint(null); setSensoryVectorLabel(""); queryClient.invalidateQueries({ queryKey: getListSensoryVectorsQueryKey(activePropertyId) }); } },
+                        );
+                      }}
+                      className="flex-1 text-[11px] py-1 rounded font-medium"
+                      style={{ background: "hsl(270, 45%, 30%)", color: "#e9d5ff" }}
+                    >
+                      {createSensoryVector.isPending ? "Saving…" : "Save"}
+                    </button>
+                    <button
+                      onClick={() => setPendingSensoryPoint(null)}
+                      className="text-[11px] px-2 py-1 rounded"
+                      style={{ border: "1px solid #c00", color: "#f87171", background: "none" }}
+                    >✕</button>
+                  </div>
+                </div>
+              )}
+
+              {/* Pending line confirm */}
+              {pendingSensoryLine && (
+                <div className="space-y-1.5 rounded-lg p-2" style={{ background: "hsl(270, 30%, 12%)", border: "1px solid #a855f733" }}>
+                  <p className="text-[11px]" style={{ color: "#c084fc" }}>Line drawn — save?</p>
+                  <div className="flex gap-1.5">
+                    <button
+                      disabled={createSensoryVector.isPending}
+                      onClick={() => {
+                        if (!activePropertyId) return;
+                        createSensoryVector.mutate(
+                          { propertyId: activePropertyId, data: { vectorType: sensoryVectorType, geometryType: "line", geojsonGeometry: JSON.stringify(pendingSensoryLine), label: sensoryVectorLabel || undefined } },
+                          { onSuccess: () => { setPendingSensoryLine(null); setSensoryVectorLabel(""); queryClient.invalidateQueries({ queryKey: getListSensoryVectorsQueryKey(activePropertyId) }); } },
+                        );
+                      }}
+                      className="flex-1 text-[11px] py-1 rounded font-medium"
+                      style={{ background: "hsl(270, 45%, 30%)", color: "#e9d5ff" }}
+                    >
+                      {createSensoryVector.isPending ? "Saving…" : "Save"}
+                    </button>
+                    <button
+                      onClick={() => setPendingSensoryLine(null)}
+                      className="text-[11px] px-2 py-1 rounded"
+                      style={{ border: "1px solid #c00", color: "#f87171", background: "none" }}
+                    >✕</button>
+                  </div>
+                </div>
+              )}
+
+              {/* Saved vectors list */}
+              {sensoryVectors.length > 0 && (
+                <div>
+                  <div className="text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: "#a855f7" }}>
+                    Saved ({sensoryVectors.length})
+                  </div>
+                  <div className="space-y-1">
+                    {sensoryVectors.map((sv) => {
+                      const typeEmoji: Record<string, string> = { road_noise: "🔊", view_corridor: "👁", privacy_threat: "🚫" };
+                      const typeColor: Record<string, string> = { road_noise: "#ef4444", view_corridor: "#22c55e", privacy_threat: "#a855f7" };
+                      let geomType = "?";
+                      try { geomType = (JSON.parse(sv.geojsonGeometry) as { type: string }).type; } catch { /* */ }
+                      return (
+                        <div key={sv.id} className="rounded p-1.5 text-[10px] flex items-start justify-between gap-1"
+                          style={{ background: "hsl(270, 20%, 10%)", border: `1px solid ${typeColor[sv.vectorType] ?? "#a855f7"}33` }}>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium truncate" style={{ color: typeColor[sv.vectorType] ?? "#c084fc" }}>
+                              {typeEmoji[sv.vectorType] ?? "?"} {sv.label || sv.vectorType.replace(/_/g, " ")}
+                            </div>
+                            <div style={{ color: "hsl(42, 15%, 45%)" }}>{geomType.toLowerCase()}</div>
+                          </div>
+                          {role === "designer" && (
+                            <button
+                              onClick={() => {
+                                if (!activePropertyId) return;
+                                deleteSensoryVector.mutate(
+                                  { propertyId: activePropertyId, vectorId: sv.id },
+                                  { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListSensoryVectorsQueryKey(activePropertyId) }) },
+                                );
+                              }}
+                              className="shrink-0 text-[9px] px-1.5 py-0.5 rounded"
+                              style={{ border: "1px solid #c00", color: "#f87171", background: "none" }}
+                            >✕</button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
             </div>

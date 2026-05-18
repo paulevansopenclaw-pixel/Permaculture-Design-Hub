@@ -26,6 +26,8 @@ tags:
     description: Access roads, footpaths, farm tracks and fencelines
   - name: zones
     description: Permaculture zone analysis polygons
+  - name: sensory-vectors
+    description: Subjective sensory input vectors (noise, view corridors, privacy threats)
   - name: Auth
     description: Browser and mobile authentication endpoints.
 
@@ -680,6 +682,70 @@ paths:
         "204":
           description: Deleted
 
+  /properties/{propertyId}/sensory-vectors:
+    get:
+      operationId: listSensoryVectors
+      tags: [sensory-vectors]
+      summary: List all sensory vectors for a property
+      parameters:
+        - name: propertyId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of sensory vectors
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SensoryVector"
+    post:
+      operationId: createSensoryVector
+      tags: [sensory-vectors]
+      summary: Create a sensory vector
+      parameters:
+        - name: propertyId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SensoryVectorInput"
+      responses:
+        "201":
+          description: Created sensory vector
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SensoryVector"
+
+  /properties/{propertyId}/sensory-vectors/{vectorId}:
+    delete:
+      operationId: deleteSensoryVector
+      tags: [sensory-vectors]
+      summary: Delete a sensory vector
+      parameters:
+        - name: propertyId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: vectorId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
   /auth/user:
     get:
       tags: [Auth]
@@ -1057,6 +1123,11 @@ components:
           description: Soil protection, erosion mitigation, and caloric planting
         ClimateResilience:
           description: Extreme-weather and grid-collapse resilience summary with immediate action steps
+        InfrastructureCritique:
+          description: Localised critiques of drawn structures, swales, and sensory vectors — conflicts, risks, relocation recommendations
+        climateSource:
+          type: string
+          description: Whether climate data was fetched live or failed
         generatedAt:
           type: string
         rawJson:
@@ -1426,6 +1497,38 @@ components:
       properties:
         success:
           type: boolean
+    SensoryVector:
+      type: object
+      required: [id, propertyId, vectorType, label, geometryType, geojsonGeometry, createdAt]
+      properties:
+        id:
+          type: string
+        propertyId:
+          type: string
+        vectorType:
+          type: string
+        label:
+          type: string
+        geometryType:
+          type: string
+        geojsonGeometry:
+          type: string
+        createdAt:
+          type: string
+
+    SensoryVectorInput:
+      type: object
+      required: [vectorType, geometryType, geojsonGeometry]
+      properties:
+        vectorType:
+          type: string
+        label:
+          type: string
+        geometryType:
+          type: string
+        geojsonGeometry:
+          type: string
+
     ErrorEnvelope:
       type: object
       required: [error]

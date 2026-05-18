@@ -292,6 +292,8 @@ export const AnalyzeSiteResponse = zod.object({
   "SunAndEnergy": zod.unknown().describe('Solar optimisation, microclimate, and thermal mass strategies'),
   "LandAndBiodiversity": zod.unknown().describe('Soil protection, erosion mitigation, and caloric planting'),
   "ClimateResilience": zod.unknown().describe('Extreme-weather and grid-collapse resilience summary with immediate action steps'),
+  "InfrastructureCritique": zod.unknown().optional().describe('Localised critiques of drawn structures, swales, and sensory vectors — conflicts, risks, relocation recommendations'),
+  "climateSource": zod.string().optional().describe('Whether climate data was fetched live or failed'),
   "generatedAt": zod.string(),
   "rawJson": zod.string()
 })
@@ -608,6 +610,49 @@ export const BulkReplaceZonesResponse = zod.array(BulkReplaceZonesResponseItem)
 export const DeleteZoneParams = zod.object({
   "propertyId": zod.coerce.string(),
   "zoneId": zod.coerce.string()
+})
+
+
+/**
+ * @summary List all sensory vectors for a property
+ */
+export const ListSensoryVectorsParams = zod.object({
+  "propertyId": zod.coerce.string()
+})
+
+export const ListSensoryVectorsResponseItem = zod.object({
+  "id": zod.string(),
+  "propertyId": zod.string(),
+  "vectorType": zod.string(),
+  "label": zod.string(),
+  "geometryType": zod.string(),
+  "geojsonGeometry": zod.string(),
+  "createdAt": zod.string()
+})
+export const ListSensoryVectorsResponse = zod.array(ListSensoryVectorsResponseItem)
+
+
+/**
+ * @summary Create a sensory vector
+ */
+export const CreateSensoryVectorParams = zod.object({
+  "propertyId": zod.coerce.string()
+})
+
+export const CreateSensoryVectorBody = zod.object({
+  "vectorType": zod.string(),
+  "label": zod.string().optional(),
+  "geometryType": zod.string(),
+  "geojsonGeometry": zod.string()
+})
+
+
+/**
+ * @summary Delete a sensory vector
+ */
+export const DeleteSensoryVectorParams = zod.object({
+  "propertyId": zod.coerce.string(),
+  "vectorId": zod.coerce.string()
 })
 
 

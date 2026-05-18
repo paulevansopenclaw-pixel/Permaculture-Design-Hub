@@ -7,10 +7,15 @@ import {
   propertiesTable,
   sectorsTable,
   zonesTable,
+  structuresTable,
+  designedSwalesTable,
+  sensoryVectorsTable,
 } from "@workspace/db";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const router: IRouter = Router();
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function bearingLabel(startAngle: number, endAngle: number): string {
   const mid = (startAngle + endAngle) / 2;
@@ -19,117 +24,319 @@ function bearingLabel(startAngle: number, endAngle: number): string {
   return dirs[idx];
 }
 
-/**
- * Approximate region label from WGS-84 coordinates, used to bias plant recommendations
- * toward locally appropriate, non-invasive species.
- */
+function bearingToCompass(deg: number): string {
+  const dirs = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"];
+  return dirs[Math.round(((deg % 360) + 360) % 360 / 22.5) % 16];
+}
+
 function deriveRegion(lat: number, lng: number): string {
   const hemi = lat < 0 ? "Southern Hemisphere" : "Northern Hemisphere";
-  // Australia
   if (lat < -10 && lat > -45 && lng > 110 && lng < 156) {
     if (lat < -28 && lng > 135) return `Eastern Australia (NSW / VIC / SE QLD), ${hemi}`;
     if (lng < 130)              return `Western Australia, ${hemi}`;
     if (lat > -28)              return `Tropical / Sub-tropical Northern Australia (QLD / NT), ${hemi}`;
     return `Australia, ${hemi}`;
   }
-  // New Zealand
   if (lat < -34 && lat > -48 && lng > 166 && lng < 179) return `New Zealand, ${hemi}`;
-  // South Africa
-  if (lat < -22 && lat > -35 && lng > 16 && lng < 33) return `South Africa, ${hemi}`;
-  // South America
-  if (lat < 0 && lng > -82 && lng < -34) return `South America, ${hemi}`;
-  // North America
+  if (lat < -22 && lat > -35 && lng > 16 && lng < 33)   return `South Africa, ${hemi}`;
+  if (lat < 0 && lng > -82 && lng < -34)                 return `South America, ${hemi}`;
   if (lat > 24 && lat < 72 && lng > -168 && lng < -52) {
     if (lat > 50) return `Canada / Pacific Northwest, ${hemi}`;
     if (lng < -100) return `Western USA, ${hemi}`;
     return `Eastern / Central USA, ${hemi}`;
   }
-  // Europe
-  if (lat > 36 && lat < 72 && lng > -12 && lng < 45) return `Europe, ${hemi}`;
-  // East Asia
-  if (lat > 20 && lat < 55 && lng > 100 && lng < 145) return `East Asia, ${hemi}`;
-  // South / SE Asia
-  if (lat > -10 && lat < 30 && lng > 65 && lng < 140) return `South / Southeast Asia, ${hemi}`;
-  // Sub-Saharan Africa
-  if (lat > -35 && lat < 18 && lng > -18 && lng < 51) return `Sub-Saharan Africa, ${hemi}`;
-  // Middle East / North Africa
-  if (lat > 15 && lat < 40 && lng > 30 && lng < 65) return `Middle East, ${hemi}`;
+  if (lat > 36 && lat < 72 && lng > -12 && lng < 45)    return `Europe, ${hemi}`;
+  if (lat > 20 && lat < 55 && lng > 100 && lng < 145)   return `East Asia, ${hemi}`;
+  if (lat > -10 && lat < 30 && lng > 65 && lng < 140)   return `South / Southeast Asia, ${hemi}`;
+  if (lat > -35 && lat < 18 && lng > -18 && lng < 51)   return `Sub-Saharan Africa, ${hemi}`;
+  if (lat > 15 && lat < 40 && lng > 30 && lng < 65)     return `Middle East, ${hemi}`;
   return `Coordinates ${lat.toFixed(1)}°, ${lng.toFixed(1)}° (${hemi})`;
 }
 
-/** Rough bbox centroid from a GeoJSON Polygon or MultiPolygon (accepts raw string or parsed object). */
 function roughCentroid(geojson: unknown): { lat: number; lng: number } | null {
   try {
     const parsed = typeof geojson === "string" ? JSON.parse(geojson) : geojson;
     const geo = parsed as { type: string; coordinates: number[][][] | number[][][][] };
     let coords: number[][] = [];
-    if (geo.type === "Polygon") {
-      coords = geo.coordinates[0] as number[][];
-    } else if (geo.type === "MultiPolygon") {
-      coords = (geo.coordinates[0] as number[][][])[0] as number[][];
-    }
+    if (geo.type === "Polygon")            coords = geo.coordinates[0] as number[][];
+    else if (geo.type === "MultiPolygon")  coords = (geo.coordinates[0] as number[][][])[0] as number[][];
     if (!coords.length) return null;
     const lng = coords.reduce((s, c) => s + c[0], 0) / coords.length;
     const lat = coords.reduce((s, c) => s + c[1], 0) / coords.length;
     return { lat, lng };
-  } catch {
-    return null;
-  }
+  } catch { return null; }
+}
+
+// ─── Live climate fetch (Open-Meteo + NASA POWER) ─────────────────────────────
+
+interface LiveClimate {
+  annualPrecipMm:   number | null;
+  prevailingWind:   string | null;
+  meanWindSpeedMs:  number | null;
+  meanAnnualTempC:  number | null;
+  summerMaxTempC:   number | null;
+  winterMinTempC:   number | null;
+  frostDaysPerYear: number | null;
+  solarKwhM2:       number | null;
+  source: "live" | "failed";
+}
+
+async function fetchLiveClimate(lat: number, lng: number): Promise<LiveClimate> {
+  const failed: LiveClimate = {
+    annualPrecipMm: null, prevailingWind: null, meanWindSpeedMs: null,
+    meanAnnualTempC: null, summerMaxTempC: null, winterMinTempC: null,
+    frostDaysPerYear: null, solarKwhM2: null, source: "failed",
+  };
+  try {
+    const today     = new Date();
+    const endDate   = today.toISOString().slice(0, 10);
+    const startDate = new Date(today.getFullYear() - 3, today.getMonth(), today.getDate())
+      .toISOString().slice(0, 10);
+
+    const [meteoRes, nasaRes] = await Promise.allSettled([
+      fetch(
+        `https://archive-api.open-meteo.com/v1/archive` +
+        `?latitude=${lat.toFixed(4)}&longitude=${lng.toFixed(4)}` +
+        `&start_date=${startDate}&end_date=${endDate}` +
+        `&daily=precipitation_sum,temperature_2m_mean,temperature_2m_max,temperature_2m_min` +
+        `&timezone=UTC`,
+        { signal: AbortSignal.timeout(12_000) },
+      ),
+      fetch(
+        `https://power.larc.nasa.gov/api/temporal/climatology/point` +
+        `?parameters=ALLSKY_SFC_SW_DWN,WS10M,WD10M` +
+        `&community=AG` +
+        `&longitude=${lng.toFixed(4)}&latitude=${lat.toFixed(4)}` +
+        `&format=JSON`,
+        { signal: AbortSignal.timeout(12_000) },
+      ),
+    ]);
+
+    // ── Open-Meteo ──
+    let annualPrecipMm: number | null = null;
+    let meanAnnualTempC: number | null = null;
+    let summerMaxTempC: number | null = null;
+    let winterMinTempC: number | null = null;
+    let frostDaysPerYear: number | null = null;
+
+    if (meteoRes.status === "fulfilled" && meteoRes.value.ok) {
+      const d = await meteoRes.value.json() as {
+        daily: {
+          time: string[];
+          precipitation_sum: (number | null)[];
+          temperature_2m_mean: (number | null)[];
+          temperature_2m_max: (number | null)[];
+          temperature_2m_min: (number | null)[];
+        };
+      };
+      const { time, precipitation_sum, temperature_2m_mean, temperature_2m_max, temperature_2m_min } = d.daily;
+
+      annualPrecipMm = Math.round(precipitation_sum.reduce<number>((s, v) => s + (v ?? 0), 0) / 3);
+
+      const means = temperature_2m_mean.filter((v): v is number => v !== null);
+      meanAnnualTempC = means.length ? Math.round(means.reduce((s, v) => s + v, 0) / means.length * 10) / 10 : null;
+
+      frostDaysPerYear = Math.round(
+        temperature_2m_min.filter((v): v is number => v !== null && v < 0).length / 3,
+      );
+
+      // Monthly buckets for summer/winter extremes
+      const mxSums = Array(12).fill(0); const mxN = Array(12).fill(0);
+      const mnSums = Array(12).fill(0); const mnN = Array(12).fill(0);
+      for (let i = 0; i < time.length; i++) {
+        const m = new Date(time[i]).getMonth();
+        const mx = temperature_2m_max[i]; const mn = temperature_2m_min[i];
+        if (mx !== null) { mxSums[m] += mx; mxN[m]++; }
+        if (mn !== null) { mnSums[m] += mn; mnN[m]++; }
+      }
+      const mxAvg = mxSums.map((s, i) => mxN[i] > 0 ? s / mxN[i] : null);
+      const mnAvg = mnSums.map((s, i) => mnN[i] > 0 ? s / mnN[i] : null);
+      const top3Max = [...mxAvg].sort((a, b) => (b ?? -99) - (a ?? -99)).slice(0, 3).filter((v): v is number => v !== null);
+      const bot3Min = [...mnAvg].sort((a, b) => (a ?? 99) - (b ?? 99)).slice(0, 3).filter((v): v is number => v !== null);
+      summerMaxTempC = top3Max.length ? Math.round(top3Max.reduce((s, v) => s + v, 0) / top3Max.length * 10) / 10 : null;
+      winterMinTempC = bot3Min.length ? Math.round(bot3Min.reduce((s, v) => s + v, 0) / bot3Min.length * 10) / 10 : null;
+    }
+
+    // ── NASA POWER ──
+    let prevailingWind: string | null = null;
+    let meanWindSpeedMs: number | null = null;
+    let solarKwhM2: number | null = null;
+
+    if (nasaRes.status === "fulfilled" && nasaRes.value.ok) {
+      const nd = await nasaRes.value.json() as { properties: { parameter: Record<string, Record<string, number>> } };
+      const p = nd.properties.parameter;
+      const windDeg = p["WD10M"]?.["ANN"] ?? null;
+      if (windDeg !== null) prevailingWind = bearingToCompass(windDeg);
+      const ws = p["WS10M"]?.["ANN"] ?? null;
+      if (ws !== null) meanWindSpeedMs = Math.round(ws * 10) / 10;
+      const sol = p["ALLSKY_SFC_SW_DWN"]?.["ANN"] ?? null;
+      if (sol !== null) solarKwhM2 = Math.round(sol * 365);
+    }
+
+    return {
+      annualPrecipMm, prevailingWind, meanWindSpeedMs,
+      meanAnnualTempC, summerMaxTempC, winterMinTempC, frostDaysPerYear,
+      solarKwhM2, source: "live",
+    };
+  } catch { return failed; }
+}
+
+// ─── Prompt builder ───────────────────────────────────────────────────────────
+
+function formatCoord(lng: number, lat: number) {
+  return `${Math.abs(lat).toFixed(5)}°${lat >= 0 ? "N" : "S"}, ${Math.abs(lng).toFixed(5)}°${lng >= 0 ? "E" : "W"}`;
+}
+
+function geomSummary(geojson: string): string {
+  try {
+    const g = JSON.parse(geojson) as { type: string; coordinates: unknown };
+    if (g.type === "Point") {
+      const [lng, lat] = g.coordinates as [number, number];
+      return `point at ${formatCoord(lng, lat)}`;
+    }
+    if (g.type === "LineString") {
+      const coords = g.coordinates as [number, number][];
+      const first = coords[0];
+      const last  = coords[coords.length - 1];
+      return `line from ${formatCoord(first[0], first[1])} → ${formatCoord(last[0], last[1])} (${coords.length} nodes)`;
+    }
+    return g.type;
+  } catch { return "unknown geometry"; }
 }
 
 function buildPrompt(
-  property: { name: string; areaHectares: number | null; areaAcres: number | null; boundaryGeojson: unknown },
+  property: typeof propertiesTable.$inferSelect,
   brief: typeof clientBriefsTable.$inferSelect,
   sectors: Array<typeof sectorsTable.$inferSelect>,
   zoneCount: number,
+  climate: LiveClimate,
+  structures: Array<typeof structuresTable.$inferSelect>,
+  swales: Array<typeof designedSwalesTable.$inferSelect>,
+  sensoryVectors: Array<typeof sensoryVectorsTable.$inferSelect>,
 ): string {
   const centroid = roughCentroid(property.boundaryGeojson);
-  const region = centroid ? deriveRegion(centroid.lat, centroid.lng) : "unknown region";
+  const region   = centroid ? deriveRegion(centroid.lat, centroid.lng) : "unknown region";
+
   const challenges: string[] = [];
-  if (brief.challengeSevereErosion) challenges.push("severe erosion");
+  if (brief.challengeSevereErosion)  challenges.push("severe erosion");
   if (brief.challengeWinterFlooding) challenges.push("winter flooding");
-  if (brief.challengeHighWind) challenges.push("high wind exposure");
+  if (brief.challengeHighWind)       challenges.push("high wind exposure");
   if (brief.challengeWildlifePressure) challenges.push("wildlife pressure");
 
   const utilities: string[] = [];
-  if (brief.utilitiesOverheadPower) utilities.push("overhead power lines");
-  if (brief.utilitiesBuriedPipes) utilities.push("buried pipes");
-  if (brief.utilitiesLegalEasements) utilities.push("legal easements");
-  if (brief.utilitiesActiveWell) utilities.push("active well");
+  if (brief.utilitiesOverheadPower)   utilities.push("overhead power lines");
+  if (brief.utilitiesBuriedPipes)     utilities.push("buried pipes");
+  if (brief.utilitiesLegalEasements)  utilities.push("legal easements");
+  if (brief.utilitiesActiveWell)      utilities.push("active well");
 
-  const sectorSummary = sectors.map((s) => {
-    const dir = bearingLabel(s.startAngle, s.endAngle);
-    return `  - ${s.label || s.sectorType} (${dir}, ${s.startAngle}°–${s.endAngle}°)`;
-  }).join("\n") || "  - None mapped yet";
+  // Climate — live data overrides user brief where available
+  const precipDisplay = climate.annualPrecipMm != null
+    ? `${climate.annualPrecipMm} mm/yr  [LIVE — 3yr Open-Meteo archive]`
+    : brief.annualRainfallMm != null ? `${brief.annualRainfallMm} mm/yr  [user estimate]`
+    : "unknown";
+  const windDisplay = climate.prevailingWind != null
+    ? `${climate.prevailingWind}${climate.meanWindSpeedMs != null ? ` @ ${climate.meanWindSpeedMs} m/s` : ""}  [LIVE — NASA POWER 30yr]`
+    : brief.prevailingWindDir ? `${brief.prevailingWindDir}  [user estimate]`
+    : "unknown";
+  const solarDisplay = climate.solarKwhM2 != null
+    ? `${climate.solarKwhM2} kWh/m²/yr  [LIVE — NASA POWER]`
+    : brief.solarIrradianceKwhM2 != null ? `${brief.solarIrradianceKwhM2} kWh/m²/yr  [user estimate]`
+    : "unknown";
+  const summerTempDisplay = climate.summerMaxTempC != null
+    ? `${climate.summerMaxTempC} °C  [LIVE]`
+    : brief.summerMaxTempC != null ? `${brief.summerMaxTempC} °C  [user estimate]`
+    : "unknown";
+  const winterTempDisplay = climate.winterMinTempC != null
+    ? `${climate.winterMinTempC} °C  [LIVE]`
+    : brief.winterMinTempC != null ? `${brief.winterMinTempC} °C  [user estimate]`
+    : "unknown";
+  const frostDisplay = climate.frostDaysPerYear != null
+    ? `${climate.frostDaysPerYear} days/yr  [LIVE]`
+    : brief.frostDaysPerYear != null ? `${brief.frostDaysPerYear} days/yr  [user estimate]`
+    : "unknown";
 
-  return `You are a Lead Resilience Engineer and Autonomous Site Architect. Your objective is to design a high-security, off-grid, autonomous property that maximizes resource capture, off-grid power generation, and caloric security.
+  // Sectors
+  const sectorSummary = sectors.length > 0
+    ? sectors.map(s => `  - ${s.label || s.sectorType} (${bearingLabel(s.startAngle, s.endAngle)}, ${s.startAngle}°–${s.endAngle}°, R=${s.radiusKm}km)`).join("\n")
+    : "  - None mapped";
+
+  // ── User-drawn infrastructure ──
+  const structureSummary = structures.length > 0
+    ? structures.map(s => `  - [STRUCTURE] ${s.label} (type: ${s.structureType}) @ ${formatCoord(s.lng, s.lat)}${s.footprintGeojson ? " — has footprint polygon" : ""}`)
+        .join("\n")
+    : "  - None placed";
+
+  const swaleSummary = swales.length > 0
+    ? swales.map(s => `  - [SWALE] "${s.name}" (${s.swaleType}) — ${s.lengthM.toFixed(0)} m @ elev ${s.elevationM.toFixed(1)} m`)
+        .join("\n")
+    : "  - None designed";
+
+  const svSummary = sensoryVectors.length > 0
+    ? sensoryVectors.map(sv =>
+        `  - [${sv.vectorType.toUpperCase().replace(/_/g, "-")}] "${sv.label || sv.vectorType}" — ${geomSummary(sv.geojsonGeometry)}`
+      ).join("\n")
+    : "  - None mapped";
+
+  return `You are a Lead Resilience Engineer and Autonomous Site Architect. Your objective is to design a high-security, off-grid, autonomous property that maximises resource capture, off-grid power generation, and caloric security.
 
 Analyse the following site data and return a highly technical, structured JSON report. Do not use generic gardening terminology; use infrastructure and resilience terminology.
 
 === SITE METRICS ===
 Project: ${property.name}
-Usable Area: ${brief ? `${property.areaHectares?.toFixed(2) ?? "unknown"} ha / ${property.areaAcres?.toFixed(2) ?? "unknown"} acres` : "unknown"}
+Usable Area: ${property.areaHectares?.toFixed(2) ?? "unknown"} ha / ${property.areaAcres?.toFixed(2) ?? "unknown"} acres
 Geographic Threat Region: ${region}
+Permaculture Zones Mapped: ${zoneCount}
 
-=== CLIMATE & THREAT DATA ===
-Köppen Classification: ${brief.climateZone ?? "unknown"}
-Annual Rainfall Yield: ${brief.annualRainfallMm != null ? `${brief.annualRainfallMm} mm/yr` : "unknown"}
-Thermal Maximum: ${brief.summerMaxTempC != null ? `${brief.summerMaxTempC} °C` : "unknown"}
-Thermal Minimum: ${brief.winterMinTempC != null ? `${brief.winterMinTempC} °C` : "unknown"}
+=== LIVE CLIMATE DATA ===
+Annual Rainfall Yield:     ${precipDisplay}
+Prevailing Wind Direction: ${windDisplay}
+Solar Irradiance:          ${solarDisplay}
+Thermal Maximum (summer):  ${summerTempDisplay}
+Thermal Minimum (winter):  ${winterTempDisplay}
+Frost Exposure:            ${frostDisplay}
+Köppen Classification:     ${brief.climateZone ?? (climate.meanAnnualTempC != null ? "derived from live temps" : "unknown")}
+
+=== USER-REPORTED SITE DATA ===
+Soil Type: ${brief.estimatedSoilType ?? "unknown"}
+Soil pH: ${brief.soilPH != null ? brief.soilPH : "unknown"}
+Elevation: ${brief.elevationM != null ? `${brief.elevationM} m` : "unknown"}
+Utilities on site: ${utilities.length > 0 ? utilities.join(", ") : "none"}
 
 === SITE VULNERABILITIES ===
-${challenges.length > 0 ? challenges.map(c => `  - ${c}`).join("\n") : "  - None mapped"}
+${challenges.length > 0 ? challenges.map(c => `  - ${c}`).join("\n") : "  - None reported"}
 
-=== SOLAR & WIND VECTORS ===
+=== SOLAR & SECTOR OVERLAYS ===
 ${sectorSummary}
 
-BASED ON THIS DATA, RETURN A JSON OBJECT WITH THE EXACT FOLLOWING STRUCTURE:
-1. "WaterStrategy": Actionable advice on water catchment, tank sizing, and drainage/swale placement based on the rainfall yield and slope.
-2. "SunAndEnergy": Solar optimization, microclimate creation, and thermal mass strategies based on the provided vectors and temperature extremes.
+=== USER-DRAWN INFRASTRUCTURE ===
+Structures:
+${structureSummary}
+
+Designed Swales / Water Channels:
+${swaleSummary}
+
+Sensory Vectors:
+${svSummary}
+
+=== ANALYSIS DIRECTIVE ===
+Review the "User-Drawn Infrastructure" and "Sensory Vectors" sections above. Provide specific, localised critiques and optimisations based on the ACTUAL coordinates and geometry provided. For example:
+  - If a structure is placed in a topographic flood zone (low elevation swale lines nearby), flag it and suggest a precise new placement.
+  - If a water tank lacks a gravity-feed relationship to higher-elevation swales, flag it.
+  - If a HOUSE or GREENHOUSE is directly exposed to a "road_noise" or "privacy_threat" sensory vector, flag the bearing and recommend a windbreak, berm, or setback with estimated dimensions.
+  - If a "view_corridor" vector is blocked by a proposed structure, recommend relocating the structure.
+  - Cross-reference swale elevations against structure placements for flood/drainage risk.
+  - Be specific: mention structure names, vector labels, and compass bearings in your critiques.
+
+BASED ON ALL OF THE ABOVE, RETURN A JSON OBJECT WITH THE EXACT FOLLOWING STRUCTURE:
+1. "WaterStrategy": Actionable advice on water catchment, tank sizing, and drainage/swale placement based on live rainfall yield and slope data.
+2. "SunAndEnergy": Solar optimisation, microclimate creation, and thermal mass strategies based on live irradiance vectors and temperature extremes.
 3. "LandAndBiodiversity": Soil protection, erosion mitigation, and defensive/caloric planting recommendations tailored to this specific hardiness zone.
 4. "ClimateResilience": A summary of the property's ability to survive extreme weather, grid collapse, or drought, and the immediate steps to secure it.
+5. "InfrastructureCritique": Specific, localised critiques of the user-drawn structures, swales, and sensory vectors — flag conflicts, risks, and precise relocation recommendations.
 Ensure the response is raw, valid JSON only.`;
 }
+
+// ─── Rate limiter ─────────────────────────────────────────────────────────────
 
 const analyzeRateLimit = rateLimit({
   windowMs: 60 * 60 * 1000,
@@ -138,6 +345,8 @@ const analyzeRateLimit = rateLimit({
   legacyHeaders: false,
   message: { error: "Too many analysis requests — please wait before running another analysis." },
 });
+
+// ─── Route ────────────────────────────────────────────────────────────────────
 
 router.post(
   "/properties/:propertyId/analyze-site",
@@ -161,19 +370,37 @@ router.post(
       .select()
       .from(clientBriefsTable)
       .where(eq(clientBriefsTable.propertyId, propertyId));
-    if (!brief) { res.status(404).json({ error: "No client brief found — complete the site survey first" }); return; }
+    if (!brief) {
+      res.status(404).json({ error: "No client brief found — complete the site survey first" });
+      return;
+    }
 
-    const sectors = await db
-      .select()
-      .from(sectorsTable)
-      .where(eq(sectorsTable.propertyId, propertyId));
+    // Fetch all layer data in parallel
+    const [sectors, zones, structures, swales, sensoryVectors] = await Promise.all([
+      db.select().from(sectorsTable)       .where(eq(sectorsTable.propertyId,        propertyId)),
+      db.select().from(zonesTable)         .where(eq(zonesTable.propertyId,           propertyId)),
+      db.select().from(structuresTable)    .where(eq(structuresTable.propertyId,      propertyId)),
+      db.select().from(designedSwalesTable).where(eq(designedSwalesTable.propertyId,  propertyId)),
+      db.select().from(sensoryVectorsTable).where(eq(sensoryVectorsTable.propertyId,  propertyId)),
+    ]);
 
-    const zones = await db
-      .select()
-      .from(zonesTable)
-      .where(eq(zonesTable.propertyId, propertyId));
+    // Fetch live climate data — runs concurrently with DB queries above are already done
+    const centroid = roughCentroid(property.boundaryGeojson);
+    const climate  = centroid
+      ? await fetchLiveClimate(centroid.lat, centroid.lng)
+      : {
+          annualPrecipMm: null, prevailingWind: null, meanWindSpeedMs: null,
+          meanAnnualTempC: null, summerMaxTempC: null, winterMinTempC: null,
+          frostDaysPerYear: null, solarKwhM2: null, source: "failed" as const,
+        };
 
-    const prompt = buildPrompt(property, brief, sectors, zones.length);
+    req.log.info(
+      { propertyId, climateSource: climate.source, structureCount: structures.length,
+        swaleCount: swales.length, svCount: sensoryVectors.length },
+      "analyze-site: payload assembled",
+    );
+
+    const prompt = buildPrompt(property, brief, sectors, zones.length, climate, structures, swales, sensoryVectors);
 
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
@@ -181,10 +408,13 @@ router.post(
       generationConfig: { responseMimeType: "application/json", maxOutputTokens: 8192 },
     });
 
-    const result = await model.generateContent(prompt);
-    const rawJson = result.response.text().trim();
+    const result   = await model.generateContent(prompt);
+    const rawJson  = result.response.text().trim();
 
-    let parsed: { WaterStrategy: unknown; SunAndEnergy: unknown; LandAndBiodiversity: unknown; ClimateResilience: unknown };
+    let parsed: {
+      WaterStrategy: unknown; SunAndEnergy: unknown; LandAndBiodiversity: unknown;
+      ClimateResilience: unknown; InfrastructureCritique: unknown;
+    };
     try {
       parsed = JSON.parse(rawJson);
     } catch {
@@ -194,7 +424,6 @@ router.post(
     }
 
     const generatedAt = new Date();
-
     await db
       .update(clientBriefsTable)
       .set({ aiAnalysisReport: rawJson, aiAnalysisGeneratedAt: generatedAt, updatedAt: generatedAt })
@@ -202,11 +431,13 @@ router.post(
 
     res.json({
       propertyId,
-      WaterStrategy: parsed.WaterStrategy ?? "",
-      SunAndEnergy: parsed.SunAndEnergy ?? "",
-      LandAndBiodiversity: parsed.LandAndBiodiversity ?? "",
-      ClimateResilience: parsed.ClimateResilience ?? "",
+      WaterStrategy:          parsed.WaterStrategy          ?? "",
+      SunAndEnergy:           parsed.SunAndEnergy           ?? "",
+      LandAndBiodiversity:    parsed.LandAndBiodiversity    ?? "",
+      ClimateResilience:      parsed.ClimateResilience      ?? "",
+      InfrastructureCritique: parsed.InfrastructureCritique ?? "",
       generatedAt: generatedAt.toISOString(),
+      climateSource: climate.source,
       rawJson,
     });
   },

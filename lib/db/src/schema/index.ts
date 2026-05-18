@@ -7,3 +7,4 @@ export * from "./swales";
 export * from "./clientBriefs";
 export * from "./pathways";
 export * from "./zones";
+export * from "./sensoryVectors";

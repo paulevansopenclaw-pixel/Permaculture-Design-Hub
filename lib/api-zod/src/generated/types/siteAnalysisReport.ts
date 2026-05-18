@@ -16,6 +16,10 @@ export interface SiteAnalysisReport {
   LandAndBiodiversity: unknown;
   /** Extreme-weather and grid-collapse resilience summary with immediate action steps */
   ClimateResilience: unknown;
+  /** Localised critiques of drawn structures, swales, and sensory vectors — conflicts, risks, relocation recommendations */
+  InfrastructureCritique?: unknown;
+  /** Whether climate data was fetched live or failed */
+  climateSource?: string;
   generatedAt: string;
   rawJson: string;
 }

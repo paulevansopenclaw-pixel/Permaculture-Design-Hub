@@ -36,6 +36,8 @@ export * from './propertyUpdateBoundaryGeojson';
 export * from './sector';
 export * from './sectorInput';
 export * from './sectorUpdate';
+export * from './sensoryVector';
+export * from './sensoryVectorInput';
 export * from './siteAnalysisReport';
 export * from './spatialRecommendation';
 export * from './structure';

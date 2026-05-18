@@ -137,6 +137,20 @@ export function AiAnalysisPanel({ propertyId, hasBrief, savedReport, savedAt, on
             title="Climate Resilience"
             value={report.ClimateResilience}
           />
+          {report.InfrastructureCritique !== undefined && report.InfrastructureCritique !== null && (
+            <ReportCard
+              icon="⚠️"
+              accent="hsl(22, 55%, 22%)"
+              accentBorder="hsl(22, 55%, 16%)"
+              title="Infrastructure Critique"
+              value={report.InfrastructureCritique}
+            />
+          )}
+          {report.climateSource && (
+            <p className="text-[9px] text-center" style={{ color: "hsl(42, 15%, 35%)" }}>
+              Climate data: {report.climateSource}
+            </p>
+          )}
         </div>
       )}
     </div>

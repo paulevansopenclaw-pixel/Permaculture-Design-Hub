@@ -43,6 +43,8 @@ import type {
   Sector,
   SectorInput,
   SectorUpdate,
+  SensoryVector,
+  SensoryVectorInput,
   SiteAnalysisReport,
   Structure,
   StructureInput,
@@ -2275,6 +2277,227 @@ export const useDeleteZone = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getDeleteZoneMutationOptions(options));
+    }
+
+export const getListSensoryVectorsUrl = (propertyId: string,) => {
+
+
+
+
+  return `/api/properties/${propertyId}/sensory-vectors`
+}
+
+/**
+ * @summary List all sensory vectors for a property
+ */
+export const listSensoryVectors = async (propertyId: string, options?: RequestInit): Promise<SensoryVector[]> => {
+
+  return customFetch<SensoryVector[]>(getListSensoryVectorsUrl(propertyId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListSensoryVectorsQueryKey = (propertyId: string,) => {
+    return [
+    `/api/properties/${propertyId}/sensory-vectors`
+    ] as const;
+    }
+
+
+export const getListSensoryVectorsQueryOptions = <TData = Awaited<ReturnType<typeof listSensoryVectors>>, TError = ErrorType<unknown>>(propertyId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSensoryVectors>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListSensoryVectorsQueryKey(propertyId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listSensoryVectors>>> = ({ signal }) => listSensoryVectors(propertyId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(propertyId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listSensoryVectors>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListSensoryVectorsQueryResult = NonNullable<Awaited<ReturnType<typeof listSensoryVectors>>>
+export type ListSensoryVectorsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List all sensory vectors for a property
+ */
+
+export function useListSensoryVectors<TData = Awaited<ReturnType<typeof listSensoryVectors>>, TError = ErrorType<unknown>>(
+ propertyId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSensoryVectors>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListSensoryVectorsQueryOptions(propertyId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateSensoryVectorUrl = (propertyId: string,) => {
+
+
+
+
+  return `/api/properties/${propertyId}/sensory-vectors`
+}
+
+/**
+ * @summary Create a sensory vector
+ */
+export const createSensoryVector = async (propertyId: string,
+    sensoryVectorInput: SensoryVectorInput, options?: RequestInit): Promise<SensoryVector> => {
+
+  return customFetch<SensoryVector>(getCreateSensoryVectorUrl(propertyId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      sensoryVectorInput,)
+  }
+);}
+
+
+
+
+export const getCreateSensoryVectorMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createSensoryVector>>, TError,{propertyId: string;data: BodyType<SensoryVectorInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createSensoryVector>>, TError,{propertyId: string;data: BodyType<SensoryVectorInput>}, TContext> => {
+
+const mutationKey = ['createSensoryVector'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createSensoryVector>>, {propertyId: string;data: BodyType<SensoryVectorInput>}> = (props) => {
+          const {propertyId,data} = props ?? {};
+
+          return  createSensoryVector(propertyId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateSensoryVectorMutationResult = NonNullable<Awaited<ReturnType<typeof createSensoryVector>>>
+    export type CreateSensoryVectorMutationBody = BodyType<SensoryVectorInput>
+    export type CreateSensoryVectorMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Create a sensory vector
+ */
+export const useCreateSensoryVector = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createSensoryVector>>, TError,{propertyId: string;data: BodyType<SensoryVectorInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createSensoryVector>>,
+        TError,
+        {propertyId: string;data: BodyType<SensoryVectorInput>},
+        TContext
+      > => {
+      return useMutation(getCreateSensoryVectorMutationOptions(options));
+    }
+
+export const getDeleteSensoryVectorUrl = (propertyId: string,
+    vectorId: string,) => {
+
+
+
+
+  return `/api/properties/${propertyId}/sensory-vectors/${vectorId}`
+}
+
+/**
+ * @summary Delete a sensory vector
+ */
+export const deleteSensoryVector = async (propertyId: string,
+    vectorId: string, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteSensoryVectorUrl(propertyId,vectorId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteSensoryVectorMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteSensoryVector>>, TError,{propertyId: string;vectorId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteSensoryVector>>, TError,{propertyId: string;vectorId: string}, TContext> => {
+
+const mutationKey = ['deleteSensoryVector'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteSensoryVector>>, {propertyId: string;vectorId: string}> = (props) => {
+          const {propertyId,vectorId} = props ?? {};
+
+          return  deleteSensoryVector(propertyId,vectorId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteSensoryVectorMutationResult = NonNullable<Awaited<ReturnType<typeof deleteSensoryVector>>>
+
+    export type DeleteSensoryVectorMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Delete a sensory vector
+ */
+export const useDeleteSensoryVector = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteSensoryVector>>, TError,{propertyId: string;vectorId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteSensoryVector>>,
+        TError,
+        {propertyId: string;vectorId: string},
+        TContext
+      > => {
+      return useMutation(getDeleteSensoryVectorMutationOptions(options));
     }
 
 export const getGetCurrentAuthUserUrl = () => {
