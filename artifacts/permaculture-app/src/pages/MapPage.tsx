@@ -340,6 +340,7 @@ export default function MapPage() {
   const [isFetchingParcel, setIsFetchingParcel] = useState(false);
   const [geoImportError, setGeoImportError] = useState<string | null>(null);
   const [isBoundaryDrawing, setIsBoundaryDrawing] = useState(false);
+  const [showAiModal, setShowAiModal] = useState(false);
   const overpassPreview = overpassCandidates[overpassSelectedIdx] ?? null;
 
   const { data: properties = [] } = useListProperties();
@@ -2508,17 +2509,34 @@ export default function MapPage() {
           </SidebarSection>
         )}
 
-        {/* ── AI ANALYSIS ── */}
+        {/* ── AI ANALYSIS ── compact launcher */}
         {activePropertyId && (
-          <SidebarSection label="AI Analysis">
-            <AiAnalysisPanel
-              propertyId={activePropertyId}
-              hasBrief={!!clientBrief}
-              savedReport={clientBrief?.aiAnalysisReport}
-              savedAt={clientBrief?.aiAnalysisGeneratedAt ?? null}
-              onReportSaved={() => queryClient.invalidateQueries({ queryKey: getGetClientBriefQueryKey(activePropertyId) })}
-            />
-          </SidebarSection>
+          <div className="px-3 pb-1">
+            <button
+              onClick={() => setShowAiModal(true)}
+              className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-[12px] font-semibold transition-all group"
+              style={{
+                background: "linear-gradient(135deg, hsl(103,25%,11%), hsl(103,28%,14%))",
+                border: "1px solid hsl(103, 28%, 22%)",
+                color: "hsl(103, 40%, 72%)",
+                boxShadow: "0 2px 12px rgba(45,106,26,0.2)",
+              }}
+            >
+              <span className="flex items-center gap-2">
+                <span className="text-[15px]">⚡</span>
+                <span>
+                  {clientBrief?.aiAnalysisReport ? "View Resilience Report" : "Run AI Resilience Analysis"}
+                </span>
+              </span>
+              {clientBrief?.aiAnalysisGeneratedAt ? (
+                <span className="text-[10px] font-normal" style={{ color: "hsl(42, 15%, 40%)" }}>
+                  {new Date(clientBrief.aiAnalysisGeneratedAt).toLocaleDateString(undefined, { day: "numeric", month: "short" })}
+                </span>
+              ) : (
+                <span className="text-[13px] opacity-50">→</span>
+              )}
+            </button>
+          </div>
         )}
 
         {/* ── LAYER 1: BOUNDARY ── */}
@@ -3595,6 +3613,62 @@ export default function MapPage() {
           boundaryGeojson={activeProperty.boundaryGeojson as unknown as GeoJSON.Polygon}
           onClose={() => setShowOnboarding(false)}
         />
+      )}
+
+      {/* ── AI ANALYSIS MODAL ── */}
+      {showAiModal && activePropertyId && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: "rgba(4, 10, 4, 0.85)", backdropFilter: "blur(4px)" }}
+          onClick={(e) => { if (e.target === e.currentTarget) setShowAiModal(false); }}
+        >
+          <div
+            className="relative w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl overflow-hidden"
+            style={{
+              background: "hsl(103, 20%, 7%)",
+              border: "1px solid hsl(103, 25%, 18%)",
+              boxShadow: "0 32px 80px rgba(0,0,0,0.7)",
+            }}
+          >
+            {/* Header */}
+            <div
+              className="flex items-center justify-between px-6 py-4 shrink-0"
+              style={{ borderBottom: "1px solid hsl(103, 22%, 14%)", background: "hsl(103, 22%, 9%)" }}
+            >
+              <div>
+                <div className="flex items-center gap-2.5">
+                  <span className="text-xl">⚡</span>
+                  <span className="text-[15px] font-bold tracking-wide" style={{ color: "hsl(42, 28%, 88%)" }}>
+                    AI Resilience Analysis
+                  </span>
+                </div>
+                {activeProperty?.name && (
+                  <p className="text-[11px] mt-0.5 pl-8" style={{ color: "hsl(42, 15%, 45%)" }}>
+                    {activeProperty.name}
+                  </p>
+                )}
+              </div>
+              <button
+                onClick={() => setShowAiModal(false)}
+                className="w-8 h-8 flex items-center justify-center rounded-lg text-[18px] transition-colors"
+                style={{ color: "hsl(42, 20%, 50%)", background: "hsl(103, 20%, 11%)" }}
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Scrollable content */}
+            <div className="overflow-y-auto flex-1 px-6 py-5">
+              <AiAnalysisPanel
+                propertyId={activePropertyId}
+                hasBrief={!!clientBrief}
+                savedReport={clientBrief?.aiAnalysisReport}
+                savedAt={clientBrief?.aiAnalysisGeneratedAt ?? null}
+                onReportSaved={() => queryClient.invalidateQueries({ queryKey: getGetClientBriefQueryKey(activePropertyId) })}
+              />
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
