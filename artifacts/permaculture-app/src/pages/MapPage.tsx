@@ -73,21 +73,31 @@ async function searchAddress(query: string, token: string) {
   return data.features ?? [];
 }
 
-async function fetchParcelBoundary(lat: number, lng: number): Promise<GeoJSON.Polygon | null> {
-  const query = `[out:json][timeout:12];(way["landuse"](around:500,${lat},${lng});way["boundary"="cadastral"](around:500,${lat},${lng});way["natural"~"^(wood|scrub|grassland|heath|wetland|water)$"](around:300,${lat},${lng}););(._;>;);out body;`;
+async function fetchParcelBoundary(lat: number, lng: number): Promise<GeoJSON.Polygon[]> {
+  // Primary: is_in finds polygons that actually contain the point (most accurate)
+  // Fallback: small around radius in case is_in returns nothing
+  const query = `[out:json][timeout:15];
+(
+  way(around:200,${lat},${lng})["landuse"];
+  way(around:200,${lat},${lng})["boundary"="cadastral"];
+  way(around:200,${lat},${lng})["boundary"="land_area"];
+  way(around:200,${lat},${lng})["place"~"^(farm|allotments|isolated_dwelling|hamlet|village)$"];
+);
+(._;>;);
+out body;`;
   try {
     const res = await fetch("https://overpass-api.de/api/interpreter", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: "data=" + encodeURIComponent(query),
     });
-    if (!res.ok) return null;
+    if (!res.ok) return [];
     const data = await res.json();
     const nodeMap = new Map<number, [number, number]>();
     for (const el of data.elements) {
       if (el.type === "node") nodeMap.set(el.id, [el.lon, el.lat]);
     }
-    const candidates: GeoJSON.Polygon[] = [];
+    const polygons: GeoJSON.Polygon[] = [];
     for (const el of data.elements) {
       if (el.type !== "way" || !el.nodes || el.nodes.length < 4) continue;
       const coords: [number, number][] = [];
@@ -95,14 +105,34 @@ async function fetchParcelBoundary(lat: number, lng: number): Promise<GeoJSON.Po
       if (coords.length < 4) continue;
       const f = coords[0], l = coords[coords.length - 1];
       if (f[0] !== l[0] || f[1] !== l[1]) coords.push([f[0], f[1]]);
-      candidates.push({ type: "Polygon", coordinates: [coords] });
+      polygons.push({ type: "Polygon", coordinates: [coords] });
     }
-    if (!candidates.length) return null;
+    if (!polygons.length) return [];
+    // Sort: polygons containing the point first, then by area ascending (smallest = most specific)
     const pt = turf.point([lng, lat]);
-    const containing = candidates.filter(p => { try { return turf.booleanPointInPolygon(pt, turf.feature(p)); } catch { return false; } });
-    const pool = containing.length ? containing : candidates;
-    pool.sort((a, b) => { try { return turf.area(turf.feature(a)) - turf.area(turf.feature(b)); } catch { return 0; } });
-    return pool[0] ?? null;
+    const containing = polygons.filter(p => { try { return turf.booleanPointInPolygon(pt, turf.feature(p)); } catch { return false; } });
+    const outside  = polygons.filter(p => !containing.includes(p));
+    const sortByArea = (a: GeoJSON.Polygon, b: GeoJSON.Polygon) => { try { return turf.area(turf.feature(a)) - turf.area(turf.feature(b)); } catch { return 0; } };
+    return [...containing.sort(sortByArea), ...outside.sort(sortByArea)];
+  } catch { return []; }
+}
+
+function parseGeoJsonFile(text: string): GeoJSON.Polygon | null {
+  try {
+    const json = JSON.parse(text);
+    // Accept Polygon, Feature<Polygon>, or FeatureCollection (first polygon feature)
+    if (json.type === "Polygon") return json as GeoJSON.Polygon;
+    if (json.type === "Feature" && json.geometry?.type === "Polygon") return json.geometry as GeoJSON.Polygon;
+    if (json.type === "FeatureCollection") {
+      const feat = (json.features as any[]).find(f => f.geometry?.type === "Polygon" || f.geometry?.type === "MultiPolygon");
+      if (!feat) return null;
+      if (feat.geometry.type === "Polygon") return feat.geometry as GeoJSON.Polygon;
+      // MultiPolygon — take largest ring
+      const polys: GeoJSON.Polygon[] = (feat.geometry.coordinates as [number, number][][]).map((ring) => ({ type: "Polygon" as const, coordinates: [ring] }));
+      polys.sort((a, b) => { try { return turf.area(turf.feature(b)) - turf.area(turf.feature(a)); } catch { return 0; } });
+      return polys[0] ?? null;
+    }
+    return null;
   } catch { return null; }
 }
 
@@ -305,8 +335,11 @@ export default function MapPage() {
   const [showDropdown, setShowDropdown] = useState(false);
   const [showNewPropForm, setShowNewPropForm] = useState(false);
   const [newPropName, setNewPropName] = useState("");
-  const [overpassPreview, setOverpassPreview] = useState<GeoJSON.Polygon | null>(null);
+  const [overpassCandidates, setOverpassCandidates] = useState<GeoJSON.Polygon[]>([]);
+  const [overpassSelectedIdx, setOverpassSelectedIdx] = useState(0);
   const [isFetchingParcel, setIsFetchingParcel] = useState(false);
+  const [geoImportError, setGeoImportError] = useState<string | null>(null);
+  const overpassPreview = overpassCandidates[overpassSelectedIdx] ?? null;
 
   const { data: properties = [] } = useListProperties();
   const { data: activeProperty, refetch: refetchProperty } = useGetProperty(
@@ -1819,11 +1852,13 @@ export default function MapPage() {
     setSearchQuery(result.place_name ?? "");
     setShowDropdown(false);
     setSearchResults([]);
-    setOverpassPreview(null);
+    setOverpassCandidates([]);
+    setOverpassSelectedIdx(0);
     setIsFetchingParcel(true);
-    fetchParcelBoundary(lat, lng).then((polygon) => {
+    fetchParcelBoundary(lat, lng).then((polygons) => {
       setIsFetchingParcel(false);
-      if (polygon) setOverpassPreview(polygon);
+      setOverpassCandidates(polygons);
+      setOverpassSelectedIdx(0);
     });
   }
 
@@ -1836,7 +1871,41 @@ export default function MapPage() {
     setPendingBoundary(overpassPreview);
     setPendingAreaHa(ha);
     setPendingAreaAc(ac);
-    setOverpassPreview(null);
+    setOverpassCandidates([]);
+    setOverpassSelectedIdx(0);
+  }
+
+  // ─── IMPORT GEOJSON FILE ──────────────────────────────────────────────────
+  function handleGeoJsonFileImport(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setGeoImportError(null);
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = ev.target?.result as string;
+      const polygon = parseGeoJsonFile(text);
+      if (!polygon) {
+        setGeoImportError("Could not find a polygon in this file. Make sure it is valid GeoJSON with a Polygon or FeatureCollection.");
+        return;
+      }
+      const areaM2 = turf.area(turf.feature(polygon));
+      const ha = areaM2 / 10_000;
+      const ac = ha * 2.47105;
+      setPendingBoundary(polygon);
+      setPendingAreaHa(ha);
+      setPendingAreaAc(ac);
+      setOverpassCandidates([]);
+      // Fly to the imported boundary
+      const map = mapRef.current;
+      if (map) {
+        try {
+          const layer = L.geoJSON(polygon as any);
+          map.fitBounds(layer.getBounds(), { padding: [40, 40] });
+        } catch { /* no-op */ }
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = "";
   }
 
   // ─── SAVE BOUNDARY ────────────────────────────────────────────────────────
@@ -2228,13 +2297,13 @@ export default function MapPage() {
           {isFetchingParcel && (
             <p className="text-[10px] mt-1.5 animate-pulse" style={{ color: "#3b82f6" }}>Searching for parcel boundary…</p>
           )}
-          {!isFetchingParcel && overpassPreview && (
+          {!isFetchingParcel && overpassCandidates.length > 0 && (
             <p className="text-[10px] mt-1.5" style={{ color: "#60a5fa" }}>
-              ● Parcel boundary found — shown in blue. Select a property below then import it.
+              ● {overpassCandidates.length} parcel option{overpassCandidates.length > 1 ? "s" : ""} found — shown in blue. Select a property below then import.
             </p>
           )}
-          {!isFetchingParcel && searchQuery && !overpassPreview && !showDropdown && (
-            <p className="text-[10px] mt-1.5" style={{ color: "hsl(42, 15%, 45%)" }}>No parcel data found — draw boundary manually.</p>
+          {!isFetchingParcel && searchQuery && overpassCandidates.length === 0 && !showDropdown && (
+            <p className="text-[10px] mt-1.5" style={{ color: "hsl(42, 15%, 45%)" }}>No parcel data found — upload a GeoJSON file or draw manually.</p>
           )}
         </div>
 
@@ -2456,27 +2525,68 @@ export default function MapPage() {
             <p className="text-[11px]" style={{ color: "hsl(42, 15%, 50%)" }}>Select a property to manage its boundary.</p>
           ) : role === "designer" ? (
             <div className="space-y-2.5">
-              {overpassPreview && (
+              {/* ── OSM candidate picker ── */}
+              {overpassCandidates.length > 0 && (
                 <div className="rounded p-2.5 space-y-2" style={{ background: "hsl(220, 60%, 10%)", border: "1px solid hsl(220, 50%, 28%)" }}>
                   <p className="text-[10px] font-semibold" style={{ color: "#60a5fa" }}>
-                    Parcel boundary detected from map data (shown in blue).
+                    {overpassCandidates.length} parcel option{overpassCandidates.length > 1 ? "s" : ""} from map data (blue outline on map)
                   </p>
+                  {overpassCandidates.length > 1 && (
+                    <div className="space-y-1">
+                      {overpassCandidates.map((poly, idx) => {
+                        const ha = turf.area(turf.feature(poly)) / 10_000;
+                        const isSelected = idx === overpassSelectedIdx;
+                        return (
+                          <button
+                            key={idx}
+                            onClick={() => setOverpassSelectedIdx(idx)}
+                            className="w-full text-left px-2 py-1.5 rounded text-[10px] transition-colors"
+                            style={{
+                              background: isSelected ? "hsl(220, 50%, 18%)" : "hsl(220, 50%, 12%)",
+                              border: isSelected ? "1px solid #3b82f6" : "1px solid hsl(220, 40%, 22%)",
+                              color: isSelected ? "#93c5fd" : "hsl(42, 15%, 55%)",
+                            }}
+                          >
+                            {isSelected ? "▶ " : ""}Option {idx + 1} — {ha < 0.01 ? (ha * 10000).toFixed(0) + " m²" : ha.toFixed(2) + " ha"}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                   <button
                     onClick={handleImportOverpassBoundary}
                     className="w-full text-xs px-3 py-2 rounded font-semibold transition-colors"
                     style={{ background: "#1d4ed8", color: "#fff", border: "1px solid #3b82f6" }}
                   >
-                    Import This Boundary
+                    Import {overpassCandidates.length > 1 ? "Selected" : "This"} Boundary
                   </button>
                   <button
-                    onClick={() => setOverpassPreview(null)}
+                    onClick={() => { setOverpassCandidates([]); setOverpassSelectedIdx(0); }}
                     className="w-full text-xs px-3 py-1.5 rounded transition-colors"
                     style={{ background: "transparent", color: "hsl(42, 15%, 50%)", border: "1px solid hsl(103, 30%, 22%)" }}
                   >
-                    Dismiss — I'll draw manually
+                    Dismiss — use file upload or draw
                   </button>
                 </div>
               )}
+
+              {/* ── GeoJSON file import ── */}
+              <div>
+                <label
+                  className="w-full text-xs px-3 py-2 rounded font-medium text-left transition-colors cursor-pointer flex items-center gap-2"
+                  style={{ background: "hsl(103, 35%, 17%)", border: "1px solid hsl(103, 30%, 22%)", color: "hsl(42, 28%, 88%)", display: "flex" }}
+                >
+                  <span>⬆</span> Import Boundary from GeoJSON File
+                  <input type="file" accept=".geojson,.json" className="hidden" onChange={handleGeoJsonFileImport} />
+                </label>
+                {geoImportError && (
+                  <p className="text-[10px] mt-1" style={{ color: "#f87171" }}>{geoImportError}</p>
+                )}
+                <p className="text-[10px] mt-1" style={{ color: "hsl(42, 15%, 40%)" }}>
+                  Download cadastral data from your land registry as GeoJSON and import it here.
+                </p>
+              </div>
+
               <button
                 onClick={() => drawPolygonHandlerRef.current?.enable()}
                 className="w-full text-xs px-3 py-2 rounded font-medium text-left transition-colors"
