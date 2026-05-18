@@ -381,6 +381,21 @@ export default function MapPage() {
   const [show3D, setShow3D] = useState(false);
   const [isSyncingSiteData, setIsSyncingSiteData] = useState(false);
   const [syncSiteDataStatus, setSyncSiteDataStatus] = useState<"idle" | "ok" | "error">("idle");
+  // ─── SIDEBAR RESPONSIVE (iPad / mobile) ──────────────────────────────────
+  const [isNarrow, setIsNarrow] = useState(() => typeof window !== "undefined" && window.innerWidth < 1024);
+  const [sidebarOpen, setSidebarOpen] = useState(() => typeof window !== "undefined" && window.innerWidth >= 1024);
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1024px)");
+    const handler = (e: MediaQueryListEvent) => {
+      setIsNarrow(!e.matches);
+      if (e.matches) setSidebarOpen(true);
+    };
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+  const sidebarIsOverlay = isNarrow;
+  const modalLeft = sidebarOpen && !sidebarIsOverlay ? "18rem" : "0";
+
   const [showSensoryVectors, setShowSensoryVectors] = useState(true);
   const [dropSensoryPointMode, setDropSensoryPointMode] = useState(false);
   const [drawSensoryLineMode, setDrawSensoryLineMode] = useState(false);
@@ -2401,10 +2416,34 @@ export default function MapPage() {
   // ─── RENDER ───────────────────────────────────────────────────────────────
   return (
     <div className="flex h-screen w-screen overflow-hidden">
+      {/* ── SIDEBAR BACKDROP (overlay mode only) ── */}
+      {sidebarIsOverlay && sidebarOpen && (
+        <div
+          className="fixed inset-0 z-40"
+          style={{ background: "rgba(0,0,0,0.55)" }}
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* ── SIDEBAR ── */}
       <aside
-        className="w-72 flex-shrink-0 flex flex-col overflow-y-auto"
-        style={{ background: "hsl(103, 48%, 11%)", borderRight: "1px solid hsl(103, 35%, 18%)" }}
+        className="flex flex-col overflow-y-auto flex-shrink-0"
+        style={{
+          width: "18rem",
+          background: "hsl(103, 48%, 11%)",
+          borderRight: "1px solid hsl(103, 35%, 18%)",
+          ...(sidebarIsOverlay
+            ? {
+                position: "fixed",
+                top: 0,
+                left: 0,
+                height: "100%",
+                zIndex: 50,
+                transform: sidebarOpen ? "translateX(0)" : "translateX(-100%)",
+                transition: "transform 0.28s cubic-bezier(0.4,0,0.2,1)",
+              }
+            : {}),
+        }}
       >
         {/* Header */}
         <div className="px-4 py-3 border-b" style={{ borderColor: "hsl(103, 35%, 18%)" }}>
@@ -2413,17 +2452,31 @@ export default function MapPage() {
               <h1 className="text-sm font-semibold tracking-tight" style={{ color: "hsl(42, 28%, 90%)" }}>TerraGuard</h1>
               <p className="text-[10px] mt-0.5" style={{ color: "hsl(42, 15%, 55%)" }}>Land Security Platform</p>
             </div>
-            <button
-              onClick={() => navigate("/properties")}
-              title="All Properties"
-              className="p-1.5 rounded transition-colors"
-              style={{ color: "hsl(42, 15%, 55%)" }}
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
-                <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
-              </svg>
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => navigate("/properties")}
+                title="All Properties"
+                className="p-2 rounded transition-colors"
+                style={{ color: "hsl(42, 15%, 55%)" }}
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+                  <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+                </svg>
+              </button>
+              {sidebarIsOverlay && (
+                <button
+                  onClick={() => setSidebarOpen(false)}
+                  title="Close panel"
+                  className="p-2 rounded transition-colors"
+                  style={{ color: "hsl(42, 15%, 55%)" }}
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                  </svg>
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="mt-3 flex rounded-md overflow-hidden border" style={{ borderColor: "hsl(103, 35%, 20%)" }}>
@@ -3787,6 +3840,29 @@ export default function MapPage() {
       <div className="flex-1 relative">
         <div ref={mapContainerRef} className="absolute inset-0" />
 
+        {/* ── HAMBURGER TOGGLE (overlay mode only) ── */}
+        {sidebarIsOverlay && !sidebarOpen && (
+          <button
+            onClick={() => setSidebarOpen(true)}
+            title="Open layers panel"
+            className="absolute top-3 left-3 flex items-center gap-2 px-3 py-2.5 rounded-xl text-[12px] font-semibold shadow-lg"
+            style={{
+              zIndex: 30,
+              background: "hsl(103, 48%, 11%)",
+              border: "1px solid hsl(103, 35%, 25%)",
+              color: "hsl(42, 28%, 85%)",
+              boxShadow: "0 4px 16px rgba(0,0,0,0.5)",
+            }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <line x1="3" y1="6" x2="21" y2="6"/>
+              <line x1="3" y1="12" x2="21" y2="12"/>
+              <line x1="3" y1="18" x2="21" y2="18"/>
+            </svg>
+            Layers
+          </button>
+        )}
+
         {/* Mapbox GL 3D terrain overlay */}
         <div
           ref={gl3DContainerRef}
@@ -3836,7 +3912,7 @@ export default function MapPage() {
       {showBriefModal && activePropertyId && clientBrief && (
         <div
           className="fixed top-0 bottom-0 right-0 flex items-center justify-center p-4"
-          style={{ left: "18rem", background: "rgba(4, 10, 4, 0.82)", zIndex: 1000 }}
+          style={{ left: modalLeft, background: "rgba(4, 10, 4, 0.82)", zIndex: 1000, transition: "left 0.28s cubic-bezier(0.4,0,0.2,1)" }}
           onClick={(e) => { if (e.target === e.currentTarget) setShowBriefModal(false); }}
         >
           <div
@@ -3988,7 +4064,7 @@ export default function MapPage() {
       {showKeylineModal && waterAnalysis && (
         <div
           className="fixed top-0 bottom-0 right-0 flex items-center justify-center p-4"
-          style={{ left: "18rem", background: "rgba(2, 8, 18, 0.85)", zIndex: 1000 }}
+          style={{ left: modalLeft, background: "rgba(2, 8, 18, 0.85)", zIndex: 1000, transition: "left 0.28s cubic-bezier(0.4,0,0.2,1)" }}
           onClick={(e) => { if (e.target === e.currentTarget) setShowKeylineModal(false); }}
         >
           <div
@@ -4186,7 +4262,7 @@ export default function MapPage() {
       {showAiModal && activePropertyId && (
         <div
           className="fixed top-0 bottom-0 right-0 flex items-center justify-center p-4"
-          style={{ left: "18rem", background: "rgba(4, 10, 4, 0.82)", zIndex: 1000 }}
+          style={{ left: modalLeft, background: "rgba(4, 10, 4, 0.82)", zIndex: 1000, transition: "left 0.28s cubic-bezier(0.4,0,0.2,1)" }}
           onClick={(e) => { if (e.target === e.currentTarget) setShowAiModal(false); }}
         >
           <div
@@ -4272,8 +4348,8 @@ function SidebarSection({ label, children, defaultOpen = false }: { label: strin
     <div className="border-b" style={{ borderColor: "hsl(103, 35%, 18%)" }}>
       <button
         onClick={() => setOpen((v) => !v)}
-        className="w-full px-4 py-2.5 flex items-center justify-between text-left"
-        style={{ background: "transparent", cursor: "pointer" }}
+        className="w-full px-4 py-3.5 flex items-center justify-between text-left"
+        style={{ background: "transparent", cursor: "pointer", minHeight: "44px" }}
       >
         <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "hsl(84, 35%, 52%)" }}>
           {label}
@@ -4366,20 +4442,28 @@ function LayerToggle({
   disabled?: boolean;
 }) {
   return (
-    <div className="flex items-center justify-between gap-2" style={{ opacity: disabled ? 0.4 : 1 }}>
+    <button
+      onClick={disabled ? undefined : onToggle}
+      className="w-full flex items-center justify-between gap-2 rounded-lg px-1 py-1.5 transition-colors"
+      style={{
+        opacity: disabled ? 0.4 : 1,
+        cursor: disabled ? "not-allowed" : "pointer",
+        background: "transparent",
+        minHeight: "40px",
+      }}
+    >
       <div className="flex items-center gap-2 min-w-0">
         <div className="w-3 h-3 rounded-sm flex-shrink-0" style={{ background: color, opacity: active ? 1 : 0.3 }} />
         <span className="text-[11px] truncate" style={{ color: active ? "hsl(42, 28%, 85%)" : "hsl(42, 15%, 45%)" }}>
           {label}
         </span>
       </div>
-      <button
-        onClick={disabled ? undefined : onToggle}
+      <div
         className="relative w-9 h-5 rounded-full transition-colors flex-shrink-0"
-        style={{ background: active ? "hsl(84, 38%, 42%)" : "hsl(103, 30%, 20%)", cursor: disabled ? "not-allowed" : "pointer" }}
+        style={{ background: active ? "hsl(84, 38%, 42%)" : "hsl(103, 30%, 20%)" }}
       >
         <span className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all" style={{ left: active ? "18px" : "2px" }} />
-      </button>
-    </div>
+      </div>
+    </button>
   );
 }
