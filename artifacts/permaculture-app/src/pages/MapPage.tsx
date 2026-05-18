@@ -3618,8 +3618,8 @@ export default function MapPage() {
       {/* ── AI ANALYSIS MODAL ── */}
       {showAiModal && activePropertyId && (
         <div
-          className="fixed top-0 bottom-0 right-0 z-50 flex items-center justify-center p-4"
-          style={{ left: "18rem", background: "rgba(4, 10, 4, 0.82)" }}
+          className="fixed top-0 bottom-0 right-0 flex items-center justify-center p-4"
+          style={{ left: "18rem", background: "rgba(4, 10, 4, 0.82)", zIndex: 1000 }}
           onClick={(e) => { if (e.target === e.currentTarget) setShowAiModal(false); }}
         >
           <div
