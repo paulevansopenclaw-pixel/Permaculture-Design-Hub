@@ -14,7 +14,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   useListProperties,
   useGetProperty,
-  useGetClientBrief,
   useCreateProperty,
   useUpdateProperty,
   useListComments,
@@ -29,7 +28,6 @@ import {
   useDeleteSector,
   getListPropertiesQueryKey,
   getGetPropertyQueryKey,
-  getGetClientBriefQueryKey,
   getListCommentsQueryKey,
   getListStructuresQueryKey,
   getListSectorsQueryKey,
@@ -45,7 +43,6 @@ import {
   useBulkReplaceZones,
   useDeleteZone,
   getListZonesQueryKey,
-  useUpsertClientBrief,
   useListSensoryVectors,
   useCreateSensoryVector,
   useDeleteSensoryVector,
@@ -54,9 +51,7 @@ import {
 import { useAppStore, type Role } from "@/store/useAppStore";
 import { generateContours } from "@/lib/contourEngine";
 import { analyzeWaterPaths, type WaterAnalysisResult, type AnalyzedSwale } from "@/lib/keylineEngine";
-import { OnboardingModal } from "@/components/OnboardingModal";
-import { AiAnalysisPanel } from "@/components/AiAnalysisPanel";
-import { fetchClimateBaseline } from "@/lib/fetchClimateBaseline";
+import { StepNav } from "@/components/StepNav";
 
 async function fetchMapboxToken(): Promise<string> {
   try {
@@ -377,10 +372,7 @@ export default function MapPage() {
   const sectorDraftRef = useRef(sectorDraft);
   sectorDraftRef.current = sectorDraft;
   const [editingSectorId, setEditingSectorId] = useState<string | null>(null);
-  const [showOnboarding, setShowOnboarding] = useState(false);
   const [show3D, setShow3D] = useState(false);
-  const [isSyncingSiteData, setIsSyncingSiteData] = useState(false);
-  const [syncSiteDataStatus, setSyncSiteDataStatus] = useState<"idle" | "ok" | "error">("idle");
   // ─── SIDEBAR RESPONSIVE (iPad / mobile) ──────────────────────────────────
   const [isNarrow, setIsNarrow] = useState(() => typeof window !== "undefined" && window.innerWidth < 1024);
   const [sidebarOpen, setSidebarOpen] = useState(() => typeof window !== "undefined" && window.innerWidth >= 1024);
@@ -425,8 +417,6 @@ export default function MapPage() {
   const [isFetchingParcel, setIsFetchingParcel] = useState(false);
   const [geoImportError, setGeoImportError] = useState<string | null>(null);
   const [isBoundaryDrawing, setIsBoundaryDrawing] = useState(false);
-  const [showAiModal, setShowAiModal] = useState(false);
-  const [showBriefModal, setShowBriefModal] = useState(false);
   const [showKeylineModal, setShowKeylineModal] = useState(false);
   const overpassPreview = overpassCandidates[overpassSelectedIdx] ?? null;
 
@@ -435,9 +425,6 @@ export default function MapPage() {
     activePropertyId ?? "",
     { query: { enabled: !!activePropertyId, queryKey: getGetPropertyQueryKey(activePropertyId ?? "") } },
   );
-  const { data: clientBrief } = useGetClientBrief(activePropertyId ?? "", {
-    query: { enabled: !!activePropertyId, queryKey: getGetClientBriefQueryKey(activePropertyId ?? "") },
-  });
   const { data: comments = [] } = useListComments(activePropertyId ?? "", {
     query: {
       enabled: !!activePropertyId,
@@ -455,7 +442,6 @@ export default function MapPage() {
 
   const createProperty = useCreateProperty();
   const updateProperty = useUpdateProperty();
-  const upsertClientBrief = useUpsertClientBrief();
   const createComment = useCreateComment();
   const deleteComment = useDeleteComment();
   const createStructure = useCreateStructure();
@@ -2168,69 +2154,9 @@ export default function MapPage() {
           setPendingAreaAc(null);
           drawnItemsRef.current?.clearLayers();
           refetchProperty();
-          setShowOnboarding(true);
         },
       },
     );
-  }
-
-  // ─── SYNC SITE DATA ───────────────────────────────────────────────────────
-  async function handleSyncSiteData() {
-    if (!activePropertyId || !activeProperty?.boundaryGeojson) return;
-    setIsSyncingSiteData(true);
-    setSyncSiteDataStatus("idle");
-    try {
-      const boundaryGeo = typeof activeProperty.boundaryGeojson === "string"
-        ? JSON.parse(activeProperty.boundaryGeojson)
-        : activeProperty.boundaryGeojson;
-      const centroid = turf.centroid({ type: "Feature", geometry: boundaryGeo, properties: {} });
-      const [lng, lat] = centroid.geometry.coordinates;
-      const baseline = await fetchClimateBaseline(lat, lng);
-      await upsertClientBrief.mutateAsync({
-        propertyId: activePropertyId,
-        data: {
-          // Only overwrite the auto-fetched fields; preserve user-entered ones from existing brief
-          annualRainfallMm: baseline.annualRainfallMm,
-          estimatedSoilType: baseline.estimatedSoilType,
-          climateZone: baseline.climateZone,
-          meanAnnualTempC: baseline.meanAnnualTempC,
-          summerMaxTempC: baseline.summerMaxTempC,
-          winterMinTempC: baseline.winterMinTempC,
-          frostDaysPerYear: baseline.frostDaysPerYear,
-          solarIrradianceKwhM2: baseline.solarIrradianceKwhM2,
-          prevailingWindDir: baseline.prevailingWindDir,
-          meanWindSpeedMs: baseline.meanWindSpeedMs,
-          annualHumidityPct: baseline.annualHumidityPct,
-          elevationM: baseline.elevationM,
-          soilClay: baseline.soilClay,
-          soilSand: baseline.soilSand,
-          soilSilt: baseline.soilSilt,
-          soilPH: baseline.soilPH,
-          soilOrganicCarbonGkg: baseline.soilOrganicCarbonGkg,
-          soilTextureClass: baseline.soilTextureClass,
-          // Preserve existing user-entered fields
-          machineryWidthM: clientBrief?.machineryWidthM ?? 3.0,
-          utilitiesOverheadPower: clientBrief?.utilitiesOverheadPower ?? false,
-          utilitiesBuriedPipes: clientBrief?.utilitiesBuriedPipes ?? false,
-          utilitiesLegalEasements: clientBrief?.utilitiesLegalEasements ?? false,
-          utilitiesActiveWell: clientBrief?.utilitiesActiveWell ?? false,
-          challengeSevereErosion: clientBrief?.challengeSevereErosion ?? false,
-          challengeWinterFlooding: clientBrief?.challengeWinterFlooding ?? false,
-          challengeHighWind: clientBrief?.challengeHighWind ?? false,
-          challengeWildlifePressure: clientBrief?.challengeWildlifePressure ?? false,
-          primaryGoal: clientBrief?.primaryGoal ?? null,
-          maintenanceCapacity: clientBrief?.maintenanceCapacity ?? null,
-        },
-      });
-      queryClient.invalidateQueries({ queryKey: getGetClientBriefQueryKey(activePropertyId) });
-      setSyncSiteDataStatus("ok");
-      setTimeout(() => setSyncSiteDataStatus("idle"), 4000);
-    } catch {
-      setSyncSiteDataStatus("error");
-      setTimeout(() => setSyncSiteDataStatus("idle"), 6000);
-    } finally {
-      setIsSyncingSiteData(false);
-    }
   }
 
   // ─── CREATE PROPERTY ──────────────────────────────────────────────────────
@@ -2659,75 +2585,6 @@ export default function MapPage() {
             </div>
           )}
         </SidebarSection>
-
-        {/* ── CLIENT BRIEF ── compact launcher */}
-        {activePropertyId && (
-          <div className="px-3 pb-1">
-            <button
-              onClick={() => {
-                if (!activeProperty?.boundaryGeojson) return;
-                clientBrief ? setShowBriefModal(true) : setShowOnboarding(true);
-              }}
-              disabled={!activeProperty?.boundaryGeojson}
-              className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-[12px] font-semibold transition-all"
-              style={{
-                background: "linear-gradient(135deg, hsl(210,30%,10%), hsl(210,32%,13%))",
-                border: "1px solid hsl(210, 30%, 22%)",
-                color: clientBrief ? "hsl(210, 60%, 72%)" : "hsl(42, 15%, 50%)",
-                boxShadow: clientBrief ? "0 2px 12px rgba(30,80,160,0.2)" : "none",
-                opacity: !activeProperty?.boundaryGeojson ? 0.5 : 1,
-              }}
-            >
-              <span className="flex items-center gap-2">
-                <span className="text-[15px]">📋</span>
-                <span>
-                  {!activeProperty?.boundaryGeojson
-                    ? "Draw boundary first"
-                    : clientBrief
-                    ? "View Site Brief"
-                    : "Open Site Survey →"}
-                </span>
-              </span>
-              {clientBrief?.climateZone ? (
-                <span className="text-[10px] font-normal truncate max-w-[80px]" style={{ color: "hsl(42, 15%, 40%)" }}>
-                  {clientBrief.climateZone}
-                </span>
-              ) : (
-                <span className="text-[13px] opacity-50">→</span>
-              )}
-            </button>
-          </div>
-        )}
-
-        {/* ── AI ANALYSIS ── compact launcher */}
-        {activePropertyId && (
-          <div className="px-3 pb-1">
-            <button
-              onClick={() => setShowAiModal(true)}
-              className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-[12px] font-semibold transition-all group"
-              style={{
-                background: "linear-gradient(135deg, hsl(103,25%,11%), hsl(103,28%,14%))",
-                border: "1px solid hsl(103, 28%, 22%)",
-                color: "hsl(103, 40%, 72%)",
-                boxShadow: "0 2px 12px rgba(45,106,26,0.2)",
-              }}
-            >
-              <span className="flex items-center gap-2">
-                <span className="text-[15px]">⚡</span>
-                <span>
-                  {clientBrief?.aiAnalysisReport ? "View Resilience Report" : "Run AI Resilience Analysis"}
-                </span>
-              </span>
-              {clientBrief?.aiAnalysisGeneratedAt ? (
-                <span className="text-[10px] font-normal" style={{ color: "hsl(42, 15%, 40%)" }}>
-                  {new Date(clientBrief.aiAnalysisGeneratedAt).toLocaleDateString(undefined, { day: "numeric", month: "short" })}
-                </span>
-              ) : (
-                <span className="text-[13px] opacity-50">→</span>
-              )}
-            </button>
-          </div>
-        )}
 
         {/* ── LAYER 1: BOUNDARY ── */}
         <SidebarSection label="Layer 1 — Property Boundary" defaultOpen>
@@ -3834,6 +3691,21 @@ export default function MapPage() {
         </SidebarSection>
 
         <div className="flex-1" />
+
+        {/* ── WORKFLOW NAVIGATION ── */}
+        <div className="shrink-0 px-3 py-3 border-t" style={{ borderColor: "hsl(103, 35%, 18%)" }}>
+          <div className="text-[9px] uppercase tracking-widest mb-2 px-0.5" style={{ color: "hsl(42, 15%, 35%)" }}>
+            Workflow
+          </div>
+          <StepNav />
+          <button
+            onClick={() => navigate("/analysis")}
+            className="mt-2 w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-[11px] font-semibold transition-all"
+            style={{ background: "linear-gradient(135deg, hsl(103,25%,11%), hsl(103,28%,14%))", color: "hsl(103, 40%, 70%)", border: "1px solid hsl(103, 28%, 22%)" }}
+          >
+            <span>⚡</span> Next: Run AI Analysis →
+          </button>
+        </div>
       </aside>
 
       {/* ── MAP ── */}
@@ -3897,168 +3769,6 @@ export default function MapPage() {
           </div>
         )}
       </div>
-
-      {/* ── ONBOARDING MODAL ── */}
-      {showOnboarding && activePropertyId && activeProperty?.boundaryGeojson && (
-        <OnboardingModal
-          propertyId={activePropertyId}
-          propertyName={activeProperty.name}
-          boundaryGeojson={activeProperty.boundaryGeojson as unknown as GeoJSON.Polygon}
-          onClose={() => setShowOnboarding(false)}
-        />
-      )}
-
-      {/* ── CLIENT BRIEF MODAL ── */}
-      {showBriefModal && activePropertyId && clientBrief && (
-        <div
-          className="fixed top-0 bottom-0 right-0 flex items-center justify-center p-4"
-          style={{ left: modalLeft, background: "rgba(4, 10, 4, 0.82)", zIndex: 1000, transition: "left 0.28s cubic-bezier(0.4,0,0.2,1)" }}
-          onClick={(e) => { if (e.target === e.currentTarget) setShowBriefModal(false); }}
-        >
-          <div
-            className="relative w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl overflow-hidden"
-            style={{
-              background: "hsl(103, 20%, 7%)",
-              border: "1px solid hsl(103, 25%, 18%)",
-              boxShadow: "0 32px 80px rgba(0,0,0,0.7)",
-            }}
-          >
-            {/* Header */}
-            <div
-              className="flex items-center justify-between px-6 py-4 shrink-0"
-              style={{ borderBottom: "1px solid hsl(103, 22%, 14%)", background: "hsl(103, 22%, 9%)" }}
-            >
-              <div>
-                <div className="flex items-center gap-2.5">
-                  <span className="text-xl">📋</span>
-                  <span className="text-[15px] font-bold tracking-wide" style={{ color: "hsl(42, 28%, 88%)" }}>
-                    Site Brief
-                  </span>
-                </div>
-                {activeProperty?.name && (
-                  <p className="text-[11px] mt-0.5 pl-8" style={{ color: "hsl(42, 15%, 45%)" }}>
-                    {activeProperty.name}
-                  </p>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handleSyncSiteData}
-                  disabled={isSyncingSiteData}
-                  title="Re-fetch climate, elevation & soil data"
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all"
-                  style={{
-                    background: syncSiteDataStatus === "ok" ? "hsl(103, 30%, 14%)" : syncSiteDataStatus === "error" ? "hsl(0, 25%, 14%)" : "hsl(103, 22%, 14%)",
-                    color: syncSiteDataStatus === "ok" ? "#4a9a28" : syncSiteDataStatus === "error" ? "#f87171" : "hsl(42, 20%, 60%)",
-                    border: `1px solid ${syncSiteDataStatus === "ok" ? "hsl(103, 30%, 22%)" : syncSiteDataStatus === "error" ? "hsl(0, 25%, 22%)" : "hsl(103, 22%, 22%)"}`,
-                    opacity: isSyncingSiteData ? 0.7 : 1,
-                  }}
-                >
-                  {isSyncingSiteData ? (
-                    <><div className="w-3 h-3 border border-t-transparent rounded-full animate-spin" style={{ borderColor: "hsl(42, 20%, 60%)" }} /> Syncing…</>
-                  ) : syncSiteDataStatus === "ok" ? "✓ Synced" : syncSiteDataStatus === "error" ? "✗ Failed" : "⟳ Sync Data"}
-                </button>
-                <button
-                  onClick={() => { setShowBriefModal(false); setShowOnboarding(true); }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all"
-                  style={{ background: "hsl(103, 22%, 13%)", color: "hsl(103, 35%, 60%)", border: "1px solid hsl(103, 22%, 22%)" }}
-                >
-                  ✎ Edit Survey
-                </button>
-                <button
-                  onClick={() => setShowBriefModal(false)}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg text-[18px] transition-colors"
-                  style={{ color: "hsl(42, 20%, 50%)", background: "hsl(103, 20%, 11%)" }}
-                >
-                  ×
-                </button>
-              </div>
-            </div>
-
-            {/* Scrollable content */}
-            <div className="overflow-y-auto flex-1 px-6 py-5 space-y-4">
-
-              {(clientBrief.climateZone || clientBrief.annualRainfallMm != null) && (
-                <DetailGroup heading="Climate & Rainfall">
-                  {clientBrief.climateZone && <DetailRow icon="🌍" label="Zone" value={clientBrief.climateZone} />}
-                  {clientBrief.annualRainfallMm != null && <DetailRow icon="🌧" label="Rainfall" value={`${clientBrief.annualRainfallMm.toLocaleString()} mm/yr`} />}
-                  {clientBrief.annualHumidityPct != null && <DetailRow icon="💧" label="Humidity" value={`${clientBrief.annualHumidityPct}%`} />}
-                </DetailGroup>
-              )}
-
-              {(clientBrief.meanAnnualTempC != null || clientBrief.frostDaysPerYear != null) && (
-                <DetailGroup heading="Temperature">
-                  {clientBrief.meanAnnualTempC != null && <DetailRow icon="🌡" label="Mean" value={`${clientBrief.meanAnnualTempC} °C`} />}
-                  {clientBrief.summerMaxTempC != null && <DetailRow icon="🔆" label="Summer max" value={`${clientBrief.summerMaxTempC} °C`} />}
-                  {clientBrief.winterMinTempC != null && <DetailRow icon="❄️" label="Winter min" value={`${clientBrief.winterMinTempC} °C`} />}
-                  {clientBrief.frostDaysPerYear != null && <DetailRow icon="🧊" label="Frost days" value={`${clientBrief.frostDaysPerYear} days/yr`} />}
-                </DetailGroup>
-              )}
-
-              {(clientBrief.solarIrradianceKwhM2 != null || clientBrief.prevailingWindDir) && (
-                <DetailGroup heading="Solar & Wind">
-                  {clientBrief.solarIrradianceKwhM2 != null && <DetailRow icon="☀️" label="Irradiance" value={`${clientBrief.solarIrradianceKwhM2.toLocaleString()} kWh/m²/yr`} />}
-                  {clientBrief.prevailingWindDir && <DetailRow icon="🌬" label="Wind dir." value={clientBrief.prevailingWindDir} />}
-                  {clientBrief.meanWindSpeedMs != null && <DetailRow icon="💨" label="Wind speed" value={`${clientBrief.meanWindSpeedMs} m/s`} />}
-                </DetailGroup>
-              )}
-
-              {clientBrief.elevationM != null && (
-                <DetailGroup heading="Elevation">
-                  <DetailRow icon="🏔" label="ASL" value={`${clientBrief.elevationM} m`} />
-                </DetailGroup>
-              )}
-
-              {(clientBrief.soilTextureClass || clientBrief.soilClay != null || clientBrief.soilPH != null) && (
-                <DetailGroup heading="Soil (0–5 cm)">
-                  {clientBrief.soilTextureClass && <DetailRow icon="🪱" label="Texture" value={clientBrief.soilTextureClass} />}
-                  {(clientBrief.soilClay != null || clientBrief.soilSand != null) && (
-                    <DetailRow
-                      icon="⚗️"
-                      label="Composition"
-                      value={[
-                        clientBrief.soilClay != null ? `Clay ${clientBrief.soilClay}%` : null,
-                        clientBrief.soilSand != null ? `Sand ${clientBrief.soilSand}%` : null,
-                        clientBrief.soilSilt != null ? `Silt ${clientBrief.soilSilt}%` : null,
-                      ].filter(Boolean).join(" · ")}
-                    />
-                  )}
-                  {clientBrief.soilPH != null && <DetailRow icon="🧪" label="pH" value={String(clientBrief.soilPH)} />}
-                  {clientBrief.soilOrganicCarbonGkg != null && <DetailRow icon="🌿" label="Org. carbon" value={`${clientBrief.soilOrganicCarbonGkg} g/kg`} />}
-                </DetailGroup>
-              )}
-
-              {(clientBrief.primaryGoal || clientBrief.maintenanceCapacity) && (
-                <DetailGroup heading="Design Goals">
-                  {clientBrief.primaryGoal && <DetailRow icon="🎯" label="Primary goal" value={clientBrief.primaryGoal} />}
-                  {clientBrief.maintenanceCapacity && <DetailRow icon="🛠" label="Maintenance" value={clientBrief.maintenanceCapacity} />}
-                </DetailGroup>
-              )}
-
-              {/* Infrastructure flags */}
-              {(clientBrief.utilitiesOverheadPower || clientBrief.utilitiesBuriedPipes || clientBrief.utilitiesLegalEasements || clientBrief.utilitiesActiveWell) && (
-                <DetailGroup heading="Infrastructure">
-                  {clientBrief.utilitiesOverheadPower && <DetailRow icon="⚡" label="Overhead power" value="Present" />}
-                  {clientBrief.utilitiesBuriedPipes && <DetailRow icon="🔧" label="Buried pipes" value="Present" />}
-                  {clientBrief.utilitiesLegalEasements && <DetailRow icon="⚖️" label="Legal easements" value="Present" />}
-                  {clientBrief.utilitiesActiveWell && <DetailRow icon="💧" label="Active well" value="Present" />}
-                </DetailGroup>
-              )}
-
-              {/* Site challenges */}
-              {(clientBrief.challengeSevereErosion || clientBrief.challengeWinterFlooding || clientBrief.challengeHighWind || clientBrief.challengeWildlifePressure) && (
-                <DetailGroup heading="Site Challenges">
-                  {clientBrief.challengeSevereErosion && <DetailRow icon="🌊" label="Severe erosion" value="Yes" />}
-                  {clientBrief.challengeWinterFlooding && <DetailRow icon="🌧" label="Winter flooding" value="Yes" />}
-                  {clientBrief.challengeHighWind && <DetailRow icon="💨" label="High wind" value="Yes" />}
-                  {clientBrief.challengeWildlifePressure && <DetailRow icon="🦌" label="Wildlife pressure" value="Yes" />}
-                </DetailGroup>
-              )}
-
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* ── KEYLINE REPORT MODAL ── */}
       {showKeylineModal && waterAnalysis && (
@@ -4258,86 +3968,6 @@ export default function MapPage() {
         </div>
       )}
 
-      {/* ── AI ANALYSIS MODAL ── */}
-      {showAiModal && activePropertyId && (
-        <div
-          className="fixed top-0 bottom-0 right-0 flex items-center justify-center p-4"
-          style={{ left: modalLeft, background: "rgba(4, 10, 4, 0.82)", zIndex: 1000, transition: "left 0.28s cubic-bezier(0.4,0,0.2,1)" }}
-          onClick={(e) => { if (e.target === e.currentTarget) setShowAiModal(false); }}
-        >
-          <div
-            className="relative w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl overflow-hidden"
-            style={{
-              background: "hsl(103, 20%, 7%)",
-              border: "1px solid hsl(103, 25%, 18%)",
-              boxShadow: "0 32px 80px rgba(0,0,0,0.7)",
-            }}
-          >
-            {/* Header */}
-            <div
-              className="flex items-center justify-between px-6 py-4 shrink-0"
-              style={{ borderBottom: "1px solid hsl(103, 22%, 14%)", background: "hsl(103, 22%, 9%)" }}
-            >
-              <div>
-                <div className="flex items-center gap-2.5">
-                  <span className="text-xl">⚡</span>
-                  <span className="text-[15px] font-bold tracking-wide" style={{ color: "hsl(42, 28%, 88%)" }}>
-                    AI Resilience Analysis
-                  </span>
-                </div>
-                {activeProperty?.name && (
-                  <p className="text-[11px] mt-0.5 pl-8" style={{ color: "hsl(42, 15%, 45%)" }}>
-                    {activeProperty.name}
-                  </p>
-                )}
-              </div>
-              <button
-                onClick={() => setShowAiModal(false)}
-                className="w-8 h-8 flex items-center justify-center rounded-lg text-[18px] transition-colors"
-                style={{ color: "hsl(42, 20%, 50%)", background: "hsl(103, 20%, 11%)" }}
-              >
-                ×
-              </button>
-            </div>
-
-            {/* Scrollable content */}
-            <div className="overflow-y-auto flex-1 px-6 py-5">
-              <AiAnalysisPanel
-                propertyId={activePropertyId}
-                hasBrief={!!clientBrief}
-                savedReport={clientBrief?.aiAnalysisReport}
-                savedAt={clientBrief?.aiAnalysisGeneratedAt ?? null}
-                onReportSaved={() => queryClient.invalidateQueries({ queryKey: getGetClientBriefQueryKey(activePropertyId) })}
-              />
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── SUBCOMPONENTS ────────────────────────────────────────────────────────────
-
-function DetailGroup({ heading, children }: { heading: string; children: ReactNode }) {
-  return (
-    <div>
-      <div className="text-[9px] uppercase tracking-widest font-semibold mb-1 px-0.5" style={{ color: "hsl(103, 35%, 40%)" }}>
-        {heading}
-      </div>
-      <div className="rounded-lg overflow-hidden" style={{ border: "1px solid hsl(103, 22%, 18%)" }}>
-        {children}
-      </div>
-    </div>
-  );
-}
-
-function DetailRow({ icon, label, value }: { icon: string; label: string; value: string }) {
-  return (
-    <div className="flex items-center gap-2 px-2.5 py-1.5 text-[11px]" style={{ background: "hsl(103, 22%, 10%)", borderBottom: "1px solid hsl(103, 22%, 16%)" }}>
-      <span className="text-[13px] shrink-0">{icon}</span>
-      <span className="shrink-0" style={{ color: "hsl(42, 15%, 50%)", minWidth: "4.5rem" }}>{label}</span>
-      <span className="font-medium truncate" style={{ color: "hsl(42, 28%, 86%)" }}>{value}</span>
     </div>
   );
 }

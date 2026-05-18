@@ -1,10 +1,14 @@
-import { Switch, Route, Router as WouterRouter } from "wouter";
+import { useEffect } from "react";
+import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import MapPage from "@/pages/MapPage";
 import PropertiesPage from "@/pages/PropertiesPage";
+import IntakePage from "@/pages/IntakePage";
+import AnalysisPage from "@/pages/AnalysisPage";
+import DossierPage from "@/pages/DossierPage";
 import { useAuth } from "@workspace/replit-auth-web";
 
 const queryClient = new QueryClient({
@@ -16,11 +20,23 @@ const queryClient = new QueryClient({
   },
 });
 
+function RootRedirect() {
+  const [, navigate] = useLocation();
+  useEffect(() => {
+    navigate("/properties");
+  }, [navigate]);
+  return null;
+}
+
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={MapPage} />
+      <Route path="/" component={RootRedirect} />
       <Route path="/properties" component={PropertiesPage} />
+      <Route path="/intake" component={IntakePage} />
+      <Route path="/workspace" component={MapPage} />
+      <Route path="/analysis" component={AnalysisPage} />
+      <Route path="/dossier" component={DossierPage} />
       <Route component={NotFound} />
     </Switch>
   );
