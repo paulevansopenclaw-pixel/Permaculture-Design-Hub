@@ -341,6 +341,7 @@ export default function MapPage() {
   const [geoImportError, setGeoImportError] = useState<string | null>(null);
   const [isBoundaryDrawing, setIsBoundaryDrawing] = useState(false);
   const [showAiModal, setShowAiModal] = useState(false);
+  const [showBriefModal, setShowBriefModal] = useState(false);
   const overpassPreview = overpassCandidates[overpassSelectedIdx] ?? null;
 
   const { data: properties = [] } = useListProperties();
@@ -2379,134 +2380,43 @@ export default function MapPage() {
           )}
         </SidebarSection>
 
-        {/* ── CLIENT BRIEF ── */}
-        <SidebarSection label="Client Brief">
-          {!activePropertyId ? (
-            <p className="text-[11px]" style={{ color: "hsl(42, 15%, 50%)" }}>Select a property to open its site survey.</p>
-          ) : !activeProperty?.boundaryGeojson ? (
-            <p className="text-[11px]" style={{ color: "hsl(42, 15%, 50%)" }}>Draw and save a property boundary first — the survey uses it to fetch climate data.</p>
-          ) : (
-            <div className="space-y-2">
-              <p className="text-[11px]" style={{ color: "hsl(42, 15%, 55%)" }}>
-                Capture rainfall, soil type, infrastructure, site challenges, and design goals for this property.
-              </p>
-              <button
-                onClick={() => setShowOnboarding(true)}
-                className="w-full py-2 rounded-lg text-[12px] font-semibold transition-all"
-                style={{
-                  background: "linear-gradient(135deg, #2D6A1A, #4a9a28)",
-                  color: "#fff",
-                  border: "1px solid #4a9a28",
-                  boxShadow: "0 3px 12px rgba(45,106,26,0.35)",
-                }}
-              >
-                Open Site Survey →
-              </button>
-            </div>
-          )}
-        </SidebarSection>
-
-        {/* ── PROPERTY DETAILS ── */}
-        {activePropertyId && clientBrief && (
-          <SidebarSection label="Property Details">
-            <div className="space-y-3">
-
-              {/* Climate & Rainfall */}
-              {(clientBrief.climateZone || clientBrief.annualRainfallMm != null) && (
-                <DetailGroup heading="Climate & Rainfall">
-                  {clientBrief.climateZone && <DetailRow icon="🌍" label="Zone" value={clientBrief.climateZone} />}
-                  {clientBrief.annualRainfallMm != null && <DetailRow icon="🌧" label="Rainfall" value={`${clientBrief.annualRainfallMm.toLocaleString()} mm/yr`} />}
-                  {clientBrief.annualHumidityPct != null && <DetailRow icon="💧" label="Humidity" value={`${clientBrief.annualHumidityPct}%`} />}
-                </DetailGroup>
+        {/* ── CLIENT BRIEF ── compact launcher */}
+        {activePropertyId && (
+          <div className="px-3 pb-1">
+            <button
+              onClick={() => {
+                if (!activeProperty?.boundaryGeojson) return;
+                clientBrief ? setShowBriefModal(true) : setShowOnboarding(true);
+              }}
+              disabled={!activeProperty?.boundaryGeojson}
+              className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-[12px] font-semibold transition-all"
+              style={{
+                background: "linear-gradient(135deg, hsl(210,30%,10%), hsl(210,32%,13%))",
+                border: "1px solid hsl(210, 30%, 22%)",
+                color: clientBrief ? "hsl(210, 60%, 72%)" : "hsl(42, 15%, 50%)",
+                boxShadow: clientBrief ? "0 2px 12px rgba(30,80,160,0.2)" : "none",
+                opacity: !activeProperty?.boundaryGeojson ? 0.5 : 1,
+              }}
+            >
+              <span className="flex items-center gap-2">
+                <span className="text-[15px]">📋</span>
+                <span>
+                  {!activeProperty?.boundaryGeojson
+                    ? "Draw boundary first"
+                    : clientBrief
+                    ? "View Site Brief"
+                    : "Open Site Survey →"}
+                </span>
+              </span>
+              {clientBrief?.climateZone ? (
+                <span className="text-[10px] font-normal truncate max-w-[80px]" style={{ color: "hsl(42, 15%, 40%)" }}>
+                  {clientBrief.climateZone}
+                </span>
+              ) : (
+                <span className="text-[13px] opacity-50">→</span>
               )}
-
-              {/* Temperature */}
-              {(clientBrief.meanAnnualTempC != null || clientBrief.frostDaysPerYear != null) && (
-                <DetailGroup heading="Temperature">
-                  {clientBrief.meanAnnualTempC != null && <DetailRow icon="🌡" label="Mean" value={`${clientBrief.meanAnnualTempC} °C`} />}
-                  {clientBrief.summerMaxTempC != null && <DetailRow icon="🔆" label="Summer max" value={`${clientBrief.summerMaxTempC} °C`} />}
-                  {clientBrief.winterMinTempC != null && <DetailRow icon="❄️" label="Winter min" value={`${clientBrief.winterMinTempC} °C`} />}
-                  {clientBrief.frostDaysPerYear != null && <DetailRow icon="🧊" label="Frost days" value={`${clientBrief.frostDaysPerYear} days/yr`} />}
-                </DetailGroup>
-              )}
-
-              {/* Solar & Wind */}
-              {(clientBrief.solarIrradianceKwhM2 != null || clientBrief.prevailingWindDir) && (
-                <DetailGroup heading="Solar & Wind">
-                  {clientBrief.solarIrradianceKwhM2 != null && <DetailRow icon="☀️" label="Irradiance" value={`${clientBrief.solarIrradianceKwhM2.toLocaleString()} kWh/m²/yr`} />}
-                  {clientBrief.prevailingWindDir && <DetailRow icon="🌬" label="Wind dir." value={clientBrief.prevailingWindDir} />}
-                  {clientBrief.meanWindSpeedMs != null && <DetailRow icon="💨" label="Wind speed" value={`${clientBrief.meanWindSpeedMs} m/s`} />}
-                </DetailGroup>
-              )}
-
-              {/* Elevation */}
-              {clientBrief.elevationM != null && (
-                <DetailGroup heading="Elevation">
-                  <DetailRow icon="🏔" label="ASL" value={`${clientBrief.elevationM} m`} />
-                </DetailGroup>
-              )}
-
-              {/* Soil */}
-              {(clientBrief.soilTextureClass || clientBrief.soilClay != null || clientBrief.soilPH != null) && (
-                <DetailGroup heading="Soil (0–5 cm)">
-                  {clientBrief.soilTextureClass && <DetailRow icon="🪱" label="Texture" value={clientBrief.soilTextureClass} />}
-                  {(clientBrief.soilClay != null || clientBrief.soilSand != null) && (
-                    <DetailRow
-                      icon="⚗️"
-                      label="Composition"
-                      value={[
-                        clientBrief.soilClay != null ? `Clay ${clientBrief.soilClay}%` : null,
-                        clientBrief.soilSand != null ? `Sand ${clientBrief.soilSand}%` : null,
-                        clientBrief.soilSilt != null ? `Silt ${clientBrief.soilSilt}%` : null,
-                      ].filter(Boolean).join(" · ")}
-                    />
-                  )}
-                  {clientBrief.soilPH != null && <DetailRow icon="🧪" label="pH" value={String(clientBrief.soilPH)} />}
-                  {clientBrief.soilOrganicCarbonGkg != null && <DetailRow icon="🌿" label="Org. carbon" value={`${clientBrief.soilOrganicCarbonGkg} g/kg`} />}
-                </DetailGroup>
-              )}
-
-              {/* Goals */}
-              {(clientBrief.primaryGoal || clientBrief.maintenanceCapacity) && (
-                <DetailGroup heading="Design Goals">
-                  {clientBrief.primaryGoal && <DetailRow icon="🎯" label="Primary goal" value={clientBrief.primaryGoal} />}
-                  {clientBrief.maintenanceCapacity && <DetailRow icon="🛠" label="Maintenance" value={clientBrief.maintenanceCapacity} />}
-                </DetailGroup>
-              )}
-
-              <div className="flex gap-2 mt-1">
-                <button
-                  onClick={() => setShowOnboarding(true)}
-                  className="flex-1 py-1.5 rounded text-[11px] font-medium transition-all"
-                  style={{ background: "hsl(103, 22%, 14%)", color: "hsl(103, 30%, 55%)", border: "1px solid hsl(103, 22%, 22%)" }}
-                >
-                  Edit Survey →
-                </button>
-                <button
-                  onClick={handleSyncSiteData}
-                  disabled={isSyncingSiteData}
-                  title="Re-fetch climate, elevation & soil data from external APIs"
-                  className="flex items-center gap-1 px-2.5 py-1.5 rounded text-[11px] font-medium transition-all"
-                  style={{
-                    background: syncSiteDataStatus === "ok" ? "hsl(103, 30%, 14%)" : syncSiteDataStatus === "error" ? "hsl(0, 25%, 14%)" : "hsl(103, 22%, 14%)",
-                    color: syncSiteDataStatus === "ok" ? "#4a9a28" : syncSiteDataStatus === "error" ? "#f87171" : "hsl(42, 20%, 60%)",
-                    border: `1px solid ${syncSiteDataStatus === "ok" ? "hsl(103, 30%, 22%)" : syncSiteDataStatus === "error" ? "hsl(0, 25%, 22%)" : "hsl(103, 22%, 22%)"}`,
-                    opacity: isSyncingSiteData ? 0.7 : 1,
-                  }}
-                >
-                  {isSyncingSiteData ? (
-                    <><div className="w-3 h-3 border border-t-transparent rounded-full animate-spin" style={{ borderColor: "hsl(42, 20%, 60%)" }} /> Syncing…</>
-                  ) : syncSiteDataStatus === "ok" ? (
-                    "✓ Synced"
-                  ) : syncSiteDataStatus === "error" ? (
-                    "✗ Failed"
-                  ) : (
-                    "⟳ Sync Data"
-                  )}
-                </button>
-              </div>
-            </div>
-          </SidebarSection>
+            </button>
+          </div>
         )}
 
         {/* ── AI ANALYSIS ── compact launcher */}
@@ -3613,6 +3523,158 @@ export default function MapPage() {
           boundaryGeojson={activeProperty.boundaryGeojson as unknown as GeoJSON.Polygon}
           onClose={() => setShowOnboarding(false)}
         />
+      )}
+
+      {/* ── CLIENT BRIEF MODAL ── */}
+      {showBriefModal && activePropertyId && clientBrief && (
+        <div
+          className="fixed top-0 bottom-0 right-0 flex items-center justify-center p-4"
+          style={{ left: "18rem", background: "rgba(4, 10, 4, 0.82)", zIndex: 1000 }}
+          onClick={(e) => { if (e.target === e.currentTarget) setShowBriefModal(false); }}
+        >
+          <div
+            className="relative w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl overflow-hidden"
+            style={{
+              background: "hsl(103, 20%, 7%)",
+              border: "1px solid hsl(103, 25%, 18%)",
+              boxShadow: "0 32px 80px rgba(0,0,0,0.7)",
+            }}
+          >
+            {/* Header */}
+            <div
+              className="flex items-center justify-between px-6 py-4 shrink-0"
+              style={{ borderBottom: "1px solid hsl(103, 22%, 14%)", background: "hsl(103, 22%, 9%)" }}
+            >
+              <div>
+                <div className="flex items-center gap-2.5">
+                  <span className="text-xl">📋</span>
+                  <span className="text-[15px] font-bold tracking-wide" style={{ color: "hsl(42, 28%, 88%)" }}>
+                    Site Brief
+                  </span>
+                </div>
+                {activeProperty?.name && (
+                  <p className="text-[11px] mt-0.5 pl-8" style={{ color: "hsl(42, 15%, 45%)" }}>
+                    {activeProperty.name}
+                  </p>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleSyncSiteData}
+                  disabled={isSyncingSiteData}
+                  title="Re-fetch climate, elevation & soil data"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all"
+                  style={{
+                    background: syncSiteDataStatus === "ok" ? "hsl(103, 30%, 14%)" : syncSiteDataStatus === "error" ? "hsl(0, 25%, 14%)" : "hsl(103, 22%, 14%)",
+                    color: syncSiteDataStatus === "ok" ? "#4a9a28" : syncSiteDataStatus === "error" ? "#f87171" : "hsl(42, 20%, 60%)",
+                    border: `1px solid ${syncSiteDataStatus === "ok" ? "hsl(103, 30%, 22%)" : syncSiteDataStatus === "error" ? "hsl(0, 25%, 22%)" : "hsl(103, 22%, 22%)"}`,
+                    opacity: isSyncingSiteData ? 0.7 : 1,
+                  }}
+                >
+                  {isSyncingSiteData ? (
+                    <><div className="w-3 h-3 border border-t-transparent rounded-full animate-spin" style={{ borderColor: "hsl(42, 20%, 60%)" }} /> Syncing…</>
+                  ) : syncSiteDataStatus === "ok" ? "✓ Synced" : syncSiteDataStatus === "error" ? "✗ Failed" : "⟳ Sync Data"}
+                </button>
+                <button
+                  onClick={() => { setShowBriefModal(false); setShowOnboarding(true); }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all"
+                  style={{ background: "hsl(103, 22%, 13%)", color: "hsl(103, 35%, 60%)", border: "1px solid hsl(103, 22%, 22%)" }}
+                >
+                  ✎ Edit Survey
+                </button>
+                <button
+                  onClick={() => setShowBriefModal(false)}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg text-[18px] transition-colors"
+                  style={{ color: "hsl(42, 20%, 50%)", background: "hsl(103, 20%, 11%)" }}
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+
+            {/* Scrollable content */}
+            <div className="overflow-y-auto flex-1 px-6 py-5 space-y-4">
+
+              {(clientBrief.climateZone || clientBrief.annualRainfallMm != null) && (
+                <DetailGroup heading="Climate & Rainfall">
+                  {clientBrief.climateZone && <DetailRow icon="🌍" label="Zone" value={clientBrief.climateZone} />}
+                  {clientBrief.annualRainfallMm != null && <DetailRow icon="🌧" label="Rainfall" value={`${clientBrief.annualRainfallMm.toLocaleString()} mm/yr`} />}
+                  {clientBrief.annualHumidityPct != null && <DetailRow icon="💧" label="Humidity" value={`${clientBrief.annualHumidityPct}%`} />}
+                </DetailGroup>
+              )}
+
+              {(clientBrief.meanAnnualTempC != null || clientBrief.frostDaysPerYear != null) && (
+                <DetailGroup heading="Temperature">
+                  {clientBrief.meanAnnualTempC != null && <DetailRow icon="🌡" label="Mean" value={`${clientBrief.meanAnnualTempC} °C`} />}
+                  {clientBrief.summerMaxTempC != null && <DetailRow icon="🔆" label="Summer max" value={`${clientBrief.summerMaxTempC} °C`} />}
+                  {clientBrief.winterMinTempC != null && <DetailRow icon="❄️" label="Winter min" value={`${clientBrief.winterMinTempC} °C`} />}
+                  {clientBrief.frostDaysPerYear != null && <DetailRow icon="🧊" label="Frost days" value={`${clientBrief.frostDaysPerYear} days/yr`} />}
+                </DetailGroup>
+              )}
+
+              {(clientBrief.solarIrradianceKwhM2 != null || clientBrief.prevailingWindDir) && (
+                <DetailGroup heading="Solar & Wind">
+                  {clientBrief.solarIrradianceKwhM2 != null && <DetailRow icon="☀️" label="Irradiance" value={`${clientBrief.solarIrradianceKwhM2.toLocaleString()} kWh/m²/yr`} />}
+                  {clientBrief.prevailingWindDir && <DetailRow icon="🌬" label="Wind dir." value={clientBrief.prevailingWindDir} />}
+                  {clientBrief.meanWindSpeedMs != null && <DetailRow icon="💨" label="Wind speed" value={`${clientBrief.meanWindSpeedMs} m/s`} />}
+                </DetailGroup>
+              )}
+
+              {clientBrief.elevationM != null && (
+                <DetailGroup heading="Elevation">
+                  <DetailRow icon="🏔" label="ASL" value={`${clientBrief.elevationM} m`} />
+                </DetailGroup>
+              )}
+
+              {(clientBrief.soilTextureClass || clientBrief.soilClay != null || clientBrief.soilPH != null) && (
+                <DetailGroup heading="Soil (0–5 cm)">
+                  {clientBrief.soilTextureClass && <DetailRow icon="🪱" label="Texture" value={clientBrief.soilTextureClass} />}
+                  {(clientBrief.soilClay != null || clientBrief.soilSand != null) && (
+                    <DetailRow
+                      icon="⚗️"
+                      label="Composition"
+                      value={[
+                        clientBrief.soilClay != null ? `Clay ${clientBrief.soilClay}%` : null,
+                        clientBrief.soilSand != null ? `Sand ${clientBrief.soilSand}%` : null,
+                        clientBrief.soilSilt != null ? `Silt ${clientBrief.soilSilt}%` : null,
+                      ].filter(Boolean).join(" · ")}
+                    />
+                  )}
+                  {clientBrief.soilPH != null && <DetailRow icon="🧪" label="pH" value={String(clientBrief.soilPH)} />}
+                  {clientBrief.soilOrganicCarbonGkg != null && <DetailRow icon="🌿" label="Org. carbon" value={`${clientBrief.soilOrganicCarbonGkg} g/kg`} />}
+                </DetailGroup>
+              )}
+
+              {(clientBrief.primaryGoal || clientBrief.maintenanceCapacity) && (
+                <DetailGroup heading="Design Goals">
+                  {clientBrief.primaryGoal && <DetailRow icon="🎯" label="Primary goal" value={clientBrief.primaryGoal} />}
+                  {clientBrief.maintenanceCapacity && <DetailRow icon="🛠" label="Maintenance" value={clientBrief.maintenanceCapacity} />}
+                </DetailGroup>
+              )}
+
+              {/* Infrastructure flags */}
+              {(clientBrief.utilitiesOverheadPower || clientBrief.utilitiesBuriedPipes || clientBrief.utilitiesLegalEasements || clientBrief.utilitiesActiveWell) && (
+                <DetailGroup heading="Infrastructure">
+                  {clientBrief.utilitiesOverheadPower && <DetailRow icon="⚡" label="Overhead power" value="Present" />}
+                  {clientBrief.utilitiesBuriedPipes && <DetailRow icon="🔧" label="Buried pipes" value="Present" />}
+                  {clientBrief.utilitiesLegalEasements && <DetailRow icon="⚖️" label="Legal easements" value="Present" />}
+                  {clientBrief.utilitiesActiveWell && <DetailRow icon="💧" label="Active well" value="Present" />}
+                </DetailGroup>
+              )}
+
+              {/* Site challenges */}
+              {(clientBrief.challengeSevereErosion || clientBrief.challengeWinterFlooding || clientBrief.challengeHighWind || clientBrief.challengeWildlifePressure) && (
+                <DetailGroup heading="Site Challenges">
+                  {clientBrief.challengeSevereErosion && <DetailRow icon="🌊" label="Severe erosion" value="Yes" />}
+                  {clientBrief.challengeWinterFlooding && <DetailRow icon="🌧" label="Winter flooding" value="Yes" />}
+                  {clientBrief.challengeHighWind && <DetailRow icon="💨" label="High wind" value="Yes" />}
+                  {clientBrief.challengeWildlifePressure && <DetailRow icon="🦌" label="Wildlife pressure" value="Yes" />}
+                </DetailGroup>
+              )}
+
+            </div>
+          </div>
+        </div>
       )}
 
       {/* ── AI ANALYSIS MODAL ── */}
