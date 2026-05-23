@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Fingerprint } from "lucide-react";
 import { useLocation } from "wouter";
 import {
   useGetProperty,
@@ -269,6 +270,13 @@ export default function DossierPage() {
                     )}
                   </DocSection>
 
+                  {/* Pattern Strategy */}
+                  {aiReport?.PatternStrategy && (
+                    <DocPatternStrategy
+                      pattern={aiReport.PatternStrategy as { recommendedPattern?: string; rationale?: string; application?: string }}
+                    />
+                  )}
+
                   {/* Infrastructure */}
                   {(brief.utilitiesOverheadPower || brief.utilitiesBuriedPipes || brief.utilitiesLegalEasements || brief.utilitiesActiveWell || brief.challengeSevereErosion || brief.challengeWinterFlooding || brief.challengeHighWind || brief.challengeWildlifePressure) && (
                     <DocSection title="Infrastructure & Site Constraints">
@@ -369,6 +377,69 @@ export default function DossierPage() {
         </main>
       )}
     </div>
+  );
+}
+
+function DocPatternStrategy({ pattern }: { pattern: { recommendedPattern?: string; rationale?: string; application?: string } }) {
+  return (
+    <section>
+      <h2
+        className="text-[10px] font-bold uppercase tracking-[0.15em] mb-3 pb-2 flex items-center gap-2"
+        style={{ color: "#4c1d95", borderBottom: "1.5px solid #ede9fe" }}
+      >
+        <Fingerprint size={12} strokeWidth={2} style={{ color: "#7c3aed", flexShrink: 0 }} />
+        Pattern Strategy
+      </h2>
+      <div
+        className="rounded-xl overflow-hidden"
+        style={{ border: "1px solid #ddd6fe", background: "linear-gradient(135deg, #faf5ff, #f5f3ff)" }}
+      >
+        {pattern.recommendedPattern && (
+          <div
+            className="px-5 py-3 flex items-center gap-3"
+            style={{ background: "linear-gradient(135deg, #4c1d95, #6d28d9)", borderBottom: "1px solid #ddd6fe" }}
+          >
+            <Fingerprint size={16} strokeWidth={1.8} style={{ color: "#e9d5ff", flexShrink: 0 }} />
+            <div>
+              <div className="text-[9px] font-bold uppercase tracking-widest" style={{ color: "#c4b5fd" }}>
+                Recommended Pattern
+              </div>
+              <div className="text-[15px] font-bold text-white leading-tight">
+                {pattern.recommendedPattern}
+              </div>
+            </div>
+          </div>
+        )}
+        <div className="px-5 py-4 space-y-4">
+          {pattern.rationale && (
+            <div>
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: "#7c3aed" }} />
+                <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: "#7c3aed" }}>
+                  Why Nature Uses This Form
+                </span>
+              </div>
+              <p className="text-[12px] leading-relaxed" style={{ color: "#374151" }}>
+                {pattern.rationale}
+              </p>
+            </div>
+          )}
+          {pattern.application && (
+            <div>
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: "#5b21b6" }} />
+                <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: "#5b21b6" }}>
+                  Site Application
+                </span>
+              </div>
+              <p className="text-[12px] leading-relaxed" style={{ color: "#374151" }}>
+                {pattern.application}
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
   );
 }
 

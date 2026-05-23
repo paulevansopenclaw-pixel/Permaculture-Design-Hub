@@ -293,6 +293,11 @@ export const AnalyzeSiteResponse = zod.object({
   "LandAndBiodiversity": zod.unknown().describe('Soil protection, erosion mitigation, and caloric planting'),
   "ClimateResilience": zod.unknown().describe('Extreme-weather and grid-collapse resilience summary with immediate action steps'),
   "InfrastructureCritique": zod.unknown().optional().describe('Localised critiques of drawn structures, swales, and sensory vectors — conflicts, risks, relocation recommendations'),
+  "PatternStrategy": zod.object({
+  "recommendedPattern": zod.string().optional().describe('Name of the recommended pattern (e.g. Fibonacci Spiral, Keyhole, Branching Net-and-Pan, Wind Sector Wedge)'),
+  "rationale": zod.string().optional().describe('Why nature uses this shape and why it suits this specific site'),
+  "application": zod.string().optional().describe('Concrete physical instructions for implementing the pattern on this site')
+}).optional().describe('Design from patterns to details — recommended primary spatial pattern for this site'),
   "climateSource": zod.string().optional().describe('Whether climate data was fetched live or failed'),
   "generatedAt": zod.string(),
   "rawJson": zod.string()

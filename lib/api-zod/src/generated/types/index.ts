@@ -39,6 +39,7 @@ export * from './sectorUpdate';
 export * from './sensoryVector';
 export * from './sensoryVectorInput';
 export * from './siteAnalysisReport';
+export * from './siteAnalysisReportPatternStrategy';
 export * from './spatialRecommendation';
 export * from './structure';
 export * from './structureInput';

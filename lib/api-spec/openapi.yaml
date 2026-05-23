@@ -1148,6 +1148,19 @@ components:
           description: Extreme-weather and grid-collapse resilience summary with immediate action steps
         InfrastructureCritique:
           description: Localised critiques of drawn structures, swales, and sensory vectors — conflicts, risks, relocation recommendations
+        PatternStrategy:
+          type: object
+          description: "Design from patterns to details — recommended primary spatial pattern for this site"
+          properties:
+            recommendedPattern:
+              type: string
+              description: Name of the recommended pattern (e.g. Fibonacci Spiral, Keyhole, Branching Net-and-Pan, Wind Sector Wedge)
+            rationale:
+              type: string
+              description: Why nature uses this shape and why it suits this specific site
+            application:
+              type: string
+              description: Concrete physical instructions for implementing the pattern on this site
         climateSource:
           type: string
           description: Whether climate data was fetched live or failed

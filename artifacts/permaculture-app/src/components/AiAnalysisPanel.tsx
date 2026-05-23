@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Fingerprint } from "lucide-react";
 import { useAnalyzeSite } from "@workspace/api-client-react";
 import type { SiteAnalysisReport } from "@workspace/api-client-react";
 
@@ -146,6 +147,9 @@ export function AiAnalysisPanel({ propertyId, hasBrief, savedReport, savedAt, on
               value={report.InfrastructureCritique}
             />
           )}
+          {report.PatternStrategy && (
+            <PatternStrategyCard pattern={report.PatternStrategy as { recommendedPattern?: string; rationale?: string; application?: string }} />
+          )}
           {report.climateSource && (
             <p className="text-[9px] text-center" style={{ color: "hsl(42, 15%, 35%)" }}>
               Climate data: {report.climateSource}
@@ -251,6 +255,70 @@ function MatrixTable({ rows }: { rows: unknown[] }) {
           ))}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+function PatternStrategyCard({ pattern }: { pattern: { recommendedPattern?: string; rationale?: string; application?: string } }) {
+  return (
+    <div
+      className="rounded-xl overflow-hidden"
+      style={{ border: "1px solid hsl(270, 35%, 28%)", boxShadow: "0 4px 24px rgba(109,40,217,0.18)" }}
+    >
+      {/* Header */}
+      <div
+        className="flex items-center gap-2.5 px-3 py-2.5"
+        style={{
+          background: "linear-gradient(135deg, hsl(270, 50%, 14%), hsl(270, 45%, 18%))",
+          borderBottom: "1px solid hsl(270, 40%, 22%)",
+        }}
+      >
+        <Fingerprint size={15} style={{ color: "#c4b5fd", flexShrink: 0 }} strokeWidth={1.8} />
+        <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "#c4b5fd" }}>
+          Pattern Strategy
+        </span>
+        {pattern.recommendedPattern && (
+          <span
+            className="ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full"
+            style={{ background: "hsl(270, 40%, 22%)", color: "#e9d5ff" }}
+          >
+            {pattern.recommendedPattern}
+          </span>
+        )}
+      </div>
+
+      {/* Body */}
+      <div
+        className="px-3 py-3 space-y-3"
+        style={{ background: "linear-gradient(180deg, hsl(270, 30%, 10%), hsl(103, 18%, 9%))" }}
+      >
+        {pattern.rationale && (
+          <div>
+            <div className="flex items-center gap-1.5 mb-1">
+              <div className="w-1.5 h-1.5 rounded-full" style={{ background: "#a78bfa" }} />
+              <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: "hsl(270, 40%, 55%)" }}>
+                Why Nature Uses This Form
+              </span>
+            </div>
+            <p className="text-[11px] leading-relaxed" style={{ color: "hsl(42, 20%, 72%)" }}>
+              {pattern.rationale}
+            </p>
+          </div>
+        )}
+        {pattern.application && (
+          <div>
+            <div className="flex items-center gap-1.5 mb-1">
+              <div className="w-1.5 h-1.5 rounded-full" style={{ background: "#6d28d9" }} />
+              <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: "hsl(270, 40%, 55%)" }}>
+                Site Application
+              </span>
+            </div>
+            <p className="text-[11px] leading-relaxed" style={{ color: "hsl(42, 20%, 72%)" }}>
+              {pattern.application}
+            </p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

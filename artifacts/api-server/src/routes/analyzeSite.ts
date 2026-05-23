@@ -333,6 +333,10 @@ BASED ON ALL OF THE ABOVE, RETURN A JSON OBJECT WITH THE EXACT FOLLOWING STRUCTU
 3. "LandAndBiodiversity": Soil protection, erosion mitigation, and defensive/caloric planting recommendations tailored to this specific hardiness zone.
 4. "ClimateResilience": A summary of the property's ability to survive extreme weather, grid collapse, or drought, and the immediate steps to secure it.
 5. "InfrastructureCritique": Specific, localised critiques of the user-drawn structures, swales, and sensory vectors — flag conflicts, risks, and precise relocation recommendations.
+6. "PatternStrategy": Apply the permaculture principle of "Design from Patterns to Details". Based on this site's unique climate, hydrology, wind exposure, and terrain, identify the single most powerful spatial design pattern to impose order and resilience across the whole property. This key must contain exactly three sub-keys:
+   - "recommendedPattern": The name of the pattern — choose from or adapt: Fibonacci Spiral, Keyhole, Branching Net-and-Pan, Wind Sector Wedge, Mandala Grid, Broadacre Keyline, Sector Radial, Swale Contour Cascade. Select the one that is most physically appropriate for this site's rainfall, slope, and wind data.
+   - "rationale": Why nature uses this shape or flow form in similar environments. Explain the physical or biological principle behind it (e.g., Fibonacci optimises light interception; Net-and-Pan maximises infiltration on flat clay soils). Reference this site's actual climate and soil data. 2–3 sentences.
+   - "application": Concrete, site-specific instructions for physically implementing this pattern. Reference cardinal directions, estimated dimensions in metres, and how it integrates with the existing swales, structures, or zone layout already described. 3–4 sentences.
 Ensure the response is raw, valid JSON only.`;
 }
 
@@ -415,6 +419,7 @@ router.post(
     let parsed: {
       WaterStrategy: unknown; SunAndEnergy: unknown; LandAndBiodiversity: unknown;
       ClimateResilience: unknown; InfrastructureCritique: unknown;
+      PatternStrategy: { recommendedPattern: string; rationale: string; application: string } | undefined;
     };
     try {
       parsed = JSON.parse(rawJson);
@@ -437,6 +442,7 @@ router.post(
       LandAndBiodiversity:    parsed.LandAndBiodiversity    ?? "",
       ClimateResilience:      parsed.ClimateResilience      ?? "",
       InfrastructureCritique: parsed.InfrastructureCritique ?? "",
+      PatternStrategy:        parsed.PatternStrategy        ?? null,
       generatedAt: generatedAt.toISOString(),
       climateSource: climate.source,
       rawJson,

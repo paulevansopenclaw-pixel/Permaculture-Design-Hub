@@ -162,6 +162,18 @@ export interface SpatialRecommendation {
   rationale: string;
 }
 
+/**
+ * Design from patterns to details — recommended primary spatial pattern for this site
+ */
+export type SiteAnalysisReportPatternStrategy = {
+  /** Name of the recommended pattern (e.g. Fibonacci Spiral, Keyhole, Branching Net-and-Pan, Wind Sector Wedge) */
+  recommendedPattern?: string;
+  /** Why nature uses this shape and why it suits this specific site */
+  rationale?: string;
+  /** Concrete physical instructions for implementing the pattern on this site */
+  application?: string;
+};
+
 export interface SiteAnalysisReport {
   propertyId: string;
   /** Water catchment, tank sizing, and swale/drainage placement */
@@ -174,6 +186,8 @@ export interface SiteAnalysisReport {
   ClimateResilience: unknown;
   /** Localised critiques of drawn structures, swales, and sensory vectors — conflicts, risks, relocation recommendations */
   InfrastructureCritique?: unknown;
+  /** Design from patterns to details — recommended primary spatial pattern for this site */
+  PatternStrategy?: SiteAnalysisReportPatternStrategy;
   /** Whether climate data was fetched live or failed */
   climateSource?: string;
   generatedAt: string;

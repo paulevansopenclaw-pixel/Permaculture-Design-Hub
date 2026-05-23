@@ -5,6 +5,7 @@
  * Collaborative Permaculture Design API
  * OpenAPI spec version: 0.1.0
  */
+import type { SiteAnalysisReportPatternStrategy } from './siteAnalysisReportPatternStrategy';
 
 export interface SiteAnalysisReport {
   propertyId: string;
@@ -18,6 +19,8 @@ export interface SiteAnalysisReport {
   ClimateResilience: unknown;
   /** Localised critiques of drawn structures, swales, and sensory vectors — conflicts, risks, relocation recommendations */
   InfrastructureCritique?: unknown;
+  /** Design from patterns to details — recommended primary spatial pattern for this site */
+  PatternStrategy?: SiteAnalysisReportPatternStrategy;
   /** Whether climate data was fetched live or failed */
   climateSource?: string;
   generatedAt: string;
