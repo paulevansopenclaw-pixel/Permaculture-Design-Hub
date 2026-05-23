@@ -8,25 +8,6 @@ import {
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAppStore } from "@/store/useAppStore";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 
 function formatArea(ha: number | null | undefined, ac: number | null | undefined) {
   if (!ha && !ac) return "No boundary set";
@@ -89,140 +70,222 @@ export default function PropertiesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-slate-950 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black">
+
       {/* Header */}
-      <header className="border-b border-border bg-card px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
+      <header className="border-b border-slate-800 bg-slate-900/70 backdrop-blur-sm px-6 py-4 flex items-center justify-between sticky top-0 z-10">
+        <div className="flex items-center gap-4">
           <button
             onClick={() => navigate("/intake")}
-            className="text-muted-foreground hover:text-foreground transition-colors"
+            className="text-slate-500 hover:text-slate-200 transition-colors p-1 rounded"
+            aria-label="Back"
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M19 12H5M12 19l-7-7 7-7"/>
             </svg>
           </button>
           <div>
-            <h1 className="text-xl font-semibold text-foreground tracking-tight">Properties</h1>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {properties.length} {properties.length === 1 ? "property" : "properties"}
-            </p>
+            <div className="flex items-center gap-2">
+              <h1 className="text-base font-bold text-slate-100 tracking-tight">SITE REGISTRY</h1>
+              <span className="text-[10px] font-mono bg-emerald-600/10 text-emerald-500 border border-emerald-600/20 px-1.5 py-0.5 rounded">
+                {properties.length} {properties.length === 1 ? "SITE" : "SITES"}
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-500 font-mono mt-0.5">TerraGuard OS · Property Management</p>
           </div>
         </div>
-        <Button onClick={() => setShowCreate(true)} size="sm">
-          New Property
-        </Button>
+
+        <button
+          onClick={() => setShowCreate(true)}
+          className="flex items-center gap-2 px-4 py-2 rounded-md text-[13px] font-bold tracking-wide uppercase transition-all bg-emerald-600/10 text-emerald-500 hover:bg-emerald-600/20 border border-emerald-600/30 shadow-[0_0_15px_rgba(16,185,129,0.1)] hover:shadow-[0_0_20px_rgba(16,185,129,0.25)]"
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          New Site
+        </button>
       </header>
 
       {/* Content */}
       <main className="max-w-5xl mx-auto px-6 py-8">
         {isLoading ? (
-          <div className="flex items-center justify-center py-24">
+          <div className="flex items-center justify-center py-32">
             <div className="flex flex-col items-center gap-3">
-              <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-              <p className="text-sm text-muted-foreground">Loading properties...</p>
+              <div className="w-6 h-6 border-2 border-t-transparent rounded-full animate-spin border-emerald-500" />
+              <p className="text-[12px] text-slate-500 font-mono uppercase tracking-widest">Querying registry...</p>
             </div>
           </div>
         ) : properties.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-24 gap-4">
-            <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-muted-foreground">
+          <div className="flex flex-col items-center justify-center py-32 gap-5">
+            <div className="w-16 h-16 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-slate-500">
                 <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
                 <polyline points="9,22 9,12 15,12 15,22"/>
               </svg>
             </div>
             <div className="text-center">
-              <h3 className="font-medium text-foreground">No sites yet</h3>
-              <p className="text-sm text-muted-foreground mt-1">
-                Add your first site to begin your autonomous property design
+              <h3 className="font-semibold text-slate-200 tracking-tight">No sites registered</h3>
+              <p className="text-[13px] text-slate-500 mt-1 font-mono">
+                Add your first site to begin autonomous property design
               </p>
             </div>
-            <Button onClick={() => setShowCreate(true)}>Create Property</Button>
+            <button
+              onClick={() => setShowCreate(true)}
+              className="px-5 py-2.5 rounded-md text-[13px] font-bold tracking-wide uppercase transition-all bg-emerald-600/10 text-emerald-500 hover:bg-emerald-600/20 border border-emerald-600/30 shadow-[0_0_15px_rgba(16,185,129,0.1)] hover:shadow-[0_0_20px_rgba(16,185,129,0.25)]"
+            >
+              Register Site
+            </button>
           </div>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {properties.map((property) => (
               <div
                 key={property.id}
-                className="bg-card border border-card-border rounded-lg p-5 hover:shadow-md transition-shadow group cursor-pointer"
+                className="bg-slate-900 border border-slate-800 rounded-lg p-5 hover:border-slate-600 hover:shadow-[0_0_20px_rgba(16,185,129,0.06)] transition-all group cursor-pointer relative"
                 onClick={() => handleOpen(property.id)}
               >
-                <div className="flex items-start justify-between mb-3">
-                  <div className="w-9 h-9 rounded-md bg-primary/10 flex items-center justify-center flex-shrink-0">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-primary">
+                {/* Icon + delete row */}
+                <div className="flex items-start justify-between mb-4">
+                  <div className="w-9 h-9 rounded-md bg-emerald-600/10 border border-emerald-600/20 flex items-center justify-center flex-shrink-0">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-emerald-500">
                       <polygon points="1,6 1,22 8,18 16,22 23,18 23,2 16,6 8,2"/>
                     </svg>
                   </div>
                   <button
                     onClick={(e) => { e.stopPropagation(); setDeleteId(property.id); }}
-                    className="opacity-60 sm:opacity-0 sm:group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all p-2.5 rounded-lg"
-                    style={{ minWidth: "44px", minHeight: "44px" }}
+                    className="opacity-0 group-hover:opacity-100 text-slate-600 hover:text-red-400 transition-all p-1.5 rounded"
+                    aria-label="Delete property"
                   >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <polyline points="3,6 5,6 21,6"/><path d="M19,6l-1,14a2,2,0,0,1-2,2H8a2,2,0,0,1-2-2L5,6"/><path d="M10,11v6M14,11v6"/><path d="M9,6V4a1,1,0,0,1,1-1h4a1,1,0,0,1,1,1V6"/>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <polyline points="3,6 5,6 21,6"/>
+                      <path d="M19,6l-1,14a2,2,0,0,1-2,2H8a2,2,0,0,1-2-2L5,6"/>
+                      <path d="M10,11v6M14,11v6"/>
+                      <path d="M9,6V4a1,1,0,0,1,1-1h4a1,1,0,0,1,1,1V6"/>
                     </svg>
                   </button>
                 </div>
-                <h3 className="font-medium text-foreground text-sm leading-snug mb-1">
+
+                {/* Name */}
+                <h3 className="font-semibold text-slate-100 text-sm leading-snug mb-1 pr-2">
                   {property.name}
                 </h3>
-                <p className="text-xs text-muted-foreground mb-3">
+
+                {/* Area */}
+                <p className="text-[11px] text-slate-500 font-mono mb-4">
                   {formatArea(property.areaHectares, property.areaAcres)}
                 </p>
+
+                {/* Footer row */}
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] text-muted-foreground">
+                  <span className="text-[10px] text-slate-600 font-mono uppercase tracking-wider">
                     {formatDate(property.createdAt)}
                   </span>
-                  <span className="text-[11px] font-medium text-primary opacity-60 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                    Open →
+                  <span className="text-[11px] font-bold text-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity tracking-wide">
+                    OPEN →
                   </span>
                 </div>
+
+                {/* Boundary badge */}
+                {(property.areaHectares ?? 0) > 0 && (
+                  <div className="absolute top-3 right-10 w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.8)]" />
+                )}
               </div>
             ))}
           </div>
         )}
       </main>
 
-      {/* Create Dialog */}
-      <Dialog open={showCreate} onOpenChange={setShowCreate}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>New Property</DialogTitle>
-          </DialogHeader>
-          <div className="py-2">
-            <Input
-              placeholder="Property name (e.g. Hillside Farm)"
+      {/* ── Create Modal ─────────────────────────────────────────── */}
+      {showCreate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            onClick={() => { setShowCreate(false); setNewName(""); }}
+          />
+          <div className="relative bg-slate-900 border border-slate-700 rounded-xl shadow-2xl w-full max-w-md mx-4 p-6">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-8 h-8 rounded-md bg-emerald-600/10 border border-emerald-600/20 flex items-center justify-center">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-emerald-500">
+                  <polygon points="1,6 1,22 8,18 16,22 23,18 23,2 16,6 8,2"/>
+                </svg>
+              </div>
+              <div>
+                <h2 className="text-sm font-bold text-slate-100 tracking-tight">REGISTER NEW SITE</h2>
+                <p className="text-[11px] text-slate-500 font-mono mt-0.5">Enter a designation for this property</p>
+              </div>
+            </div>
+
+            <input
+              autoFocus
+              type="text"
+              placeholder="e.g. Hillside Farm, North Ridge Parcel"
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleCreate()}
-              autoFocus
+              className="w-full bg-slate-800 border border-slate-700 text-slate-100 placeholder-slate-600 rounded-md px-3 py-2.5 text-sm outline-none focus:border-emerald-600/50 focus:shadow-[0_0_0_2px_rgba(16,185,129,0.1)] transition-all font-mono"
             />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCreate(false)}>Cancel</Button>
-            <Button onClick={handleCreate} disabled={!newName.trim() || createProperty.isPending}>
-              {createProperty.isPending ? "Creating..." : "Create"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
-      {/* Delete Confirm */}
-      <AlertDialog open={!!deleteId} onOpenChange={(o) => !o && setDeleteId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete property?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete the property and all its feedback pins.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            <div className="flex gap-2 mt-4">
+              <button
+                onClick={() => { setShowCreate(false); setNewName(""); }}
+                className="flex-1 py-2 rounded-md text-[13px] text-slate-400 hover:text-slate-200 border border-slate-700 hover:border-slate-600 transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCreate}
+                disabled={!newName.trim() || createProperty.isPending}
+                className="flex-1 py-2 rounded-md text-[13px] font-bold uppercase tracking-wide transition-all bg-emerald-600/10 text-emerald-500 hover:bg-emerald-600/20 border border-emerald-600/30 disabled:opacity-40 disabled:cursor-not-allowed shadow-[0_0_10px_rgba(16,185,129,0.1)]"
+              >
+                {createProperty.isPending ? "Registering..." : "Register Site"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Delete Confirm Modal ──────────────────────────────────── */}
+      {deleteId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            onClick={() => setDeleteId(null)}
+          />
+          <div className="relative bg-slate-900 border border-slate-700 rounded-xl shadow-2xl w-full max-w-sm mx-4 p-6">
+            <div className="flex items-start gap-3 mb-4">
+              <div className="w-8 h-8 rounded-md bg-red-500/10 border border-red-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-red-400">
+                  <polyline points="3,6 5,6 21,6"/>
+                  <path d="M19,6l-1,14a2,2,0,0,1-2,2H8a2,2,0,0,1-2-2L5,6"/>
+                  <path d="M10,11v6M14,11v6"/>
+                </svg>
+              </div>
+              <div>
+                <h2 className="text-sm font-bold text-slate-100 tracking-tight">CONFIRM DELETION</h2>
+                <p className="text-[12px] text-slate-400 mt-1 leading-relaxed">
+                  This will permanently delete the site and all associated feedback pins. This action cannot be undone.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-2 mt-5">
+              <button
+                onClick={() => setDeleteId(null)}
+                className="flex-1 py-2 rounded-md text-[13px] text-slate-400 hover:text-slate-200 border border-slate-700 hover:border-slate-600 transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={deleteProperty.isPending}
+                className="flex-1 py-2 rounded-md text-[13px] font-bold uppercase tracking-wide transition-all bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/30 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {deleteProperty.isPending ? "Deleting..." : "Delete Site"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
