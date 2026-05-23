@@ -9,7 +9,9 @@ import PropertiesPage from "@/pages/PropertiesPage";
 import IntakePage from "@/pages/IntakePage";
 import AnalysisPage from "@/pages/AnalysisPage";
 import DossierPage from "@/pages/DossierPage";
+import PresentationPage from "@/pages/PresentationPage";
 import { useAuth } from "@workspace/replit-auth-web";
+import { useAppStore } from "@/store/useAppStore";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -28,7 +30,38 @@ function RootRedirect() {
   return null;
 }
 
+function ClientBlockedPage() {
+  return (
+    <div className="h-screen w-screen flex items-center justify-center bg-slate-950 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black">
+      <div className="flex flex-col items-center gap-4 max-w-sm text-center px-6">
+        <div className="w-12 h-12 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-red-400">
+            <circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
+          </svg>
+        </div>
+        <div>
+          <h2 className="text-sm font-bold text-slate-100 tracking-tight uppercase">Access Restricted</h2>
+          <p className="text-[12px] text-slate-500 font-mono mt-1">
+            Client accounts are limited to presentation links shared by your designer.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Router() {
+  const { role } = useAppStore();
+
+  if (role === "client") {
+    return (
+      <Switch>
+        <Route path="/presentation/:id" component={PresentationPage} />
+        <Route component={ClientBlockedPage} />
+      </Switch>
+    );
+  }
+
   return (
     <Switch>
       <Route path="/" component={RootRedirect} />
@@ -37,6 +70,7 @@ function Router() {
       <Route path="/workspace" component={MapPage} />
       <Route path="/analysis" component={AnalysisPage} />
       <Route path="/dossier" component={DossierPage} />
+      <Route path="/presentation/:id" component={PresentationPage} />
       <Route component={NotFound} />
     </Switch>
   );

@@ -10,7 +10,9 @@ const STEPS = [
 
 export function StepNav({ className = "" }: { className?: string }) {
   const [location, navigate] = useLocation();
-  const { activePropertyId } = useAppStore();
+  const { activePropertyId, role } = useAppStore();
+
+  if (role === "client") return null;
   const activeIdx = STEPS.findIndex((s) => s.path === location);
 
   return (

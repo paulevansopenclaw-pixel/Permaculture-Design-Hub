@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useLocation } from "wouter";
 import {
   useGetProperty,
@@ -12,6 +13,17 @@ import { StepNav } from "@/components/StepNav";
 export default function DossierPage() {
   const [, navigate] = useLocation();
   const { activePropertyId } = useAppStore();
+  const [linkCopied, setLinkCopied] = useState(false);
+
+  function handleGenerateLink() {
+    if (!activePropertyId) return;
+    const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+    const url = `${window.location.origin}${base}/presentation/${activePropertyId}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2500);
+    });
+  }
 
   const { data: property } = useGetProperty(activePropertyId ?? "", {
     query: { enabled: !!activePropertyId, queryKey: getGetPropertyQueryKey(activePropertyId ?? "") },
@@ -52,8 +64,37 @@ export default function DossierPage() {
             Export Studio
           </span>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <StepNav />
+          {/* Generate Client Link */}
+          <button
+            onClick={handleGenerateLink}
+            disabled={!activePropertyId}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[12px] font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            style={linkCopied
+              ? { background: "rgba(16,185,129,0.15)", color: "#10b981", border: "1px solid rgba(16,185,129,0.4)" }
+              : { background: "rgba(99,102,241,0.1)", color: "#a5b4fc", border: "1px solid rgba(99,102,241,0.3)" }
+            }
+            title="Copy client presentation link to clipboard"
+          >
+            {linkCopied ? (
+              <>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <polyline points="20,6 9,17 4,12"/>
+                </svg>
+                Copied!
+              </>
+            ) : (
+              <>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/>
+                  <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/>
+                </svg>
+                Client Link
+              </>
+            )}
+          </button>
+          {/* Export PDF */}
           <button
             onClick={handleExport}
             className="flex items-center gap-2 px-4 py-2 rounded-xl text-[12px] font-semibold transition-all"
