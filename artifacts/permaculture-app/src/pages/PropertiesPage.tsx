@@ -64,7 +64,7 @@ export default function PropertiesPage() {
           setShowCreate(false);
           setNewName("");
           setActivePropertyId(property.id);
-          navigate("/");
+          navigate("/intake");
         },
       },
     );
@@ -72,7 +72,7 @@ export default function PropertiesPage() {
 
   function handleOpen(id: string) {
     setActivePropertyId(id);
-    navigate("/");
+    navigate("/intake");
   }
 
   function handleDelete() {
@@ -94,7 +94,7 @@ export default function PropertiesPage() {
       <header className="border-b border-border bg-card px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <button
-            onClick={() => navigate("/")}
+            onClick={() => navigate("/intake")}
             className="text-muted-foreground hover:text-foreground transition-colors"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
