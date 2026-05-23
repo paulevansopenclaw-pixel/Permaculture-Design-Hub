@@ -373,6 +373,29 @@ paths:
         "500":
           description: AI analysis failed
 
+  /properties/{propertyId}/water-budget:
+    post:
+      operationId: runWaterBudget
+      tags: [client-brief]
+      summary: Run AI water budget — household needs, tank sizing, and max food production area
+      parameters:
+        - name: propertyId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Water budget analysis
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WaterBudgetReport"
+        "404":
+          description: Property or brief not found
+        "500":
+          description: AI analysis failed
+
   /properties/{propertyId}/client-brief:
     get:
       operationId: getClientBrief
@@ -1133,6 +1156,106 @@ components:
         rawJson:
           type: string
 
+    WaterBudgetReport:
+      type: object
+      required: [propertyId, roofAreaM2, annualCatchmentKL, occupants]
+      properties:
+        propertyId:
+          type: string
+        roofAreaM2:
+          type: number
+        annualCatchmentKL:
+          type: number
+        occupants:
+          type: number
+        HouseholdBudget:
+          type: object
+          description: Household water demand with 20% buffer
+          properties:
+            adjustedDailyLitresPerPerson:
+              type: number
+            adjustedDailyTotalLitres:
+              type: number
+            annualHouseholdKL:
+              type: number
+            contingencyBufferKL:
+              type: number
+            totalHouseholdAllocationKL:
+              type: number
+            catchmentSurplusOrDeficitKL:
+              type: number
+            assessment:
+              type: string
+        TankConfiguration:
+          type: object
+          description: Recommended tank sizes and placement strategy
+          properties:
+            designDryDays:
+              type: number
+            recommendedTotalCapacityKL:
+              type: number
+            tanks:
+              type: array
+              items:
+                type: object
+                properties:
+                  label:
+                    type: string
+                  capacityKL:
+                    type: number
+                  purpose:
+                    type: string
+                  material:
+                    type: string
+                  placementNote:
+                    type: string
+            designRationale:
+              type: string
+        FoodProductionBudget:
+          type: object
+          description: Max sustainable food production area from surplus water
+          properties:
+            availableIrrigationKL:
+              type: number
+            vegetableBedIrrigationLPerM2:
+              type: number
+            orchardIrrigationLPerM2:
+              type: number
+            maxVegetableBedM2:
+              type: number
+            maxOrchardM2:
+              type: number
+            recommendedSplit:
+              type: object
+              properties:
+                vegetablesM2:
+                  type: number
+                orchardM2:
+                  type: number
+                totalM2:
+                  type: number
+                totalHa:
+                  type: number
+            irrigationEfficiencyNote:
+              type: string
+        RiskAssessment:
+          type: object
+          description: Drought scenario analysis
+          properties:
+            reducedRainfallMm:
+              type: number
+            reducedCatchmentKL:
+              type: number
+            systemDeficitKL:
+              type: number
+              nullable: true
+            droughtRiskLevel:
+              type: string
+            contingencyMeasures:
+              type: array
+              items:
+                type: string
+
     ClientBrief:
       type: object
       required: [id, propertyId, machineryWidthM, utilitiesOverheadPower, utilitiesBuriedPipes, utilitiesLegalEasements, utilitiesActiveWell, challengeSevereErosion, challengeWinterFlooding, challengeHighWind, challengeWildlifePressure, createdAt, updatedAt]
@@ -1216,6 +1339,9 @@ components:
           type: boolean
         primaryGoal:
           type: string
+          nullable: true
+        householdSize:
+          type: integer
           nullable: true
         maintenanceCapacity:
           type: string
@@ -1309,6 +1435,9 @@ components:
           type: boolean
         primaryGoal:
           type: string
+          nullable: true
+        householdSize:
+          type: integer
           nullable: true
         maintenanceCapacity:
           type: string

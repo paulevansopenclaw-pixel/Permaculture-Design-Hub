@@ -180,6 +180,83 @@ export interface SiteAnalysisReport {
   rawJson: string;
 }
 
+/**
+ * Household water demand with 20% buffer
+ */
+export type WaterBudgetReportHouseholdBudget = {
+  adjustedDailyLitresPerPerson?: number;
+  adjustedDailyTotalLitres?: number;
+  annualHouseholdKL?: number;
+  contingencyBufferKL?: number;
+  totalHouseholdAllocationKL?: number;
+  catchmentSurplusOrDeficitKL?: number;
+  assessment?: string;
+};
+
+export type WaterBudgetReportTankConfigurationTanksItem = {
+  label?: string;
+  capacityKL?: number;
+  purpose?: string;
+  material?: string;
+  placementNote?: string;
+};
+
+/**
+ * Recommended tank sizes and placement strategy
+ */
+export type WaterBudgetReportTankConfiguration = {
+  designDryDays?: number;
+  recommendedTotalCapacityKL?: number;
+  tanks?: WaterBudgetReportTankConfigurationTanksItem[];
+  designRationale?: string;
+};
+
+export type WaterBudgetReportFoodProductionBudgetRecommendedSplit = {
+  vegetablesM2?: number;
+  orchardM2?: number;
+  totalM2?: number;
+  totalHa?: number;
+};
+
+/**
+ * Max sustainable food production area from surplus water
+ */
+export type WaterBudgetReportFoodProductionBudget = {
+  availableIrrigationKL?: number;
+  vegetableBedIrrigationLPerM2?: number;
+  orchardIrrigationLPerM2?: number;
+  maxVegetableBedM2?: number;
+  maxOrchardM2?: number;
+  recommendedSplit?: WaterBudgetReportFoodProductionBudgetRecommendedSplit;
+  irrigationEfficiencyNote?: string;
+};
+
+/**
+ * Drought scenario analysis
+ */
+export type WaterBudgetReportRiskAssessment = {
+  reducedRainfallMm?: number;
+  reducedCatchmentKL?: number;
+  systemDeficitKL?: number | null;
+  droughtRiskLevel?: string;
+  contingencyMeasures?: string[];
+};
+
+export interface WaterBudgetReport {
+  propertyId: string;
+  roofAreaM2: number;
+  annualCatchmentKL: number;
+  occupants: number;
+  /** Household water demand with 20% buffer */
+  HouseholdBudget?: WaterBudgetReportHouseholdBudget;
+  /** Recommended tank sizes and placement strategy */
+  TankConfiguration?: WaterBudgetReportTankConfiguration;
+  /** Max sustainable food production area from surplus water */
+  FoodProductionBudget?: WaterBudgetReportFoodProductionBudget;
+  /** Drought scenario analysis */
+  RiskAssessment?: WaterBudgetReportRiskAssessment;
+}
+
 export interface ClientBrief {
   id: string;
   propertyId: string;
@@ -211,6 +288,7 @@ export interface ClientBrief {
   challengeHighWind: boolean;
   challengeWildlifePressure: boolean;
   primaryGoal?: string | null;
+  householdSize?: number | null;
   maintenanceCapacity?: string | null;
   aiAnalysisReport?: string | null;
   aiAnalysisGeneratedAt?: string | null;
@@ -247,6 +325,7 @@ export interface ClientBriefInput {
   challengeHighWind: boolean;
   challengeWildlifePressure: boolean;
   primaryGoal?: string | null;
+  householdSize?: number | null;
   maintenanceCapacity?: string | null;
 }
 

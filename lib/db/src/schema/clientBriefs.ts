@@ -29,7 +29,8 @@ export const clientBriefsTable = pgTable("client_briefs", {
   soilPH: real("soil_ph"),
   soilOrganicCarbonGkg: real("soil_organic_carbon_gkg"),
   soilTextureClass: text("soil_texture_class"),
-  // Step 2 — Machinery & Infrastructure
+  // Step 2 — Household & Machinery
+  householdSize: integer("household_size"),
   machineryWidthM: real("machinery_width_m").notNull().default(2.0),
   utilitiesOverheadPower: boolean("utilities_overhead_power").notNull().default(false),
   utilitiesBuriedPipes: boolean("utilities_buried_pipes").notNull().default(false),

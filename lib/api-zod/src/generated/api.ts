@@ -300,6 +300,63 @@ export const AnalyzeSiteResponse = zod.object({
 
 
 /**
+ * @summary Run AI water budget — household needs, tank sizing, and max food production area
+ */
+export const RunWaterBudgetParams = zod.object({
+  "propertyId": zod.coerce.string()
+})
+
+export const RunWaterBudgetResponse = zod.object({
+  "propertyId": zod.string(),
+  "roofAreaM2": zod.number(),
+  "annualCatchmentKL": zod.number(),
+  "occupants": zod.number(),
+  "HouseholdBudget": zod.object({
+  "adjustedDailyLitresPerPerson": zod.number().optional(),
+  "adjustedDailyTotalLitres": zod.number().optional(),
+  "annualHouseholdKL": zod.number().optional(),
+  "contingencyBufferKL": zod.number().optional(),
+  "totalHouseholdAllocationKL": zod.number().optional(),
+  "catchmentSurplusOrDeficitKL": zod.number().optional(),
+  "assessment": zod.string().optional()
+}).optional().describe('Household water demand with 20% buffer'),
+  "TankConfiguration": zod.object({
+  "designDryDays": zod.number().optional(),
+  "recommendedTotalCapacityKL": zod.number().optional(),
+  "tanks": zod.array(zod.object({
+  "label": zod.string().optional(),
+  "capacityKL": zod.number().optional(),
+  "purpose": zod.string().optional(),
+  "material": zod.string().optional(),
+  "placementNote": zod.string().optional()
+})).optional(),
+  "designRationale": zod.string().optional()
+}).optional().describe('Recommended tank sizes and placement strategy'),
+  "FoodProductionBudget": zod.object({
+  "availableIrrigationKL": zod.number().optional(),
+  "vegetableBedIrrigationLPerM2": zod.number().optional(),
+  "orchardIrrigationLPerM2": zod.number().optional(),
+  "maxVegetableBedM2": zod.number().optional(),
+  "maxOrchardM2": zod.number().optional(),
+  "recommendedSplit": zod.object({
+  "vegetablesM2": zod.number().optional(),
+  "orchardM2": zod.number().optional(),
+  "totalM2": zod.number().optional(),
+  "totalHa": zod.number().optional()
+}).optional(),
+  "irrigationEfficiencyNote": zod.string().optional()
+}).optional().describe('Max sustainable food production area from surplus water'),
+  "RiskAssessment": zod.object({
+  "reducedRainfallMm": zod.number().optional(),
+  "reducedCatchmentKL": zod.number().optional(),
+  "systemDeficitKL": zod.number().nullish(),
+  "droughtRiskLevel": zod.string().optional(),
+  "contingencyMeasures": zod.array(zod.string()).optional()
+}).optional().describe('Drought scenario analysis')
+})
+
+
+/**
  * @summary Get the client brief / site survey for a property
  */
 export const GetClientBriefParams = zod.object({
@@ -337,6 +394,7 @@ export const GetClientBriefResponse = zod.object({
   "challengeHighWind": zod.boolean(),
   "challengeWildlifePressure": zod.boolean(),
   "primaryGoal": zod.string().nullish(),
+  "householdSize": zod.number().nullish(),
   "maintenanceCapacity": zod.string().nullish(),
   "aiAnalysisReport": zod.string().nullish(),
   "aiAnalysisGeneratedAt": zod.string().nullish(),
@@ -381,6 +439,7 @@ export const UpsertClientBriefBody = zod.object({
   "challengeHighWind": zod.boolean(),
   "challengeWildlifePressure": zod.boolean(),
   "primaryGoal": zod.string().nullish(),
+  "householdSize": zod.number().nullish(),
   "maintenanceCapacity": zod.string().nullish()
 })
 
@@ -415,6 +474,7 @@ export const UpsertClientBriefResponse = zod.object({
   "challengeHighWind": zod.boolean(),
   "challengeWildlifePressure": zod.boolean(),
   "primaryGoal": zod.string().nullish(),
+  "householdSize": zod.number().nullish(),
   "maintenanceCapacity": zod.string().nullish(),
   "aiAnalysisReport": zod.string().nullish(),
   "aiAnalysisGeneratedAt": zod.string().nullish(),

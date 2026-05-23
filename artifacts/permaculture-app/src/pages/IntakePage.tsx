@@ -75,6 +75,7 @@ export default function IntakePage() {
           challengeWinterFlooding: brief?.challengeWinterFlooding ?? false,
           challengeHighWind: brief?.challengeHighWind ?? false,
           challengeWildlifePressure: brief?.challengeWildlifePressure ?? false,
+          householdSize: brief?.householdSize ?? null,
           primaryGoal: brief?.primaryGoal ?? null,
           maintenanceCapacity: brief?.maintenanceCapacity ?? null,
         },
@@ -294,8 +295,9 @@ export default function IntakePage() {
                 </BriefCard>
               )}
 
-              {(brief.primaryGoal || brief.maintenanceCapacity) && (
+              {(brief.primaryGoal || brief.maintenanceCapacity || brief.householdSize != null) && (
                 <BriefCard heading="🎯 Design Goals">
+                  {brief.householdSize != null && <BriefRow label="Occupants" value={`${brief.householdSize} people`} />}
                   {brief.primaryGoal && <BriefRow label="Primary goal" value={brief.primaryGoal} />}
                   {brief.maintenanceCapacity && <BriefRow label="Maintenance" value={brief.maintenanceCapacity} />}
                 </BriefCard>

@@ -49,6 +49,7 @@ import type {
   Structure,
   StructureInput,
   StructureUpdate,
+  WaterBudgetReport,
   Zone,
   ZoneInput
 } from './api.schemas';
@@ -1244,6 +1245,76 @@ export const useAnalyzeSite = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getAnalyzeSiteMutationOptions(options));
+    }
+
+export const getRunWaterBudgetUrl = (propertyId: string,) => {
+
+
+
+
+  return `/api/properties/${propertyId}/water-budget`
+}
+
+/**
+ * @summary Run AI water budget — household needs, tank sizing, and max food production area
+ */
+export const runWaterBudget = async (propertyId: string, options?: RequestInit): Promise<WaterBudgetReport> => {
+
+  return customFetch<WaterBudgetReport>(getRunWaterBudgetUrl(propertyId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getRunWaterBudgetMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof runWaterBudget>>, TError,{propertyId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof runWaterBudget>>, TError,{propertyId: string}, TContext> => {
+
+const mutationKey = ['runWaterBudget'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof runWaterBudget>>, {propertyId: string}> = (props) => {
+          const {propertyId} = props ?? {};
+
+          return  runWaterBudget(propertyId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RunWaterBudgetMutationResult = NonNullable<Awaited<ReturnType<typeof runWaterBudget>>>
+
+    export type RunWaterBudgetMutationError = ErrorType<void>
+
+    /**
+ * @summary Run AI water budget — household needs, tank sizing, and max food production area
+ */
+export const useRunWaterBudget = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof runWaterBudget>>, TError,{propertyId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof runWaterBudget>>,
+        TError,
+        {propertyId: string},
+        TContext
+      > => {
+      return useMutation(getRunWaterBudgetMutationOptions(options));
     }
 
 export const getGetClientBriefUrl = (propertyId: string,) => {

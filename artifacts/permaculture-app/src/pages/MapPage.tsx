@@ -49,6 +49,8 @@ import {
   getListSensoryVectorsQueryKey,
   useGetClientBrief,
   getGetClientBriefQueryKey,
+  useRunWaterBudget,
+  type WaterBudgetReport,
 } from "@workspace/api-client-react";
 import { useAppStore, type Role } from "@/store/useAppStore";
 import { generateContours } from "@/lib/contourEngine";
@@ -420,6 +422,9 @@ export default function MapPage() {
   const [geoImportError, setGeoImportError] = useState<string | null>(null);
   const [isBoundaryDrawing, setIsBoundaryDrawing] = useState(false);
   const [showKeylineModal, setShowKeylineModal] = useState(false);
+  const [waterBudget, setWaterBudget] = useState<WaterBudgetReport | null>(null);
+  const [isRunningWaterBudget, setIsRunningWaterBudget] = useState(false);
+  const [waterBudgetError, setWaterBudgetError] = useState<string | null>(null);
   const overpassPreview = overpassCandidates[overpassSelectedIdx] ?? null;
 
   const { data: properties = [] } = useListProperties();
@@ -508,6 +513,7 @@ export default function MapPage() {
   });
   const createSensoryVector = useCreateSensoryVector();
   const deleteSensoryVector = useDeleteSensoryVector();
+  const runWaterBudgetMutation = useRunWaterBudget();
 
   // ─── FETCH TOKEN ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -1907,6 +1913,23 @@ export default function MapPage() {
     ].filter(Boolean) as L.Layer[];
     allLayers.forEach((l) => { if (showWater) { if (!map.hasLayer(l)) map.addLayer(l); } else { if (map.hasLayer(l)) map.removeLayer(l); } });
   }, [showWater, mapLoaded]);
+
+  // ─── RUN WATER BUDGET (AI) ────────────────────────────────────────────────
+  async function handleRunWaterBudget() {
+    if (!activePropertyId) return;
+    setIsRunningWaterBudget(true);
+    setWaterBudgetError(null);
+    try {
+      const result = await runWaterBudgetMutation.mutateAsync({ propertyId: activePropertyId });
+      setWaterBudget(result);
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error
+        ?? "Water budget analysis failed — please try again.";
+      setWaterBudgetError(msg);
+    } finally {
+      setIsRunningWaterBudget(false);
+    }
+  }
 
   // ─── RUN KEYLINE ANALYSIS ─────────────────────────────────────────────────
   function handleRunWaterAnalysis() {
@@ -4029,6 +4052,212 @@ export default function MapPage() {
                   </div>
                 );
               })()}
+
+              {/* ── Water Budget AI Analysis ──────────────────────── */}
+              {structures.some((s) => s.footprintGeojson) && (
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "#a78bfa" }}>
+                      Water Budget Analysis
+                    </div>
+                    {waterBudget && !isRunningWaterBudget && (
+                      <button
+                        onClick={handleRunWaterBudget}
+                        className="text-[9px] px-2 py-1 rounded"
+                        style={{ background: "hsl(270,25%,14%)", border: "1px solid hsl(270,40%,25%)", color: "#a78bfa" }}
+                      >
+                        ⟳ Re-run
+                      </button>
+                    )}
+                  </div>
+
+                  {!waterBudget && !isRunningWaterBudget && (
+                    <div className="rounded-xl p-4 space-y-3" style={{ background: "hsl(270, 25%, 8%)", border: "1px solid hsl(270, 35%, 18%)" }}>
+                      <p className="text-[11px]" style={{ color: "hsl(42,15%,50%)" }}>
+                        Run an AI analysis to calculate household water needs with a 20% safety buffer, recommended tank sizes, and the maximum food production area sustainable from your roof catchment.
+                      </p>
+                      <button
+                        onClick={handleRunWaterBudget}
+                        className="w-full py-2.5 rounded-xl text-[12px] font-semibold flex items-center justify-center gap-2 transition-all"
+                        style={{
+                          background: "linear-gradient(135deg, hsl(270,40%,14%), hsl(270,45%,20%))",
+                          border: "1px solid hsl(270,45%,30%)",
+                          color: "#c4b5fd",
+                          boxShadow: "0 4px 18px rgba(139,92,246,0.25)",
+                        }}
+                      >
+                        <span className="text-base">🌊</span> Run Water Budget Analysis
+                      </button>
+                      {waterBudgetError && (
+                        <p className="text-[10px] text-center" style={{ color: "#f87171" }}>{waterBudgetError}</p>
+                      )}
+                    </div>
+                  )}
+
+                  {isRunningWaterBudget && (
+                    <div className="rounded-xl p-6 flex flex-col items-center gap-3" style={{ background: "hsl(270, 25%, 8%)", border: "1px solid hsl(270, 35%, 18%)" }}>
+                      <div className="w-5 h-5 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: "#a78bfa" }} />
+                      <p className="text-[11px]" style={{ color: "hsl(42,15%,55%)" }}>Calculating water budget…</p>
+                    </div>
+                  )}
+
+                  {waterBudget && !isRunningWaterBudget && (() => {
+                    const hb = waterBudget.HouseholdBudget as Record<string, unknown> | undefined;
+                    const tc = waterBudget.TankConfiguration as Record<string, unknown> | undefined;
+                    const fp = waterBudget.FoodProductionBudget as Record<string, unknown> | undefined;
+                    const ra = waterBudget.RiskAssessment as Record<string, unknown> | undefined;
+                    const riskColor: Record<string, string> = { Low: "#4ade80", Moderate: "#fbbf24", High: "#f97316", Critical: "#ef4444" };
+                    const risk = ra?.droughtRiskLevel as string | undefined;
+
+                    return (
+                      <div className="space-y-3">
+
+                        {/* Household Budget */}
+                        {hb && (
+                          <div className="rounded-xl overflow-hidden" style={{ background: "hsl(270,25%,9%)", border: "1px solid hsl(270,35%,18%)" }}>
+                            <div className="px-3 py-2 flex items-center gap-2" style={{ background: "hsl(270,28%,12%)", borderBottom: "1px solid hsl(270,30%,17%)" }}>
+                              <span className="text-sm">🏠</span>
+                              <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "#a78bfa" }}>Household Budget</span>
+                            </div>
+                            <div className="p-3 space-y-2">
+                              <div className="grid grid-cols-3 gap-1.5">
+                                {[
+                                  { label: "Daily/person", value: `${hb.adjustedDailyLitresPerPerson ?? 150} L` },
+                                  { label: "Annual need", value: `${hb.annualHouseholdKL ?? "—"} kL` },
+                                  { label: "Total reserve", value: `${hb.totalHouseholdAllocationKL ?? "—"} kL` },
+                                ].map((item) => (
+                                  <div key={item.label} className="rounded-lg p-2" style={{ background: "hsl(270,22%,12%)", border: "1px solid hsl(270,25%,18%)" }}>
+                                    <div className="text-[8px] uppercase tracking-widest mb-0.5" style={{ color: "#7c3aed" }}>{item.label}</div>
+                                    <div className="text-[11px] font-bold" style={{ color: "#e2d5b5" }}>{item.value}</div>
+                                  </div>
+                                ))}
+                              </div>
+                              <div className="rounded-lg px-2.5 py-2 flex items-center justify-between" style={{ background: "hsl(270,22%,12%)", border: "1px solid hsl(270,25%,18%)" }}>
+                                <span className="text-[9px] uppercase tracking-widest" style={{ color: "#7c3aed" }}>Catchment surplus</span>
+                                <span className="text-[12px] font-bold" style={{ color: (hb.catchmentSurplusOrDeficitKL as number) >= 0 ? "#4ade80" : "#f87171" }}>
+                                  {(hb.catchmentSurplusOrDeficitKL as number) >= 0 ? "+" : ""}{String(hb.catchmentSurplusOrDeficitKL ?? "—")} kL/yr
+                                </span>
+                              </div>
+                              {!!hb.assessment && (
+                                <p className="text-[10px] leading-relaxed" style={{ color: "hsl(42,15%,50%)" }}>{String(hb.assessment)}</p>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Tank Configuration */}
+                        {tc && (
+                          <div className="rounded-xl overflow-hidden" style={{ background: "hsl(198,28%,9%)", border: "1px solid hsl(198,40%,18%)" }}>
+                            <div className="px-3 py-2 flex items-center justify-between" style={{ background: "hsl(198,30%,12%)", borderBottom: "1px solid hsl(198,35%,17%)" }}>
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm">🛢</span>
+                                <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "#38bdf8" }}>Tank Configuration</span>
+                              </div>
+                              <span className="text-[10px] font-semibold" style={{ color: "#67e8f9" }}>
+                                {String(tc.recommendedTotalCapacityKL ?? "—")} kL total · {String(tc.designDryDays ?? "—")} day design
+                              </span>
+                            </div>
+                            <div className="p-3 space-y-2">
+                              {(tc.tanks as Array<Record<string, unknown>> | undefined)?.map((tank, i) => (
+                                <div key={i} className="rounded-lg p-2.5 space-y-0.5" style={{ background: "hsl(198,25%,12%)", border: "1px solid hsl(198,35%,18%)" }}>
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-[11px] font-semibold" style={{ color: "#38bdf8" }}>{tank.label as string}</span>
+                                    <span className="text-[12px] font-bold" style={{ color: "#67e8f9" }}>{tank.capacityKL as number} kL</span>
+                                  </div>
+                                  <div className="text-[9px]" style={{ color: "hsl(42,15%,50%)" }}>{String(tank.material ?? "")} · {String(tank.purpose ?? "")}</div>
+                                  {!!tank.placementNote && <div className="text-[9px]" style={{ color: "hsl(198,40%,55%)" }}>{String(tank.placementNote)}</div>}
+                                </div>
+                              ))}
+                              {!!tc.designRationale && (
+                                <p className="text-[10px] leading-relaxed" style={{ color: "hsl(42,15%,50%)" }}>{String(tc.designRationale)}</p>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Food Production Budget */}
+                        {fp && (
+                          <div className="rounded-xl overflow-hidden" style={{ background: "hsl(142,28%,8%)", border: "1px solid hsl(142,40%,16%)" }}>
+                            <div className="px-3 py-2 flex items-center justify-between" style={{ background: "hsl(142,30%,11%)", borderBottom: "1px solid hsl(142,35%,15%)" }}>
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm">🌿</span>
+                                <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "#4ade80" }}>Food Production</span>
+                              </div>
+                            </div>
+                            <div className="p-3 space-y-2">
+                              <div className="grid grid-cols-2 gap-1.5">
+                                {[
+                                  { label: "Irrigation available", value: `${fp.availableIrrigationKL ?? "—"} kL/yr` },
+                                  { label: "Max combined area", value: `${(fp.recommendedSplit as Record<string,unknown>)?.totalM2 ?? fp.maxVegetableBedM2 ?? "—"} m²` },
+                                  { label: "Vegetable beds", value: `${(fp.recommendedSplit as Record<string,unknown>)?.vegetablesM2 ?? fp.maxVegetableBedM2 ?? "—"} m²` },
+                                  { label: "Food forest/orchard", value: `${(fp.recommendedSplit as Record<string,unknown>)?.orchardM2 ?? fp.maxOrchardM2 ?? "—"} m²` },
+                                ].map((item) => (
+                                  <div key={item.label} className="rounded-lg p-2" style={{ background: "hsl(142,22%,11%)", border: "1px solid hsl(142,25%,16%)" }}>
+                                    <div className="text-[8px] uppercase tracking-widest mb-0.5" style={{ color: "#15803d" }}>{item.label}</div>
+                                    <div className="text-[11px] font-bold" style={{ color: "#e2d5b5" }}>{item.value}</div>
+                                  </div>
+                                ))}
+                              </div>
+                              {(fp.recommendedSplit as Record<string,unknown>)?.totalHa != null && (
+                                <div className="rounded-lg p-2 text-center" style={{ background: "hsl(142,25%,11%)", border: "1px solid #15803d44" }}>
+                                  <span className="text-[9px] uppercase tracking-widest" style={{ color: "#15803d" }}>Total recommended area </span>
+                                  <span className="text-[13px] font-bold ml-1" style={{ color: "#4ade80" }}>
+                                    {((fp.recommendedSplit as Record<string,unknown>).totalHa as number).toFixed(2)} ha
+                                  </span>
+                                </div>
+                              )}
+                              {!!fp.irrigationEfficiencyNote && (
+                                <p className="text-[10px] leading-relaxed" style={{ color: "hsl(42,15%,50%)" }}>{String(fp.irrigationEfficiencyNote)}</p>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Risk Assessment */}
+                        {ra && (
+                          <div className="rounded-xl overflow-hidden" style={{ background: "hsl(30,25%,9%)", border: "1px solid hsl(30,30%,18%)" }}>
+                            <div className="px-3 py-2 flex items-center justify-between" style={{ background: "hsl(30,28%,12%)", borderBottom: "1px solid hsl(30,28%,17%)" }}>
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm">⚠️</span>
+                                <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "#fb923c" }}>Drought Risk</span>
+                              </div>
+                              {risk && (
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: "hsl(30,30%,14%)", color: riskColor[risk] ?? "#e2d5b5" }}>
+                                  {risk}
+                                </span>
+                              )}
+                            </div>
+                            <div className="p-3 space-y-2">
+                              <div className="grid grid-cols-2 gap-1.5">
+                                <div className="rounded-lg p-2" style={{ background: "hsl(30,22%,12%)", border: "1px solid hsl(30,25%,18%)" }}>
+                                  <div className="text-[8px] uppercase tracking-widest mb-0.5" style={{ color: "#92400e" }}>-20% rainfall</div>
+                                  <div className="text-[11px] font-bold" style={{ color: "#e2d5b5" }}>{String(ra.reducedRainfallMm ?? "—")} mm/yr</div>
+                                </div>
+                                <div className="rounded-lg p-2" style={{ background: "hsl(30,22%,12%)", border: "1px solid hsl(30,25%,18%)" }}>
+                                  <div className="text-[8px] uppercase tracking-widest mb-0.5" style={{ color: "#92400e" }}>Reduced catchment</div>
+                                  <div className="text-[11px] font-bold" style={{ color: "#e2d5b5" }}>{String(ra.reducedCatchmentKL ?? "—")} kL</div>
+                                </div>
+                              </div>
+                              {(ra.contingencyMeasures as string[] | undefined)?.length ? (
+                                <div className="space-y-1">
+                                  <div className="text-[9px] uppercase tracking-widest font-semibold" style={{ color: "hsl(30,30%,45%)" }}>Contingency measures</div>
+                                  {(ra.contingencyMeasures as string[]).map((m, i) => (
+                                    <div key={i} className="flex gap-2 text-[10px]" style={{ color: "hsl(42,15%,55%)" }}>
+                                      <span style={{ color: "#fb923c", flexShrink: 0 }}>›</span>
+                                      <span>{m}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : null}
+                            </div>
+                          </div>
+                        )}
+
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
 
               {/* Saved swales summary */}
               {designedSwales.length > 0 && (

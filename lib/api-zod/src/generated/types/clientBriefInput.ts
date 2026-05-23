@@ -35,5 +35,6 @@ export interface ClientBriefInput {
   challengeHighWind: boolean;
   challengeWildlifePressure: boolean;
   primaryGoal?: string | null;
+  householdSize?: number | null;
   maintenanceCapacity?: string | null;
 }

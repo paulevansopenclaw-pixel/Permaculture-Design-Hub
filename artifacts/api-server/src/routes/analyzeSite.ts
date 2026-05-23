@@ -343,6 +343,7 @@ const analyzeRateLimit = rateLimit({
   max: 5,
   standardHeaders: true,
   legacyHeaders: false,
+  validate: { xForwardedForHeader: false },
   message: { error: "Too many analysis requests — please wait before running another analysis." },
 });
 

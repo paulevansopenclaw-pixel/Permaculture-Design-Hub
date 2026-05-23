@@ -37,6 +37,7 @@ export interface ClientBrief {
   challengeHighWind: boolean;
   challengeWildlifePressure: boolean;
   primaryGoal?: string | null;
+  householdSize?: number | null;
   maintenanceCapacity?: string | null;
   aiAnalysisReport?: string | null;
   aiAnalysisGeneratedAt?: string | null;

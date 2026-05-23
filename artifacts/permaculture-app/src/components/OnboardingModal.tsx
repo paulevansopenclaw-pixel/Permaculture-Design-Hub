@@ -136,7 +136,8 @@ export function OnboardingModal({ propertyId, propertyName, boundaryGeojson, onC
   const [baselineLoading, setBaselineLoading] = useState(true);
   const [baselineError, setBaselineError] = useState<string | null>(null);
 
-  // Step 2 — Machinery & Infrastructure
+  // Step 2 — Household, Machinery & Infrastructure
+  const [householdSize, setHouseholdSize] = useState(4);
   const [machineryWidthM, setMachineryWidthM] = useState(2.0);
   const [utilities, setUtilities] = useState({
     overheadPower: false,
@@ -214,7 +215,8 @@ export function OnboardingModal({ propertyId, propertyName, boundaryGeojson, onC
           soilPH: baseline?.soilPH ?? null,
           soilOrganicCarbonGkg: baseline?.soilOrganicCarbonGkg ?? null,
           soilTextureClass: baseline?.soilTextureClass ?? null,
-          // Infrastructure
+          // Household & Infrastructure
+          householdSize,
           machineryWidthM,
           utilitiesOverheadPower: utilities.overheadPower,
           utilitiesBuriedPipes: utilities.buriedPipes,
@@ -347,6 +349,33 @@ export function OnboardingModal({ propertyId, propertyName, boundaryGeojson, onC
       case 1:
         return (
           <div className="space-y-4">
+            <div>
+              <label className="text-[11px] block mb-1.5 font-medium" style={{ color: "hsl(42, 20%, 65%)" }}>
+                Number of household occupants
+              </label>
+              <div className="flex items-center gap-3">
+                <input
+                  type="number"
+                  min={1}
+                  max={50}
+                  step={1}
+                  value={householdSize}
+                  onChange={(e) => setHouseholdSize(Math.max(1, parseInt(e.target.value) || 1))}
+                  className="flex-1 rounded px-3 py-2.5 text-[13px]"
+                  style={{
+                    background: "hsl(103, 20%, 12%)",
+                    border: "1px solid hsl(103, 20%, 22%)",
+                    color: "hsl(42, 28%, 88%)",
+                    outline: "none",
+                  }}
+                />
+                <span className="text-[12px] shrink-0" style={{ color: "hsl(42, 15%, 55%)" }}>people</span>
+              </div>
+              <p className="text-[10px] mt-1" style={{ color: "hsl(42, 15%, 45%)" }}>
+                Used to calculate household water demand and size tank systems.
+              </p>
+            </div>
+
             <div>
               <label className="text-[11px] block mb-1.5 font-medium" style={{ color: "hsl(42, 20%, 65%)" }}>
                 Width of largest access machinery / tractor (meters)

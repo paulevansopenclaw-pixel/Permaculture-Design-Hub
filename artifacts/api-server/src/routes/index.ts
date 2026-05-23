@@ -11,6 +11,7 @@ import pathwaysRouter from "./pathways";
 import zonesRouter from "./zones";
 import configRouter from "./config";
 import analyzeSiteRouter from "./analyzeSite";
+import waterBudgetRouter from "./waterBudget";
 import sensoryVectorsRouter from "./sensoryVectors";
 
 const router: IRouter = Router();
@@ -28,5 +29,6 @@ router.use(pathwaysRouter);
 router.use(zonesRouter);
 router.use(sensoryVectorsRouter);
 router.use(analyzeSiteRouter);
+router.use(waterBudgetRouter);
 
 export default router;
