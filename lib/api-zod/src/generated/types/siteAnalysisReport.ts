@@ -5,6 +5,7 @@
  * Collaborative Permaculture Design API
  * OpenAPI spec version: 0.1.0
  */
+import type { SiteAnalysisReportDesignRecommendations } from './siteAnalysisReportDesignRecommendations';
 import type { SiteAnalysisReportPatternStrategy } from './siteAnalysisReportPatternStrategy';
 
 export interface SiteAnalysisReport {
@@ -21,6 +22,8 @@ export interface SiteAnalysisReport {
   InfrastructureCritique?: unknown;
   /** Design from patterns to details — recommended primary spatial pattern for this site */
   PatternStrategy?: SiteAnalysisReportPatternStrategy;
+  /** Final compiled design — plant palette, design elements, and implementation phases synthesised from all site data */
+  DesignRecommendations?: SiteAnalysisReportDesignRecommendations;
   /** Whether climate data was fetched live or failed */
   climateSource?: string;
   generatedAt: string;

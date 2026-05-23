@@ -174,6 +174,51 @@ export type SiteAnalysisReportPatternStrategy = {
   application?: string;
 };
 
+export type SiteAnalysisReportDesignRecommendationsPlantsItem = {
+  name?: string;
+  latinName?: string;
+  /** Canopy | Understory | Shrub | Herbaceous | Ground Cover | Vine | Root */
+  layer?: string;
+  /** Primary function — food, nitrogen-fix, windbreak, medicine, habitat, etc. */
+  purpose?: string;
+  /** Permaculture zone placement e.g. Zone 1–2 */
+  zones?: string;
+  /** Planting notes, spacing, climate caveats */
+  notes?: string;
+};
+
+export type SiteAnalysisReportDesignRecommendationsDesignElementsItem = {
+  /** e.g. Swale, Dam, Windbreak, Keyhole Bed, Compost System, Greenhouse, Chicken Tractor Circuit */
+  type?: string;
+  name?: string;
+  description?: string;
+  rationale?: string;
+  /** Cardinal direction, zone, or relation to existing structures */
+  placement?: string;
+  /** High | Medium | Low */
+  priority?: string;
+};
+
+export type SiteAnalysisReportDesignRecommendationsImplementationPhasesItem = {
+  phase?: number;
+  title?: string;
+  /** e.g. Month 1–3 */
+  duration?: string;
+  elements?: string[];
+  rationale?: string;
+};
+
+/**
+ * Final compiled design — plant palette, design elements, and implementation phases synthesised from all site data
+ */
+export type SiteAnalysisReportDesignRecommendations = {
+  /** Overall planting philosophy and layering strategy for this site */
+  plantingPrinciples?: string;
+  plants?: SiteAnalysisReportDesignRecommendationsPlantsItem[];
+  designElements?: SiteAnalysisReportDesignRecommendationsDesignElementsItem[];
+  implementationPhases?: SiteAnalysisReportDesignRecommendationsImplementationPhasesItem[];
+};
+
 export interface SiteAnalysisReport {
   propertyId: string;
   /** Water catchment, tank sizing, and swale/drainage placement */
@@ -188,6 +233,8 @@ export interface SiteAnalysisReport {
   InfrastructureCritique?: unknown;
   /** Design from patterns to details — recommended primary spatial pattern for this site */
   PatternStrategy?: SiteAnalysisReportPatternStrategy;
+  /** Final compiled design — plant palette, design elements, and implementation phases synthesised from all site data */
+  DesignRecommendations?: SiteAnalysisReportDesignRecommendations;
   /** Whether climate data was fetched live or failed */
   climateSource?: string;
   generatedAt: string;

@@ -337,6 +337,11 @@ BASED ON ALL OF THE ABOVE, RETURN A JSON OBJECT WITH THE EXACT FOLLOWING STRUCTU
    - "recommendedPattern": The name of the pattern — choose from or adapt: Fibonacci Spiral, Keyhole, Branching Net-and-Pan, Wind Sector Wedge, Mandala Grid, Broadacre Keyline, Sector Radial, Swale Contour Cascade. Select the one that is most physically appropriate for this site's rainfall, slope, and wind data.
    - "rationale": Why nature uses this shape or flow form in similar environments. Explain the physical or biological principle behind it (e.g., Fibonacci optimises light interception; Net-and-Pan maximises infiltration on flat clay soils). Reference this site's actual climate and soil data. 2–3 sentences.
    - "application": Concrete, site-specific instructions for physically implementing this pattern. Reference cardinal directions, estimated dimensions in metres, and how it integrates with the existing swales, structures, or zone layout already described. 3–4 sentences.
+7. "DesignRecommendations": A final compiled design output synthesising ALL of the above analysis into a deployable plant palette and design element list. Use the site's actual region, climate data, soil type, pH, challenges, and goals. Do NOT use generic plants — every species must be suitable for this hardiness zone and climate. This key must contain exactly four sub-keys:
+   - "plantingPrinciples": A 2–3 sentence summary of the overall planting philosophy and layering strategy appropriate to this site's climate, rainfall, and soil.
+   - "plants": An array of 15–25 plant objects, each with: "name" (common name), "latinName" (binomial), "layer" (one of: Canopy, Understory, Shrub, Herbaceous, Ground Cover, Vine, Root), "purpose" (primary function: food/calories, nitrogen-fixation, windbreak, medicine, habitat corridor, erosion control, etc.), "zones" (permaculture zone placement e.g. "Zone 1–2"), "notes" (spacing, planting time, any site-specific caveats). Cover all seven canopy layers. Include caloric staples, nitrogen-fixers, dynamic accumulators, windbreak species, and at least 3 medicinal plants. Choose species native or well-adapted to the property's geographic region.
+   - "designElements": An array of 8–12 design element objects, each with: "type" (e.g. Swale, Dam, Windbreak Belt, Keyhole Bed, Compost System, Greenhouse, Chicken Tractor Circuit, Food Forest Guild, Living Fence, Rainwater Tank), "name" (a short descriptive name), "description" (what it is and how it functions), "rationale" (why this element is critical for THIS site given its specific climate, soil, or challenges), "placement" (specific: cardinal direction, zone, or relationship to existing structures/swales from the Infrastructure data), "priority" (High, Medium, or Low — based on urgency and resilience impact).
+   - "implementationPhases": An array of 3–5 phase objects covering Year 1 through Year 3+, each with: "phase" (integer), "title" (e.g. "Foundation Earthworks"), "duration" (e.g. "Months 1–3"), "elements" (array of element names or plant groups to install in this phase), "rationale" (why this sequence — explain the dependency logic, e.g. water infrastructure before food forest).
 Ensure the response is raw, valid JSON only.`;
 }
 
@@ -416,10 +421,16 @@ router.post(
     const result   = await model.generateContent(prompt);
     const rawJson  = result.response.text().trim();
 
+    interface PlantRec { name: string; latinName: string; layer: string; purpose: string; zones: string; notes: string; }
+    interface DesignElement { type: string; name: string; description: string; rationale: string; placement: string; priority: string; }
+    interface ImplementationPhase { phase: number; title: string; duration: string; elements: string[]; rationale: string; }
+    interface DesignRecs { plantingPrinciples: string; plants: PlantRec[]; designElements: DesignElement[]; implementationPhases: ImplementationPhase[]; }
+
     let parsed: {
       WaterStrategy: unknown; SunAndEnergy: unknown; LandAndBiodiversity: unknown;
       ClimateResilience: unknown; InfrastructureCritique: unknown;
       PatternStrategy: { recommendedPattern: string; rationale: string; application: string } | undefined;
+      DesignRecommendations: DesignRecs | undefined;
     };
     try {
       parsed = JSON.parse(rawJson);
@@ -437,12 +448,13 @@ router.post(
 
     res.json({
       propertyId,
-      WaterStrategy:          parsed.WaterStrategy          ?? "",
-      SunAndEnergy:           parsed.SunAndEnergy           ?? "",
-      LandAndBiodiversity:    parsed.LandAndBiodiversity    ?? "",
-      ClimateResilience:      parsed.ClimateResilience      ?? "",
-      InfrastructureCritique: parsed.InfrastructureCritique ?? "",
-      PatternStrategy:        parsed.PatternStrategy        ?? null,
+      WaterStrategy:            parsed.WaterStrategy            ?? "",
+      SunAndEnergy:             parsed.SunAndEnergy             ?? "",
+      LandAndBiodiversity:      parsed.LandAndBiodiversity      ?? "",
+      ClimateResilience:        parsed.ClimateResilience        ?? "",
+      InfrastructureCritique:   parsed.InfrastructureCritique   ?? "",
+      PatternStrategy:          parsed.PatternStrategy          ?? null,
+      DesignRecommendations:    parsed.DesignRecommendations    ?? null,
       generatedAt: generatedAt.toISOString(),
       climateSource: climate.source,
       rawJson,

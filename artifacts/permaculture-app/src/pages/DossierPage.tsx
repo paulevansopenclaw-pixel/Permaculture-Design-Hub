@@ -12,6 +12,12 @@ import type { SiteAnalysisReport } from "@workspace/api-client-react";
 import { useAppStore } from "@/store/useAppStore";
 import { StepNav } from "@/components/StepNav";
 
+// ─── Design Recommendations types ─────────────────────────────────────────────
+interface PlantRec { name: string; latinName: string; layer: string; purpose: string; zones: string; notes: string; }
+interface DesignElementRec { type: string; name: string; description: string; rationale: string; placement: string; priority: string; }
+interface ImplPhase { phase: number; title: string; duration: string; elements: string[]; rationale: string; }
+interface DesignRecsType { plantingPrinciples: string; plants: PlantRec[]; designElements: DesignElementRec[]; implementationPhases: ImplPhase[]; }
+
 // ─── Mapbox Static API helper ──────────────────────────────────────────────────
 function mapboxStaticUrl(
   boundaryGeojson: string | null | undefined,
@@ -821,6 +827,13 @@ export default function DossierPage() {
                 </>
               )}
 
+              {/* Design Recommendations — final page */}
+              <DocDesignRecommendations designRecs={
+                aiReport
+                  ? (aiReport as unknown as Record<string, unknown>)["DesignRecommendations"] as DesignRecsType | undefined
+                  : undefined
+              } />
+
               {/* Document footer */}
               <div className="border-t pt-6 flex items-center justify-between" style={{ borderColor: "#e5e7eb" }}>
                 <span className="text-[10px]" style={{ color: "#9ca3af" }}>
@@ -992,5 +1005,222 @@ function AiObjectDoc({ obj }: { obj: Record<string, unknown> | null | undefined 
         </div>
       ))}
     </div>
+  );
+}
+
+// ─── Layer colour coding ───────────────────────────────────────────────────────
+const LAYER_COLORS: Record<string, { bg: string; text: string; dot: string }> = {
+  Canopy:       { bg: "#052e16", text: "#bbf7d0", dot: "#22c55e" },
+  Understory:   { bg: "#14532d", text: "#86efac", dot: "#4ade80" },
+  Shrub:        { bg: "#166534", text: "#6ee7b7", dot: "#34d399" },
+  Herbaceous:   { bg: "#065f46", text: "#a7f3d0", dot: "#10b981" },
+  "Ground Cover":{ bg: "#047857", text: "#d1fae5", dot: "#6ee7b7" },
+  Vine:         { bg: "#1e3a5f", text: "#bfdbfe", dot: "#60a5fa" },
+  Root:         { bg: "#3b1f0f", text: "#fde68a", dot: "#f59e0b" },
+};
+const PRIORITY_COLORS: Record<string, { bg: string; text: string }> = {
+  High:   { bg: "#7f1d1d", text: "#fca5a5" },
+  Medium: { bg: "#78350f", text: "#fcd34d" },
+  Low:    { bg: "#1a3a1a", text: "#86efac" },
+};
+
+function DocDesignRecommendations({ designRecs }: { designRecs: DesignRecsType | null | undefined }) {
+  const hasPrinciples = !!designRecs?.plantingPrinciples;
+  const plants       = Array.isArray(designRecs?.plants)         ? designRecs!.plants         : [];
+  const elements     = Array.isArray(designRecs?.designElements) ? designRecs!.designElements : [];
+  const phases       = Array.isArray(designRecs?.implementationPhases) ? designRecs!.implementationPhases : [];
+
+  // Group plants by layer order
+  const LAYER_ORDER = ["Canopy","Understory","Shrub","Herbaceous","Ground Cover","Vine","Root"];
+  const grouped = LAYER_ORDER.reduce<Record<string, PlantRec[]>>((acc, l) => {
+    const m = plants.filter(p => p.layer === l);
+    if (m.length) acc[l] = m;
+    return acc;
+  }, {});
+  // Any unrecognised layers
+  plants.filter(p => !LAYER_ORDER.includes(p.layer)).forEach(p => {
+    grouped[p.layer] = [...(grouped[p.layer] ?? []), p];
+  });
+
+  return (
+    <section style={{ pageBreakBefore: "always" }}>
+      {/* Section heading */}
+      <h2
+        className="text-[10px] font-bold uppercase tracking-[0.15em] mb-4 pb-2 flex items-center gap-2"
+        style={{ color: "#166534", borderBottom: "2px solid #bbf7d0" }}
+      >
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2" style={{ flexShrink: 0 }}>
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </svg>
+        Final Design Recommendations
+      </h2>
+
+      {!designRecs ? (
+        <DocPlaceholder message="Run the AI resilience analysis in the War Room to generate the plant palette, design elements, and implementation plan for this property." />
+      ) : (
+        <div className="space-y-7">
+
+          {/* Planting principles */}
+          {hasPrinciples && (
+            <div
+              className="rounded-xl px-5 py-4"
+              style={{ background: "linear-gradient(135deg, #052e16, #064e3b)", border: "1px solid #166534" }}
+            >
+              <p className="text-[9px] font-bold uppercase tracking-widest mb-2" style={{ color: "#4ade80" }}>
+                Planting Philosophy
+              </p>
+              <p className="text-[12px] leading-relaxed" style={{ color: "#dcfce7" }}>
+                {designRecs.plantingPrinciples}
+              </p>
+            </div>
+          )}
+
+          {/* Plant palette */}
+          <div>
+            <h3 className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: "#166534" }}>
+              Plant Palette — {plants.length} species across {Object.keys(grouped).length} canopy layers
+            </h3>
+            {plants.length === 0 ? (
+              <DocPlaceholder message="No plant data generated yet." />
+            ) : (
+              <div className="space-y-3">
+                {Object.entries(grouped).map(([layer, layerPlants]) => {
+                  const colors = LAYER_COLORS[layer] ?? { bg: "#1f2937", text: "#e5e7eb", dot: "#9ca3af" };
+                  return (
+                    <div key={layer} className="rounded-lg overflow-hidden" style={{ border: `1px solid ${colors.dot}40` }}>
+                      {/* Layer header */}
+                      <div
+                        className="px-4 py-2 flex items-center gap-2"
+                        style={{ background: colors.bg }}
+                      >
+                        <div style={{ width: 8, height: 8, borderRadius: "50%", background: colors.dot, flexShrink: 0 }} />
+                        <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: colors.text }}>
+                          {layer} layer — {layerPlants.length} species
+                        </span>
+                      </div>
+                      {/* Plants table */}
+                      <table className="w-full" style={{ background: "#f9fafb", borderCollapse: "collapse" }}>
+                        <thead>
+                          <tr style={{ borderBottom: "1px solid #e5e7eb", background: "#f3f4f6" }}>
+                            {["Common name","Latin name","Purpose","Zone","Planting notes"].map(h => (
+                              <th key={h} className="px-3 py-1.5 text-left text-[8px] font-bold uppercase tracking-wider" style={{ color: "#6b7280" }}>{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {layerPlants.map((plant, i) => (
+                            <tr key={i} style={{ borderBottom: "1px solid #f3f4f6" }}>
+                              <td className="px-3 py-2 text-[11px] font-semibold" style={{ color: "#111827" }}>{plant.name}</td>
+                              <td className="px-3 py-2 text-[10px] italic" style={{ color: "#6b7280" }}>{plant.latinName}</td>
+                              <td className="px-3 py-2 text-[10px]" style={{ color: "#374151" }}>{plant.purpose}</td>
+                              <td className="px-3 py-2 text-[10px] whitespace-nowrap" style={{ color: "#166534", fontWeight: 600 }}>{plant.zones}</td>
+                              <td className="px-3 py-2 text-[10px]" style={{ color: "#6b7280" }}>{plant.notes}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Design elements */}
+          <div>
+            <h3 className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: "#166534" }}>
+              Design Elements — {elements.length} infrastructure components
+            </h3>
+            {elements.length === 0 ? (
+              <DocPlaceholder message="No design elements generated yet." />
+            ) : (
+              <div className="grid grid-cols-2 gap-3">
+                {elements.map((el, i) => {
+                  const pc = PRIORITY_COLORS[el.priority] ?? { bg: "#1f2937", text: "#e5e7eb" };
+                  return (
+                    <div key={i} className="rounded-xl overflow-hidden" style={{ border: "1px solid #e5e7eb", background: "#fff" }}>
+                      <div className="px-4 py-2.5 flex items-start justify-between gap-2" style={{ background: "#f9fafb", borderBottom: "1px solid #e5e7eb" }}>
+                        <div>
+                          <p className="text-[10px] font-bold" style={{ color: "#111827" }}>{el.name}</p>
+                          <p className="text-[9px] uppercase tracking-wide" style={{ color: "#9ca3af" }}>{el.type}</p>
+                        </div>
+                        <span
+                          className="shrink-0 mt-0.5 px-2 py-0.5 rounded-full text-[8px] font-bold uppercase tracking-wider"
+                          style={{ background: pc.bg, color: pc.text }}
+                        >
+                          {el.priority}
+                        </span>
+                      </div>
+                      <div className="px-4 py-3 space-y-1.5">
+                        <p className="text-[10px] leading-relaxed" style={{ color: "#374151" }}>{el.description}</p>
+                        {el.placement && (
+                          <p className="text-[9px]" style={{ color: "#6b7280" }}>
+                            <span className="font-semibold" style={{ color: "#166534" }}>Placement: </span>{el.placement}
+                          </p>
+                        )}
+                        {el.rationale && (
+                          <p className="text-[9px] italic" style={{ color: "#9ca3af" }}>{el.rationale}</p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Implementation phases */}
+          <div>
+            <h3 className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: "#166534" }}>
+              Implementation Roadmap
+            </h3>
+            {phases.length === 0 ? (
+              <DocPlaceholder message="No implementation phases generated yet." />
+            ) : (
+              <div className="relative">
+                {/* vertical spine */}
+                <div className="absolute left-4 top-4 bottom-4" style={{ width: 2, background: "#bbf7d0" }} />
+                <div className="space-y-4 pl-12">
+                  {phases.map((ph, i) => (
+                    <div key={i} className="relative">
+                      {/* phase dot */}
+                      <div
+                        className="absolute flex items-center justify-center text-[9px] font-bold"
+                        style={{ left: -35, top: 4, width: 22, height: 22, borderRadius: "50%", background: "#166534", color: "#bbf7d0", border: "2px solid #bbf7d0" }}
+                      >
+                        {ph.phase}
+                      </div>
+                      <div className="rounded-xl overflow-hidden" style={{ border: "1px solid #d1fae5" }}>
+                        <div className="px-4 py-2 flex items-center justify-between" style={{ background: "#f0fdf4", borderBottom: "1px solid #d1fae5" }}>
+                          <p className="text-[11px] font-bold" style={{ color: "#166534" }}>{ph.title}</p>
+                          <span className="text-[9px] font-semibold px-2 py-0.5 rounded-full" style={{ background: "#dcfce7", color: "#15803d" }}>{ph.duration}</span>
+                        </div>
+                        <div className="px-4 py-3" style={{ background: "#fff" }}>
+                          {ph.elements?.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 mb-2">
+                              {ph.elements.map((el, j) => (
+                                <span
+                                  key={j}
+                                  className="px-2 py-0.5 rounded text-[9px] font-medium"
+                                  style={{ background: "#f3f4f6", color: "#374151", border: "1px solid #e5e7eb" }}
+                                >
+                                  {el}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          <p className="text-[10px] italic leading-relaxed" style={{ color: "#6b7280" }}>{ph.rationale}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+        </div>
+      )}
+    </section>
   );
 }

@@ -298,6 +298,32 @@ export const AnalyzeSiteResponse = zod.object({
   "rationale": zod.string().optional().describe('Why nature uses this shape and why it suits this specific site'),
   "application": zod.string().optional().describe('Concrete physical instructions for implementing the pattern on this site')
 }).optional().describe('Design from patterns to details — recommended primary spatial pattern for this site'),
+  "DesignRecommendations": zod.object({
+  "plantingPrinciples": zod.string().optional().describe('Overall planting philosophy and layering strategy for this site'),
+  "plants": zod.array(zod.object({
+  "name": zod.string().optional(),
+  "latinName": zod.string().optional(),
+  "layer": zod.string().optional().describe('Canopy | Understory | Shrub | Herbaceous | Ground Cover | Vine | Root'),
+  "purpose": zod.string().optional().describe('Primary function — food, nitrogen-fix, windbreak, medicine, habitat, etc.'),
+  "zones": zod.string().optional().describe('Permaculture zone placement e.g. Zone 1–2'),
+  "notes": zod.string().optional().describe('Planting notes, spacing, climate caveats')
+})).optional(),
+  "designElements": zod.array(zod.object({
+  "type": zod.string().optional().describe('e.g. Swale, Dam, Windbreak, Keyhole Bed, Compost System, Greenhouse, Chicken Tractor Circuit'),
+  "name": zod.string().optional(),
+  "description": zod.string().optional(),
+  "rationale": zod.string().optional(),
+  "placement": zod.string().optional().describe('Cardinal direction, zone, or relation to existing structures'),
+  "priority": zod.string().optional().describe('High | Medium | Low')
+})).optional(),
+  "implementationPhases": zod.array(zod.object({
+  "phase": zod.number().optional(),
+  "title": zod.string().optional(),
+  "duration": zod.string().optional().describe('e.g. Month 1–3'),
+  "elements": zod.array(zod.string()).optional(),
+  "rationale": zod.string().optional()
+})).optional()
+}).optional().describe('Final compiled design — plant palette, design elements, and implementation phases synthesised from all site data'),
   "climateSource": zod.string().optional().describe('Whether climate data was fetched live or failed'),
   "generatedAt": zod.string(),
   "rawJson": zod.string()
