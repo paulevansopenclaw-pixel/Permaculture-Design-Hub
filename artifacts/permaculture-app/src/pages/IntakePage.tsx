@@ -17,19 +17,34 @@ import { fetchClimateBaseline } from "@/lib/fetchClimateBaseline";
 
 // ─── Image resize helper ───────────────────────────────────────────────────────
 async function resizeToDataUrl(file: File, maxPx = 900): Promise<string> {
-  return new Promise((resolve) => {
+  // Step 1: read the file with FileReader (avoids blob-URL security issues in iframes)
+  const rawDataUrl = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => resolve(e.target!.result as string);
+    reader.onerror = () => reject(new Error("FileReader failed"));
+    reader.readAsDataURL(file);
+  });
+
+  // Step 2: draw into a canvas to resize, then return a JPEG data URL
+  return new Promise<string>((resolve) => {
     const img = new Image();
-    const blobUrl = URL.createObjectURL(file);
+    img.onerror = () => resolve(rawDataUrl); // fallback: return original on error
     img.onload = () => {
-      URL.revokeObjectURL(blobUrl);
-      const scale = Math.min(1, maxPx / Math.max(img.width, img.height));
+      const w = img.naturalWidth || img.width;
+      const h = img.naturalHeight || img.height;
+      const scale = Math.min(1, maxPx / Math.max(w, h, 1));
       const canvas = document.createElement("canvas");
-      canvas.width = Math.round(img.width * scale);
-      canvas.height = Math.round(img.height * scale);
-      canvas.getContext("2d")!.drawImage(img, 0, 0, canvas.width, canvas.height);
+      canvas.width = Math.round(w * scale);
+      canvas.height = Math.round(h * scale);
+      const ctx = canvas.getContext("2d");
+      if (!ctx || canvas.width === 0 || canvas.height === 0) {
+        resolve(rawDataUrl); // fallback: return original if canvas broken
+        return;
+      }
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       resolve(canvas.toDataURL("image/jpeg", 0.82));
     };
-    img.src = blobUrl;
+    img.src = rawDataUrl;
   });
 }
 
@@ -132,9 +147,14 @@ export default function IntakePage() {
     if (!files.length) return;
     const remaining = 5 - photos.length;
     const toProcess = files.slice(0, remaining);
-    const dataUrls = await Promise.all(toProcess.map((f) => resizeToDataUrl(f)));
-    setPhotos((prev) => [...prev, ...dataUrls].slice(0, 5));
-    if (fileInputRef.current) fileInputRef.current.value = "";
+    try {
+      const dataUrls = await Promise.all(toProcess.map((f) => resizeToDataUrl(f)));
+      setPhotos((prev) => [...prev, ...dataUrls].slice(0, 5));
+    } catch (err) {
+      console.error("Image upload failed:", err);
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
   }
 
   function handleRemovePhoto(idx: number) {
