@@ -24,7 +24,7 @@ function mapboxStaticUrl(
   style: string,
   w = 640,
   h = 300,
-  fillColor = "#4a9a28",
+  fillColor = "#059669",
 ): string | null {
   const token = import.meta.env.VITE_MAPBOX_TOKEN as string | undefined;
   if (!token || !boundaryGeojson) return null;
@@ -50,18 +50,14 @@ function mapboxStaticUrl(
     const encoded = encodeURIComponent(JSON.stringify(feature));
     const bbox = turf.bbox(asFeature);
     const bboxStr = `[${bbox[0]},${bbox[1]},${bbox[2]},${bbox[3]}]`;
-    const url = `https://api.mapbox.com/styles/v1/mapbox/${style}/static/geojson(${encoded})/${bboxStr}/${w}x${h}@2x?padding=60&access_token=${token}`;
-    return url;
+    return `https://api.mapbox.com/styles/v1/mapbox/${style}/static/geojson(${encoded})/${bboxStr}/${w}x${h}@2x?padding=60&access_token=${token}`;
   } catch {
     return null;
   }
 }
 
 function PropertyMap({
-  boundaryGeojson,
-  style,
-  caption,
-  fillColor,
+  boundaryGeojson, style, caption, fillColor,
 }: {
   boundaryGeojson: string | null | undefined;
   style: string;
@@ -75,11 +71,11 @@ function PropertyMap({
       <img
         src={url}
         alt={caption ?? "Property map"}
-        className="w-full rounded-lg"
-        style={{ display: "block", border: "1px solid #e5e7eb" }}
+        className="w-full border border-slate-200"
+        style={{ display: "block" }}
       />
       {caption && (
-        <p className="mt-1.5 text-center text-[9px] uppercase tracking-widest" style={{ color: "#9ca3af" }}>
+        <p className="mt-1.5 text-center text-[9px] uppercase tracking-widest text-slate-400">
           {caption}
         </p>
       )}
@@ -90,23 +86,20 @@ function PropertyMap({
 function MapPlaceholder({ caption, message }: { caption?: string; message?: string }) {
   return (
     <div className="mb-4" style={{ pageBreakInside: "avoid" }}>
-      <div
-        className="w-full rounded-lg flex flex-col items-center justify-center gap-2"
-        style={{ height: 180, background: "#f9fafb", border: "2px dashed #d1d5db" }}
-      >
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" strokeWidth="1.5">
+      <div className="w-full bg-slate-50 border border-slate-200 flex flex-col items-center justify-center gap-2" style={{ height: 180 }}>
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" strokeWidth="1.5">
           <rect x="3" y="3" width="18" height="18" rx="2"/>
           <circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/>
         </svg>
-        <p className="text-[11px] font-medium" style={{ color: "#9ca3af" }}>
+        <p className="text-[11px] font-medium text-slate-400">
           {message ?? "No boundary drawn on map yet"}
         </p>
-        <p className="text-[10px]" style={{ color: "#d1d5db" }}>
+        <p className="text-[10px] text-slate-300">
           Draw your property boundary in the Map workspace to generate this map
         </p>
       </div>
       {caption && (
-        <p className="mt-1.5 text-center text-[9px] uppercase tracking-widest" style={{ color: "#d1d5db" }}>{caption}</p>
+        <p className="mt-1.5 text-center text-[9px] uppercase tracking-widest text-slate-300">{caption}</p>
       )}
     </div>
   );
@@ -114,14 +107,11 @@ function MapPlaceholder({ caption, message }: { caption?: string; message?: stri
 
 function DocPlaceholder({ message }: { message: string }) {
   return (
-    <div
-      className="rounded-lg px-4 py-3 flex items-center gap-3"
-      style={{ background: "#f9fafb", border: "1.5px dashed #e5e7eb" }}
-    >
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" strokeWidth="2" style={{ flexShrink: 0 }}>
+    <div className="bg-slate-50 border border-slate-200 px-4 py-3 flex items-center gap-3">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" strokeWidth="2" style={{ flexShrink: 0 }}>
         <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
       </svg>
-      <p className="text-[11px] italic" style={{ color: "#9ca3af" }}>{message}</p>
+      <p className="text-[11px] italic text-slate-400">{message}</p>
     </div>
   );
 }
@@ -160,12 +150,6 @@ function SunSectorDiagram({
 
   function f(n: number) { return n.toFixed(1); }
 
-  // Southern hemisphere: sun transits through north (top of diagram)
-  //   Summer (long day): SE(120°) → SW(240°), large CCW arc through N  → la=1, sw=0
-  //   Winter (short day): ENE(65°) → WNW(295°), small CCW arc through N → la=0, sw=0
-  // Northern hemisphere: sun transits through south (bottom)
-  //   Summer: NNE(40°) → NNW(320°), large CW arc through S            → la=1, sw=1
-  //   Winter: SE(120°) → SW(240°), small CW arc through S              → la=0, sw=1
   const [sumS, sumE, sumLa, sumSw, winS, winE, winLa, winSw]: [number,number,0|1,0|1,number,number,0|1,0|1] =
     isNorthern
       ? [40, 320, 1, 1, 120, 240, 0, 1]
@@ -194,7 +178,7 @@ function SunSectorDiagram({
   return (
     <figure style={{ pageBreakInside: "avoid", marginBottom: 0 }}>
       <svg viewBox="0 0 320 320" style={{ width: "100%", maxWidth: 260, height: "auto", display: "block", margin: "0 auto" }}>
-        <circle cx={cx} cy={cy} r={r + 42} fill="#0c1a0c" />
+        <circle cx={cx} cy={cy} r={r + 42} fill="#0f172a" />
         {[0.35, 0.52, 0.75, 0.95].map((frac) => (
           <circle key={frac} cx={cx} cy={cy} r={r * frac} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="0.5" />
         ))}
@@ -206,17 +190,14 @@ function SunSectorDiagram({
         <path d={windPath} fill="rgba(147,197,253,0.22)" stroke="#93c5fd" strokeWidth="1" />
         <path d={winterPath} fill="rgba(96,165,250,0.32)" stroke="#60a5fa" strokeWidth="1" />
         <path d={summerPath} fill="rgba(251,191,36,0.32)" stroke="#fbbf24" strokeWidth="1.5" />
-        <circle cx={cx} cy={cy} r={r * 0.28} fill="rgba(74,154,40,0.28)" stroke="#4a9a28" strokeWidth="1.5" />
-        <text x={cx} y={cy + 1} textAnchor="middle" dominantBaseline="middle" fill="#6cc040" fontSize="8" fontWeight="bold">SITE</text>
-        <polygon
-          points={`${f(nTx)},${f(nTy)} ${f(nL1x)},${f(nL1y)} ${f(nL2x)},${f(nL2y)}`}
-          fill="#f87171"
-        />
-        <circle cx={cx} cy={cy} r={r + 7} fill="none" stroke="rgba(255,255,255,0.13)" strokeWidth="0.5" />
+        <circle cx={cx} cy={cy} r={r * 0.28} fill="rgba(5,150,105,0.25)" stroke="#059669" strokeWidth="1.5" />
+        <text x={cx} y={cy + 1} textAnchor="middle" dominantBaseline="middle" fill="#34d399" fontSize="8" fontWeight="bold">SITE</text>
+        <polygon points={`${f(nTx)},${f(nTy)} ${f(nL1x)},${f(nL1y)} ${f(nL2x)},${f(nL2y)}`} fill="#f87171" />
+        <circle cx={cx} cy={cy} r={r + 7} fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="0.5" />
         {compassPts.map(({ l, d }) => {
           const [lx, ly] = toXY(d, r + 20);
           return (
-            <text key={l} x={f(lx)} y={f(ly)} fill={d % 90 === 0 ? "white" : "rgba(255,255,255,0.55)"}
+            <text key={l} x={f(lx)} y={f(ly)} fill={d % 90 === 0 ? "white" : "rgba(255,255,255,0.5)"}
               fontSize={d % 90 === 0 ? 10 : 8} fontWeight={d % 90 === 0 ? "bold" : "normal"}
               textAnchor="middle" dominantBaseline="middle">{l}</text>
           );
@@ -233,8 +214,8 @@ function SunSectorDiagram({
           { color: "#93c5fd", label: `Prevailing wind${windKey ? ` (${windKey})` : ""}` },
         ].map(({ color, label }) => (
           <div key={label} style={{ display: "flex", alignItems: "center", gap: 4 }}>
-            <div style={{ width: 10, height: 10, borderRadius: 2, background: color, opacity: 0.7 }} />
-            <span style={{ fontSize: 9, color: "#6b7280" }}>{label}</span>
+            <div style={{ width: 10, height: 10, borderRadius: 2, background: color, opacity: 0.8 }} />
+            <span className="text-[9px] text-slate-500">{label}</span>
           </div>
         ))}
       </div>
@@ -269,81 +250,74 @@ function SoilProfileViz({
 
   return (
     <div style={{ display: "grid", gridTemplateColumns: "140px 1fr", gap: "18px", alignItems: "start", pageBreakInside: "avoid" }}>
-      {/* Soil column SVG */}
       <div>
-        <p style={{ fontSize: 9, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>
-          Soil Profile Column
-        </p>
+        <p className="text-[9px] text-slate-400 uppercase tracking-widest mb-1.5">Soil Profile Column</p>
         <svg viewBox="0 0 160 180" style={{ width: "100%", height: "auto" }}>
           {horizons.map((hz, i) => {
             const y = colY(i);
             return (
               <g key={hz.label}>
                 <rect x={18} y={y} width={55} height={hz.h} fill={hz.fill} rx={2} />
-                <text x={78} y={y + hz.h * 0.38} fontSize="8" fill="#374151" dominantBaseline="middle" fontWeight="bold">{hz.label}</text>
-                <text x={78} y={y + hz.h * 0.65} fontSize="7" fill="#6b7280" dominantBaseline="middle">{hz.name}</text>
-                <text x={14} y={y + 2} fontSize="6.5" fill="#9ca3af" textAnchor="end" dominantBaseline="hanging">{hz.depth.split("–")[0]}cm</text>
+                <text x={78} y={y + hz.h * 0.38} fontSize="8" fill="#1e293b" dominantBaseline="middle" fontWeight="bold">{hz.label}</text>
+                <text x={78} y={y + hz.h * 0.65} fontSize="7" fill="#64748b" dominantBaseline="middle">{hz.name}</text>
+                <text x={14} y={y + 2} fontSize="6.5" fill="#94a3b8" textAnchor="end" dominantBaseline="hanging">{hz.depth.split("–")[0]}cm</text>
               </g>
             );
           })}
-          {/* Organic dots in A horizon */}
           {[{x:28,y:44},{x:40,y:50},{x:54,y:42},{x:32,y:56},{x:48,y:62},{x:62,y:54}].map((p, i) => (
             <circle key={i} cx={p.x} cy={p.y} r={1.3} fill="rgba(0,0,0,0.25)" />
           ))}
-          {/* Sand grains in B horizon */}
           {[{x:30,y:100},{x:44,y:110},{x:56,y:102},{x:38,y:118},{x:62,y:114}].map((p, i) => (
             <rect key={i} x={p.x} y={p.y} width={3} height={2} fill="rgba(255,255,255,0.15)" rx={0.5} />
           ))}
         </svg>
       </div>
 
-      {/* Right panel */}
       <div style={{ paddingTop: 18 }}>
         {textureClass && (
-          <div style={{ marginBottom: 10 }}>
-            <span style={{ fontSize: 9, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.1em" }}>Texture Class</span>
-            <div style={{ fontSize: 14, fontWeight: "bold", color: "#111827", marginTop: 2 }}>{textureClass}</div>
+          <div className="mb-3">
+            <p className="text-[9px] text-slate-400 uppercase tracking-widest mb-0.5">Texture Class</p>
+            <p className="text-[14px] font-bold text-slate-900">{textureClass}</p>
           </div>
         )}
 
         {rawTotal > 0 && (
-          <div style={{ marginBottom: 12 }}>
-            <p style={{ fontSize: 9, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>
-              Particle Composition
-            </p>
+          <div className="mb-3">
+            <p className="text-[9px] text-slate-400 uppercase tracking-widest mb-2">Particle Composition</p>
             {[
-              { label: "Clay",  pct: clayPct, color: "#b45309", imp: "Water retention · structure" },
+              { label: "Clay",  pct: clayPct, color: "#92400e", imp: "Water retention · structure" },
               { label: "Silt",  pct: siltPct, color: "#78716c", imp: "Nutrient holding · erosion risk" },
               { label: "Sand",  pct: sandPct, color: "#d97706", imp: "Drainage · aeration" },
             ].map(({ label, pct, color, imp }) => (
-              <div key={label} style={{ marginBottom: 7 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, color: "#374151", marginBottom: 2 }}>
-                  <span style={{ fontWeight: 600 }}>{label}</span><span>{pct}%</span>
+              <div key={label} className="mb-2">
+                <div className="flex justify-between text-[9px] mb-0.5">
+                  <span className="font-semibold text-slate-700">{label}</span>
+                  <span className="text-slate-500">{pct}%</span>
                 </div>
-                <div style={{ height: 7, background: "#f3f4f6", borderRadius: 4, overflow: "hidden", marginBottom: 2 }}>
-                  <div style={{ height: "100%", width: `${pct}%`, background: color, borderRadius: 4 }} />
+                <div className="h-1.5 bg-slate-100 overflow-hidden mb-0.5">
+                  <div style={{ height: "100%", width: `${pct}%`, background: color }} />
                 </div>
-                <div style={{ fontSize: 8, color: "#9ca3af" }}>{imp}</div>
+                <p className="text-[8px] text-slate-400">{imp}</p>
               </div>
             ))}
           </div>
         )}
 
         {ph != null && (
-          <div style={{ marginBottom: 12 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, marginBottom: 3 }}>
-              <span style={{ textTransform: "uppercase", letterSpacing: "0.1em", color: "#6b7280" }}>Soil pH</span>
-              <span style={{ fontWeight: "bold", color: phVal < 6 ? "#dc2626" : phVal < 7.5 ? "#16a34a" : "#2563eb" }}>{ph}</span>
+          <div className="mb-3">
+            <div className="flex justify-between text-[9px] mb-1">
+              <span className="text-slate-400 uppercase tracking-widest">Soil pH</span>
+              <span className="font-bold text-slate-900">{ph}</span>
             </div>
-            <div style={{ height: 8, borderRadius: 4, background: "linear-gradient(to right,#ef4444,#f97316,#facc15,#22c55e,#60a5fa,#8b5cf6)", position: "relative" }}>
+            <div style={{ height: 6, borderRadius: 3, background: "linear-gradient(to right,#ef4444,#f97316,#facc15,#22c55e,#60a5fa,#8b5cf6)", position: "relative" }}>
               <div style={{
-                position: "absolute", top: -3, width: 7, height: 14,
-                background: "white", border: "1.5px solid #374151", borderRadius: 3,
+                position: "absolute", top: -3, width: 6, height: 12,
+                background: "white", border: "1.5px solid #1e293b", borderRadius: 2,
                 left: `${Math.max(2, Math.min(96, ((phVal - 4) / 6) * 100))}%`,
                 transform: "translateX(-50%)",
               }} />
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 7, color: "#9ca3af", marginTop: 2 }}>
+            <div className="flex justify-between text-[7px] text-slate-400 mt-1">
               <span>Acid 4</span><span>Neutral 7</span><span>Alkaline 10</span>
             </div>
           </div>
@@ -351,16 +325,16 @@ function SoilProfileViz({
 
         {ocVal > 0 && (
           <div>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, marginBottom: 3 }}>
-              <span style={{ textTransform: "uppercase", letterSpacing: "0.1em", color: "#6b7280" }}>Organic Carbon</span>
-              <span style={{ fontWeight: "bold", color: "#374151" }}>{organicCarbon} g/kg</span>
+            <div className="flex justify-between text-[9px] mb-1">
+              <span className="text-slate-400 uppercase tracking-widest">Organic Carbon</span>
+              <span className="font-bold text-slate-900">{organicCarbon} g/kg</span>
             </div>
-            <div style={{ height: 7, background: "#f3f4f6", borderRadius: 4, overflow: "hidden", marginBottom: 3 }}>
-              <div style={{ height: "100%", width: `${ocWidth}%`, background: "linear-gradient(to right,#d97706,#7c2d12)", borderRadius: 4 }} />
+            <div className="h-1.5 bg-slate-100 overflow-hidden mb-1">
+              <div style={{ height: "100%", width: `${ocWidth}%`, background: "linear-gradient(to right,#d97706,#7c2d12)" }} />
             </div>
-            <div style={{ fontSize: 8, color: "#6b7280" }}>
-              {ocVal < 8 ? "⚠ Low — prioritise compost & mulching" : ocVal < 18 ? "Moderate — build with chop-and-drop & cover crops" : "High — excellent organic matter foundation"}
-            </div>
+            <p className="text-[8px] text-slate-400">
+              {ocVal < 8 ? "Low — prioritise compost & mulching" : ocVal < 18 ? "Moderate — build with chop-and-drop & cover crops" : "High — excellent organic matter foundation"}
+            </p>
           </div>
         )}
       </div>
@@ -403,7 +377,7 @@ export default function DossierPage() {
     try {
       const geo = JSON.parse(bg);
       const c = turf.centroid(geo as Parameters<typeof turf.centroid>[0]);
-      return c.geometry.coordinates as [number, number]; // [lng, lat]
+      return c.geometry.coordinates as [number, number];
     } catch { return null; }
   })();
   const siteLat = boundaryCentroid?.[1] ?? null;
@@ -415,44 +389,37 @@ export default function DossierPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: "hsl(103, 18%, 7%)" }}>
+    <div className="min-h-screen flex flex-col bg-slate-950">
       {/* ── TOP BAR (hidden on print) ── */}
-      <header
-        className="print:hidden shrink-0 flex items-center justify-between px-5 py-3 border-b sticky top-0 z-20"
-        style={{ background: "hsl(103, 22%, 9%)", borderColor: "hsl(103, 30%, 15%)" }}
-      >
+      <header className="print:hidden shrink-0 flex items-center justify-between px-5 py-3 border-b border-slate-800 sticky top-0 z-20 bg-slate-900">
         <div className="flex items-center gap-4">
           <button
             onClick={() => navigate("/properties")}
-            className="flex items-center gap-2 transition-opacity hover:opacity-70"
-            style={{ color: "hsl(42, 28%, 85%)" }}
+            className="flex items-center gap-2 transition-opacity hover:opacity-70 text-slate-200"
           >
             <span className="text-base">🛡</span>
             <span className="text-[13px] font-bold tracking-tight hidden sm:inline">TerraGuard</span>
           </button>
-          <div className="w-px h-4 hidden sm:block" style={{ background: "hsl(103, 22%, 22%)" }} />
-          <span className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "hsl(84, 40%, 55%)" }}>
+          <div className="w-px h-4 bg-slate-700 hidden sm:block" />
+          <span className="text-[11px] font-semibold uppercase tracking-widest text-emerald-500">
             Export Studio
           </span>
         </div>
         <div className="flex items-center gap-2">
           <StepNav />
-          {/* Generate Client Link */}
           <button
             onClick={handleGenerateLink}
             disabled={!activePropertyId}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[12px] font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[12px] font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed border"
             style={linkCopied
-              ? { background: "rgba(16,185,129,0.15)", color: "#10b981", border: "1px solid rgba(16,185,129,0.4)" }
-              : { background: "rgba(99,102,241,0.1)", color: "#a5b4fc", border: "1px solid rgba(99,102,241,0.3)" }
+              ? { background: "rgba(5,150,105,0.12)", color: "#34d399", borderColor: "rgba(5,150,105,0.35)" }
+              : { background: "transparent", color: "#94a3b8", borderColor: "#334155" }
             }
             title="Copy client presentation link to clipboard"
           >
             {linkCopied ? (
               <>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <polyline points="20,6 9,17 4,12"/>
-                </svg>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20,6 9,17 4,12"/></svg>
                 Copied!
               </>
             ) : (
@@ -465,11 +432,9 @@ export default function DossierPage() {
               </>
             )}
           </button>
-          {/* Export PDF */}
           <button
             onClick={handleExport}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-[12px] font-semibold transition-all"
-            style={{ background: "linear-gradient(135deg, #1a4a0d, #3a8220)", color: "#e8f5e2", border: "1px solid #4a9a28", boxShadow: "0 2px 12px rgba(45,106,26,0.4)" }}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-[12px] font-semibold transition-all bg-emerald-700 hover:bg-emerald-600 text-white border border-emerald-600"
           >
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/>
@@ -484,10 +449,9 @@ export default function DossierPage() {
         <div className="flex-1 flex items-center justify-center p-8 print:hidden">
           <div className="text-center space-y-3">
             <div className="text-4xl">📄</div>
-            <h3 className="text-base font-semibold" style={{ color: "hsl(42, 28%, 82%)" }}>No property selected</h3>
-            <p className="text-sm" style={{ color: "hsl(42, 15%, 50%)" }}>Complete the intake and analysis steps first.</p>
-            <button onClick={() => navigate("/intake")} className="mt-2 px-5 py-2.5 rounded-xl text-[13px] font-semibold"
-              style={{ background: "hsl(84, 38%, 22%)", color: "hsl(84, 55%, 80%)", border: "1px solid hsl(84, 35%, 30%)" }}>
+            <h3 className="text-base font-semibold text-slate-200">No property selected</h3>
+            <p className="text-sm text-slate-500">Complete the intake and analysis steps first.</p>
+            <button onClick={() => navigate("/intake")} className="mt-2 px-5 py-2.5 rounded-lg text-[13px] font-semibold bg-slate-800 text-slate-200 border border-slate-700 hover:bg-slate-700 transition-colors">
               ← Start at Intake
             </button>
           </div>
@@ -497,35 +461,30 @@ export default function DossierPage() {
       {/* ── DOCUMENT ── */}
       {activePropertyId && (
         <main className="flex-1 px-4 py-10">
-          <div
-            className="mx-auto max-w-3xl rounded-2xl overflow-hidden print:shadow-none print:rounded-none"
-            style={{ background: "#ffffff", boxShadow: "0 8px 40px rgba(0,0,0,0.45)" }}
-          >
+          <div className="mx-auto max-w-3xl bg-white print:shadow-none shadow-2xl">
+
             {/* Document header */}
-            <div
-              className="px-10 py-8"
-              style={{ background: "linear-gradient(135deg, #0a1a0a, #12280f)", borderBottom: "3px solid #2D6A1A" }}
-            >
+            <div className="px-10 py-8 border-b border-slate-200">
               <div className="flex items-start justify-between">
                 <div>
-                  <div className="flex items-center gap-2.5 mb-3">
-                    <span className="text-2xl">🛡</span>
-                    <span className="text-[11px] font-bold uppercase tracking-[0.2em]" style={{ color: "#4a9a28" }}>
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-lg">🛡</span>
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-700">
                       TerraGuard OS
                     </span>
                   </div>
-                  <h1 className="text-2xl font-bold leading-tight text-white">
+                  <h1 className="text-2xl font-bold tracking-tight text-slate-900 leading-tight">
                     {property?.name ?? "Property Resilience Dossier"}
                   </h1>
-                  <p className="text-[12px] mt-1.5" style={{ color: "#6cc040" }}>
-                    Property Resilience & Autonomy Report
+                  <p className="text-[12px] mt-1 text-slate-500">
+                    Property Resilience &amp; Autonomy Report
                   </p>
                 </div>
                 <div className="text-right shrink-0 ml-4">
                   {(property?.areaHectares ?? 0) > 0 && (
-                    <div className="text-xl font-bold text-white">{property?.areaHectares?.toFixed(2)} ha</div>
+                    <div className="text-xl font-bold tracking-tight text-slate-900">{property?.areaHectares?.toFixed(2)} ha</div>
                   )}
-                  <div className="text-[10px] mt-0.5" style={{ color: "#4a9a28" }}>Generated {today}</div>
+                  <div className="text-[10px] mt-0.5 text-emerald-700">Generated {today}</div>
                 </div>
               </div>
             </div>
@@ -536,7 +495,7 @@ export default function DossierPage() {
                 <PropertyMap
                   boundaryGeojson={property.boundaryGeojson as unknown as string}
                   style="satellite-streets-v12"
-                  fillColor="#4a9a28"
+                  fillColor="#059669"
                 />
                 <div
                   style={{
@@ -551,12 +510,12 @@ export default function DossierPage() {
             )}
 
             {/* Document body */}
-            <div className="px-10 py-8 space-y-8">
+            <div className="px-10 py-8 space-y-10">
               {/* No brief */}
               {!brief && (
-                <div className="rounded-xl p-6 text-center" style={{ background: "#fef3c7", border: "1px solid #d97706" }}>
-                  <p className="text-sm font-semibold text-amber-800">Site survey not completed</p>
-                  <p className="text-xs text-amber-700 mt-1">Complete the intake survey to populate this dossier.</p>
+                <div className="border-l-4 border-amber-400 bg-amber-50 px-5 py-4">
+                  <p className="text-sm font-semibold text-amber-900">Site survey not completed</p>
+                  <p className="text-xs text-amber-700 mt-0.5">Complete the intake survey to populate this dossier.</p>
                 </div>
               )}
 
@@ -564,7 +523,7 @@ export default function DossierPage() {
                 <>
                   {/* Site Profile */}
                   <DocSection title="Site Profile">
-                    <div className="grid grid-cols-2 gap-x-8 gap-y-1.5 text-sm">
+                    <div className="grid grid-cols-2 gap-x-8 gap-y-3 text-sm">
                       <DocField label="Climate zone" value={brief.climateZone ?? "—"} />
                       <DocField label="Elevation" value={brief.elevationM != null ? `${brief.elevationM} m ASL` : "—"} />
                       <DocField label="Annual rainfall" value={brief.annualRainfallMm != null ? `${brief.annualRainfallMm.toLocaleString()} mm` : "—"} />
@@ -581,7 +540,7 @@ export default function DossierPage() {
 
                   {/* Soil */}
                   <DocSection title="Soil Analysis (0–5 cm)">
-                    <div className="grid grid-cols-2 gap-x-8 gap-y-1.5 text-sm">
+                    <div className="grid grid-cols-2 gap-x-8 gap-y-3 text-sm">
                       <DocField label="Texture class" value={brief.soilTextureClass ?? "—"} />
                       <DocField label="pH" value={brief.soilPH != null ? String(brief.soilPH) : "—"} />
                       <DocField label="Clay" value={brief.soilClay != null ? `${brief.soilClay}%` : "—"} />
@@ -593,16 +552,16 @@ export default function DossierPage() {
 
                   {/* Design Goals */}
                   <DocSection title="Design Goals">
-                    <div className="grid grid-cols-2 gap-x-8 gap-y-1.5 text-sm">
+                    <div className="grid grid-cols-2 gap-x-8 gap-y-3 text-sm">
                       <DocField label="Primary goal" value={brief.primaryGoal ?? "—"} />
                       <DocField label="Maintenance capacity" value={brief.maintenanceCapacity ?? "—"} />
                     </div>
                   </DocSection>
 
-                  {/* ── Mood Board & Concept Renders ── */}
+                  {/* Mood Board */}
                   <DocSection title="Client Mood Board">
                     {moodImages.length === 0 ? (
-                      <p className="text-sm italic" style={{ color: "#9ca3af" }}>
+                      <p className="text-sm italic text-slate-400">
                         No vision board photos uploaded yet. Ask the client to add inspiration photos via the Intake page.
                       </p>
                     ) : (
@@ -610,40 +569,26 @@ export default function DossierPage() {
                         {moodImages.map((src, i) => (
                           <div
                             key={i}
-                            className="rounded-lg overflow-hidden"
-                            style={{ aspectRatio: "4/3", background: "#f3f4f6", border: "1px solid #e5e7eb" }}
+                            className="overflow-hidden border border-slate-200"
+                            style={{ aspectRatio: "4/3", background: "#f8fafc" }}
                           >
-                            <img
-                              src={src}
-                              alt={`Mood board ${i + 1}`}
-                              className="w-full h-full object-cover"
-                            />
+                            <img src={src} alt={`Mood board ${i + 1}`} className="w-full h-full object-cover" />
                           </div>
                         ))}
                       </div>
                     )}
 
-                    {/* Designer-only: Generate AI Concept Renders */}
                     {role === "designer" && (
-                      <div
-                        className="print:hidden mt-4 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3"
-                        style={{ background: "linear-gradient(135deg, #1e1048, #2d1564)", border: "1px solid #4c1d95" }}
-                      >
+                      <div className="print:hidden mt-4 bg-slate-900 border border-slate-700 px-5 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                         <div>
-                          <p className="text-[12px] font-bold" style={{ color: "#c4b5fd" }}>AI Concept Renders</p>
-                          <p className="text-[11px] mt-0.5" style={{ color: "#7c6aa6" }}>
+                          <p className="text-[12px] font-bold text-slate-100">AI Concept Renders</p>
+                          <p className="text-[11px] mt-0.5 text-slate-400">
                             Generate photorealistic concept renders from the client's mood board using Google Imagen.
                           </p>
                         </div>
                         <button
                           onClick={() => { /* placeholder — Google Imagen integration */ }}
-                          className="shrink-0 flex items-center gap-2 px-5 py-2.5 rounded-xl text-[12px] font-bold transition-all"
-                          style={{
-                            background: "linear-gradient(135deg, #4c1d95, #6d28d9)",
-                            color: "#ede9fe",
-                            border: "1px solid #7c3aed",
-                            boxShadow: "0 4px 18px rgba(109,40,217,0.45)",
-                          }}
+                          className="shrink-0 flex items-center gap-2 px-5 py-2.5 text-[12px] font-bold bg-emerald-700 hover:bg-emerald-600 text-white border border-emerald-600 transition-colors"
                         >
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
                             <polygon points="13,2 3,14 12,14 11,22 21,10 12,10 13,2"/>
@@ -668,7 +613,7 @@ export default function DossierPage() {
                   {/* Infrastructure */}
                   {(brief.utilitiesOverheadPower || brief.utilitiesBuriedPipes || brief.utilitiesLegalEasements || brief.utilitiesActiveWell || brief.challengeSevereErosion || brief.challengeWinterFlooding || brief.challengeHighWind || brief.challengeWildlifePressure) && (
                     <DocSection title="Infrastructure & Site Constraints">
-                      <div className="grid grid-cols-2 gap-x-8 gap-y-1.5 text-sm">
+                      <div className="grid grid-cols-2 gap-x-8 gap-y-3 text-sm">
                         {brief.utilitiesOverheadPower && <DocField label="Overhead power" value="Present" />}
                         {brief.utilitiesBuriedPipes && <DocField label="Buried pipes" value="Present" />}
                         {brief.utilitiesLegalEasements && <DocField label="Legal easements" value="Present" />}
@@ -685,69 +630,65 @@ export default function DossierPage() {
                   {aiReport ? (
                     <DocSection title="AI Resilience Analysis">
                       {brief.aiAnalysisGeneratedAt && (
-                        <p className="text-xs mb-4" style={{ color: "#6b7280" }}>
+                        <p className="text-[11px] mb-5 text-slate-400">
                           Generated {new Date(brief.aiAnalysisGeneratedAt).toLocaleDateString("en-AU", { day: "numeric", month: "long", year: "numeric" })}
                         </p>
                       )}
-                      <div className="space-y-5">
+                      <div className="space-y-4">
                         {[
-                          { key: "WaterStrategy",         title: "💧 Water Strategy",        accent: "#dbeafe", border: "#3b82f6" },
-                          { key: "SunAndEnergy",          title: "☀️ Sun & Energy",           accent: "#fef9c3", border: "#ca8a04" },
-                          { key: "SoilAndFertility",      title: "🌱 Soil & Fertility",       accent: "#fef3c7", border: "#92400e" },
-                          { key: "LandAndBiodiversity",   title: "🌾 Land & Biodiversity",    accent: "#dcfce7", border: "#16a34a" },
-                          { key: "ClimateResilience",     title: "🛡 Climate Resilience",     accent: "#e0e7ff", border: "#6366f1" },
-                          { key: "InfrastructureCritique",title: "⚠️ Infrastructure Critique", accent: "#fff7ed", border: "#ea580c" },
-                        ].map(({ key, title, accent, border }) => {
+                          { key: "WaterStrategy",         title: "💧 Water Strategy" },
+                          { key: "SunAndEnergy",          title: "☀️ Sun & Energy" },
+                          { key: "SoilAndFertility",      title: "🌱 Soil & Fertility" },
+                          { key: "LandAndBiodiversity",   title: "🌾 Land & Biodiversity" },
+                          { key: "ClimateResilience",     title: "🛡 Climate Resilience" },
+                          { key: "InfrastructureCritique",title: "⚠️ Infrastructure Critique" },
+                        ].map(({ key, title }) => {
                           const val = aiReport
                             ? (aiReport as unknown as Record<string, unknown>)[key]
                             : undefined;
                           const isMissing = val === undefined || val === null;
 
-                          // Visual panels for mapped sections
                           let visualPanel: React.ReactNode = null;
                           if (key === "WaterStrategy") {
                             visualPanel = (
-                              <div className="px-4 pt-3" style={{ background: "#f9fafb" }}>
+                              <div className="px-4 pt-3 bg-slate-50 border-b border-slate-100">
                                 {property?.boundaryGeojson ? (
                                   <PropertyMap
                                     boundaryGeojson={property.boundaryGeojson as unknown as string}
                                     style="outdoors-v12"
-                                    fillColor="#3b82f6"
+                                    fillColor="#2563eb"
                                     caption="Terrain & contour map — darker shading = higher elevation, contour lines show water flow paths"
                                   />
                                 ) : (
                                   <MapPlaceholder caption="Terrain & contour map" />
                                 )}
-                                <div
-                                  className="mb-3 rounded-lg px-3 py-2 text-[10px] leading-relaxed"
-                                  style={{ background: "#eff6ff", border: "1px solid #bfdbfe", color: "#1e40af" }}
-                                >
-                                  <strong>Reading the map:</strong> Contour lines show elevation — water flows perpendicular to them, from high ground to low. Shade relief reveals ridges (water divides) and valleys (natural collection points). Swales should follow contour lines; dams sit at valley heads below natural catchment areas.
+                                <div className="mb-3 border-l-4 border-slate-200 pl-3 py-1 text-[10px] text-slate-500 leading-relaxed">
+                                  <strong className="text-slate-700">Reading the map:</strong> Contour lines show elevation — water flows perpendicular to them, from high ground to low. Shade relief reveals ridges (water divides) and valleys (natural collection points). Swales should follow contour lines; dams sit at valley heads below natural catchment areas.
                                 </div>
                               </div>
                             );
                           } else if (key === "SunAndEnergy") {
                             visualPanel = (
-                              <div className="px-4 pt-3 pb-1" style={{ background: "#f9fafb" }}>
+                              <div className="px-4 pt-3 pb-1 bg-slate-50 border-b border-slate-100">
                                 <div style={{ display: "grid", gridTemplateColumns: "260px 1fr", gap: 16, alignItems: "start" }}>
                                   <SunSectorDiagram lat={siteLat} prevailingWind={brief?.prevailingWindDir} />
                                   <div style={{ paddingTop: 8 }}>
-                                    <p style={{ fontSize: 9, color: "#92400e", textTransform: "uppercase", letterSpacing: "0.12em", fontWeight: 700, marginBottom: 6 }}>
+                                    <p className="text-[9px] text-slate-400 uppercase tracking-widest font-bold mb-2">
                                       How to read this diagram
                                     </p>
-                                    <ul style={{ fontSize: 10, color: "#374151", lineHeight: 1.7, paddingLeft: 14, margin: 0 }}>
-                                      <li><strong>Amber band</strong> — summer sun zone: maximum solar exposure, highest UV</li>
-                                      <li><strong>Blue band</strong> — winter sun zone: reduced arc, shade from buildings/trees has greater impact</li>
-                                      <li><strong>Blue wedge</strong> — prevailing wind sector: windbreaks should intercept this zone</li>
-                                      <li><strong>Red arrow</strong> — north (compass true north)</li>
+                                    <ul className="text-[10px] text-slate-600 leading-relaxed pl-3 space-y-1" style={{ margin: 0 }}>
+                                      <li><strong className="text-slate-800">Amber band</strong> — summer sun zone: maximum solar exposure, highest UV</li>
+                                      <li><strong className="text-slate-800">Blue band</strong> — winter sun zone: reduced arc, shade from buildings/trees has greater impact</li>
+                                      <li><strong className="text-slate-800">Blue wedge</strong> — prevailing wind sector: windbreaks should intercept this zone</li>
+                                      <li><strong className="text-slate-800">Red arrow</strong> — north (compass true north)</li>
                                       <li>Food gardens &amp; solar panels: position in the summer sun zone, away from winter shade sources</li>
                                       <li>Fire-breaks &amp; wind-sensitive crops: protect from the wind wedge sector</li>
                                     </ul>
                                     {brief?.solarIrradianceKwhM2 != null && (
-                                      <div style={{ marginTop: 10, padding: "6px 10px", borderRadius: 6, background: "#fef9c3", border: "1px solid #fde68a" }}>
-                                        <span style={{ fontSize: 9, color: "#92400e", fontWeight: 700 }}>Solar irradiance: </span>
-                                        <span style={{ fontSize: 11, color: "#78350f", fontWeight: 800 }}>{brief.solarIrradianceKwhM2.toLocaleString()} kWh/m²/yr</span>
-                                        <span style={{ fontSize: 8, color: "#a16207", marginLeft: 4 }}>
+                                      <div className="mt-3 border-l-4 border-emerald-600 pl-3 py-1.5 bg-white">
+                                        <span className="text-[9px] text-slate-400 uppercase tracking-widest font-semibold">Solar irradiance: </span>
+                                        <span className="text-[11px] text-slate-900 font-bold">{brief.solarIrradianceKwhM2.toLocaleString()} kWh/m²/yr</span>
+                                        <span className="text-[8px] text-slate-500 ml-2">
                                           {brief.solarIrradianceKwhM2 >= 1600 ? "Excellent PV potential" : brief.solarIrradianceKwhM2 >= 1200 ? "Good PV potential" : "Moderate PV potential"}
                                         </span>
                                       </div>
@@ -759,7 +700,7 @@ export default function DossierPage() {
                           } else if (key === "SoilAndFertility") {
                             const hasSoilData = brief?.soilClay != null || brief?.soilSand != null || brief?.soilPH != null;
                             visualPanel = (
-                              <div className="px-4 pt-3 pb-1" style={{ background: "#f9fafb" }}>
+                              <div className="px-4 pt-3 pb-1 bg-slate-50 border-b border-slate-100">
                                 {hasSoilData ? (
                                   <SoilProfileViz
                                     clay={brief?.soilClay}
@@ -789,12 +730,12 @@ export default function DossierPage() {
                           }
 
                           return (
-                            <div key={key} className="rounded-xl overflow-hidden" style={{ border: `1px solid ${border}40` }}>
-                              <div className="px-4 py-2.5 text-[11px] font-bold" style={{ background: accent, borderBottom: `1px solid ${border}40`, color: "#374151" }}>
+                            <div key={key} className="border border-slate-200 overflow-hidden">
+                              <div className="px-4 py-2.5 text-[11px] font-semibold text-slate-900 bg-slate-50 border-b border-slate-100">
                                 {title}
                               </div>
                               {visualPanel}
-                              <div className="px-4 py-3 text-[12px] leading-relaxed" style={{ background: "#f9fafb", color: "#374151" }}>
+                              <div className="px-4 py-3 text-[12px] leading-relaxed text-slate-700 bg-white">
                                 {isMissing ? (
                                   <DocPlaceholder message="Run the AI resilience analysis in the War Room to generate this section." />
                                 ) : typeof val === "string" ? (
@@ -812,13 +753,12 @@ export default function DossierPage() {
                     </DocSection>
                   ) : (
                     <DocSection title="AI Resilience Analysis">
-                      <p className="text-sm italic" style={{ color: "#9ca3af" }}>
+                      <p className="text-sm italic text-slate-400 mb-3">
                         No analysis run yet. Go to The War Room to generate the AI resilience report.
                       </p>
                       <button
                         onClick={() => navigate("/analysis")}
-                        className="print:hidden mt-3 px-4 py-2 rounded-xl text-[12px] font-semibold"
-                        style={{ background: "#1a4a0d", color: "#e8f5e2", border: "1px solid #4a9a28" }}
+                        className="print:hidden px-4 py-2 text-[12px] font-semibold bg-emerald-700 hover:bg-emerald-600 text-white border border-emerald-600 transition-colors"
                       >
                         Run Analysis →
                       </button>
@@ -835,11 +775,11 @@ export default function DossierPage() {
               } />
 
               {/* Document footer */}
-              <div className="border-t pt-6 flex items-center justify-between" style={{ borderColor: "#e5e7eb" }}>
-                <span className="text-[10px]" style={{ color: "#9ca3af" }}>
+              <div className="border-t border-slate-200 pt-6 flex items-center justify-between">
+                <span className="text-[10px] text-slate-400">
                   TerraGuard OS · Autonomous Property Resilience Platform
                 </span>
-                <span className="text-[10px]" style={{ color: "#9ca3af" }}>{today}</span>
+                <span className="text-[10px] text-slate-400">{today}</span>
               </div>
             </div>
           </div>
@@ -848,15 +788,13 @@ export default function DossierPage() {
           <div className="print:hidden mt-6 mx-auto max-w-3xl flex items-center justify-between">
             <button
               onClick={() => navigate("/analysis")}
-              className="text-[11px] px-3 py-1.5 rounded-lg"
-              style={{ color: "hsl(42, 20%, 55%)", border: "1px solid hsl(103, 22%, 20%)", background: "transparent" }}
+              className="text-[11px] px-3 py-1.5 text-slate-400 border border-slate-700 hover:border-slate-600 transition-colors bg-transparent"
             >
               ← Analysis
             </button>
             <button
               onClick={handleExport}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-[13px] font-semibold"
-              style={{ background: "linear-gradient(135deg, #1a4a0d, #3a8220)", color: "#e8f5e2", border: "1px solid #4a9a28" }}
+              className="flex items-center gap-2 px-5 py-2.5 text-[13px] font-semibold bg-emerald-700 hover:bg-emerald-600 text-white border border-emerald-600 transition-colors"
             >
               Export PDF
             </button>
@@ -870,56 +808,47 @@ export default function DossierPage() {
 function DocPatternStrategy({ pattern }: { pattern: { recommendedPattern?: string; rationale?: string; application?: string } }) {
   return (
     <section>
-      <h2
-        className="text-[10px] font-bold uppercase tracking-[0.15em] mb-3 pb-2 flex items-center gap-2"
-        style={{ color: "#4c1d95", borderBottom: "1.5px solid #ede9fe" }}
-      >
-        <Fingerprint size={12} strokeWidth={2} style={{ color: "#7c3aed", flexShrink: 0 }} />
+      <h2 className="text-[9px] font-bold uppercase tracking-widest mb-3 pb-2 flex items-center gap-2 text-emerald-700 border-b border-emerald-200">
+        <Fingerprint size={12} strokeWidth={2} className="text-emerald-700 shrink-0" />
         Pattern Strategy
       </h2>
-      <div
-        className="rounded-xl overflow-hidden"
-        style={{ border: "1px solid #ddd6fe", background: "linear-gradient(135deg, #faf5ff, #f5f3ff)" }}
-      >
+      <div className="border border-slate-200 overflow-hidden">
         {pattern.recommendedPattern && (
-          <div
-            className="px-5 py-3 flex items-center gap-3"
-            style={{ background: "linear-gradient(135deg, #4c1d95, #6d28d9)", borderBottom: "1px solid #ddd6fe" }}
-          >
-            <Fingerprint size={16} strokeWidth={1.8} style={{ color: "#e9d5ff", flexShrink: 0 }} />
+          <div className="px-5 py-4 flex items-center gap-3 bg-slate-900 border-b border-slate-800">
+            <Fingerprint size={16} strokeWidth={1.8} className="text-emerald-400 shrink-0" />
             <div>
-              <div className="text-[9px] font-bold uppercase tracking-widest" style={{ color: "#c4b5fd" }}>
+              <div className="text-[9px] font-bold uppercase tracking-widest text-emerald-400">
                 Recommended Pattern
               </div>
-              <div className="text-[15px] font-bold text-white leading-tight">
+              <div className="text-[15px] font-bold text-white tracking-tight leading-tight">
                 {pattern.recommendedPattern}
               </div>
             </div>
           </div>
         )}
-        <div className="px-5 py-4 space-y-4">
+        <div className="px-5 py-5 space-y-5 bg-white">
           {pattern.rationale && (
             <div>
-              <div className="flex items-center gap-1.5 mb-1.5">
-                <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: "#7c3aed" }} />
-                <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: "#7c3aed" }}>
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-1 h-4 bg-emerald-600 shrink-0" />
+                <span className="text-[9px] font-bold uppercase tracking-widest text-emerald-700">
                   Why Nature Uses This Form
                 </span>
               </div>
-              <p className="text-[12px] leading-relaxed" style={{ color: "#374151" }}>
+              <p className="text-[12px] leading-relaxed text-slate-700">
                 {pattern.rationale}
               </p>
             </div>
           )}
           {pattern.application && (
             <div>
-              <div className="flex items-center gap-1.5 mb-1.5">
-                <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: "#5b21b6" }} />
-                <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: "#5b21b6" }}>
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-1 h-4 bg-slate-400 shrink-0" />
+                <span className="text-[9px] font-bold uppercase tracking-widest text-slate-500">
                   Site Application
                 </span>
               </div>
-              <p className="text-[12px] leading-relaxed" style={{ color: "#374151" }}>
+              <p className="text-[12px] leading-relaxed text-slate-700">
                 {pattern.application}
               </p>
             </div>
@@ -933,10 +862,7 @@ function DocPatternStrategy({ pattern }: { pattern: { recommendedPattern?: strin
 function DocSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section>
-      <h2
-        className="text-[10px] font-bold uppercase tracking-[0.15em] mb-3 pb-2"
-        style={{ color: "#2D6A1A", borderBottom: "1.5px solid #dcfce7" }}
-      >
+      <h2 className="text-[9px] font-bold uppercase tracking-widest mb-3 pb-2 text-emerald-700 border-b border-emerald-200">
         {title}
       </h2>
       {children}
@@ -946,9 +872,9 @@ function DocSection({ title, children }: { title: string; children: React.ReactN
 
 function DocField({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex flex-col">
-      <span className="text-[10px] uppercase tracking-wide font-semibold" style={{ color: "#9ca3af" }}>{label}</span>
-      <span className="text-[13px] font-medium" style={{ color: "#111827" }}>{value}</span>
+    <div className="flex flex-col gap-0.5">
+      <span className="text-[9px] uppercase tracking-wide font-semibold text-slate-400">{label}</span>
+      <span className="text-[13px] font-medium text-slate-900">{value}</span>
     </div>
   );
 }
@@ -958,7 +884,7 @@ function AiTableDoc({ rows }: { rows: unknown[] }) {
   const first = rows[0];
   if (typeof first !== "object" || first === null) {
     return (
-      <ul className="list-disc pl-4 space-y-1">
+      <ul className="list-disc pl-4 space-y-1 text-slate-700">
         {rows.map((r, i) => <li key={i}>{String(r)}</li>)}
       </ul>
     );
@@ -967,17 +893,17 @@ function AiTableDoc({ rows }: { rows: unknown[] }) {
   return (
     <table className="w-full text-[11px] border-collapse">
       <thead>
-        <tr>
+        <tr className="border-b border-slate-200">
           {keys.map((k) => (
-            <th key={k} className="text-left py-1 pr-3 font-semibold uppercase text-[9px] tracking-wider border-b" style={{ color: "#6b7280", borderColor: "#e5e7eb" }}>{k}</th>
+            <th key={k} className="text-left py-1.5 pr-3 font-semibold uppercase text-[9px] tracking-wider text-slate-400">{k}</th>
           ))}
         </tr>
       </thead>
       <tbody>
         {rows.map((row, i) => (
-          <tr key={i} className="border-b" style={{ borderColor: "#f3f4f6" }}>
+          <tr key={i} className="border-b border-slate-100">
             {keys.map((k) => (
-              <td key={k} className="py-1.5 pr-3 align-top" style={{ color: "#374151" }}>
+              <td key={k} className="py-1.5 pr-3 align-top text-slate-700">
                 {String((row as Record<string, unknown>)[k] ?? "")}
               </td>
             ))}
@@ -994,13 +920,13 @@ function AiObjectDoc({ obj }: { obj: Record<string, unknown> | null | undefined 
     <div className="space-y-2">
       {Object.entries(obj).map(([key, val]) => (
         <div key={key}>
-          <div className="text-[9px] font-bold uppercase tracking-widest mb-0.5" style={{ color: "#6b7280" }}>{key}</div>
+          <div className="text-[9px] font-bold uppercase tracking-widest mb-0.5 text-slate-400">{key}</div>
           {Array.isArray(val) ? (
             <AiTableDoc rows={val} />
           ) : typeof val === "object" && val !== null ? (
             <AiObjectDoc obj={val as Record<string, unknown>} />
           ) : (
-            <p>{String(val)}</p>
+            <p className="text-slate-700">{String(val)}</p>
           )}
         </div>
       ))}
@@ -1008,48 +934,43 @@ function AiObjectDoc({ obj }: { obj: Record<string, unknown> | null | undefined 
   );
 }
 
-// ─── Layer colour coding ───────────────────────────────────────────────────────
-const LAYER_COLORS: Record<string, { bg: string; text: string; dot: string }> = {
-  Canopy:       { bg: "#052e16", text: "#bbf7d0", dot: "#22c55e" },
-  Understory:   { bg: "#14532d", text: "#86efac", dot: "#4ade80" },
-  Shrub:        { bg: "#166534", text: "#6ee7b7", dot: "#34d399" },
-  Herbaceous:   { bg: "#065f46", text: "#a7f3d0", dot: "#10b981" },
-  "Ground Cover":{ bg: "#047857", text: "#d1fae5", dot: "#6ee7b7" },
-  Vine:         { bg: "#1e3a5f", text: "#bfdbfe", dot: "#60a5fa" },
-  Root:         { bg: "#3b1f0f", text: "#fde68a", dot: "#f59e0b" },
+// ─── Layer accent colours (left-border only, white bg) ─────────────────────────
+const LAYER_ACCENTS: Record<string, { border: string; dot: string }> = {
+  Canopy:         { border: "#047857", dot: "#059669" },
+  Understory:     { border: "#065f46", dot: "#10b981" },
+  Shrub:          { border: "#166534", dot: "#34d399" },
+  Herbaceous:     { border: "#0f766e", dot: "#2dd4bf" },
+  "Ground Cover": { border: "#0369a1", dot: "#38bdf8" },
+  Vine:           { border: "#1d4ed8", dot: "#60a5fa" },
+  Root:           { border: "#92400e", dot: "#f59e0b" },
 };
-const PRIORITY_COLORS: Record<string, { bg: string; text: string }> = {
-  High:   { bg: "#7f1d1d", text: "#fca5a5" },
-  Medium: { bg: "#78350f", text: "#fcd34d" },
-  Low:    { bg: "#1a3a1a", text: "#86efac" },
+
+const PRIORITY_STYLES: Record<string, { bg: string; text: string; border: string }> = {
+  High:   { bg: "#fef2f2", text: "#991b1b", border: "#fca5a5" },
+  Medium: { bg: "#fffbeb", text: "#92400e", border: "#fcd34d" },
+  Low:    { bg: "#f0fdf4", text: "#166534", border: "#bbf7d0" },
 };
 
 function DocDesignRecommendations({ designRecs }: { designRecs: DesignRecsType | null | undefined }) {
   const hasPrinciples = !!designRecs?.plantingPrinciples;
-  const plants       = Array.isArray(designRecs?.plants)         ? designRecs!.plants         : [];
-  const elements     = Array.isArray(designRecs?.designElements) ? designRecs!.designElements : [];
-  const phases       = Array.isArray(designRecs?.implementationPhases) ? designRecs!.implementationPhases : [];
+  const plants    = Array.isArray(designRecs?.plants)                ? designRecs!.plants                : [];
+  const elements  = Array.isArray(designRecs?.designElements)        ? designRecs!.designElements        : [];
+  const phases    = Array.isArray(designRecs?.implementationPhases)  ? designRecs!.implementationPhases  : [];
 
-  // Group plants by layer order
   const LAYER_ORDER = ["Canopy","Understory","Shrub","Herbaceous","Ground Cover","Vine","Root"];
   const grouped = LAYER_ORDER.reduce<Record<string, PlantRec[]>>((acc, l) => {
     const m = plants.filter(p => p.layer === l);
     if (m.length) acc[l] = m;
     return acc;
   }, {});
-  // Any unrecognised layers
   plants.filter(p => !LAYER_ORDER.includes(p.layer)).forEach(p => {
     grouped[p.layer] = [...(grouped[p.layer] ?? []), p];
   });
 
   return (
     <section style={{ pageBreakBefore: "always" }}>
-      {/* Section heading */}
-      <h2
-        className="text-[10px] font-bold uppercase tracking-[0.15em] mb-4 pb-2 flex items-center gap-2"
-        style={{ color: "#166534", borderBottom: "2px solid #bbf7d0" }}
-      >
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2" style={{ flexShrink: 0 }}>
+      <h2 className="text-[9px] font-bold uppercase tracking-widest mb-4 pb-2 flex items-center gap-2 text-emerald-700 border-b border-emerald-200">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0">
           <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
         </svg>
         Final Design Recommendations
@@ -1058,18 +979,15 @@ function DocDesignRecommendations({ designRecs }: { designRecs: DesignRecsType |
       {!designRecs ? (
         <DocPlaceholder message="Run the AI resilience analysis in the War Room to generate the plant palette, design elements, and implementation plan for this property." />
       ) : (
-        <div className="space-y-7">
+        <div className="space-y-8">
 
           {/* Planting principles */}
           {hasPrinciples && (
-            <div
-              className="rounded-xl px-5 py-4"
-              style={{ background: "linear-gradient(135deg, #052e16, #064e3b)", border: "1px solid #166534" }}
-            >
-              <p className="text-[9px] font-bold uppercase tracking-widest mb-2" style={{ color: "#4ade80" }}>
+            <div className="border-l-4 border-emerald-600 pl-5 py-1">
+              <p className="text-[9px] font-bold uppercase tracking-widest text-emerald-700 mb-1.5">
                 Planting Philosophy
               </p>
-              <p className="text-[12px] leading-relaxed" style={{ color: "#dcfce7" }}>
+              <p className="text-[12px] leading-relaxed text-slate-700">
                 {designRecs.plantingPrinciples}
               </p>
             </div>
@@ -1077,44 +995,39 @@ function DocDesignRecommendations({ designRecs }: { designRecs: DesignRecsType |
 
           {/* Plant palette */}
           <div>
-            <h3 className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: "#166534" }}>
+            <h3 className="text-[9px] font-bold uppercase tracking-widest mb-3 text-slate-500">
               Plant Palette — {plants.length} species across {Object.keys(grouped).length} canopy layers
             </h3>
             {plants.length === 0 ? (
               <DocPlaceholder message="No plant data generated yet." />
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {Object.entries(grouped).map(([layer, layerPlants]) => {
-                  const colors = LAYER_COLORS[layer] ?? { bg: "#1f2937", text: "#e5e7eb", dot: "#9ca3af" };
+                  const accent = LAYER_ACCENTS[layer] ?? { border: "#64748b", dot: "#94a3b8" };
                   return (
-                    <div key={layer} className="rounded-lg overflow-hidden" style={{ border: `1px solid ${colors.dot}40` }}>
-                      {/* Layer header */}
-                      <div
-                        className="px-4 py-2 flex items-center gap-2"
-                        style={{ background: colors.bg }}
-                      >
-                        <div style={{ width: 8, height: 8, borderRadius: "50%", background: colors.dot, flexShrink: 0 }} />
-                        <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: colors.text }}>
+                    <div key={layer} className="border border-slate-200 overflow-hidden" style={{ borderLeft: `3px solid ${accent.border}` }}>
+                      <div className="px-4 py-2 flex items-center gap-2 bg-slate-50 border-b border-slate-100">
+                        <div style={{ width: 7, height: 7, borderRadius: "50%", background: accent.dot, flexShrink: 0 }} />
+                        <span className="text-[9px] font-bold uppercase tracking-widest text-slate-600">
                           {layer} layer — {layerPlants.length} species
                         </span>
                       </div>
-                      {/* Plants table */}
-                      <table className="w-full" style={{ background: "#f9fafb", borderCollapse: "collapse" }}>
+                      <table className="w-full bg-white" style={{ borderCollapse: "collapse" }}>
                         <thead>
-                          <tr style={{ borderBottom: "1px solid #e5e7eb", background: "#f3f4f6" }}>
+                          <tr className="border-b border-slate-100 bg-slate-50">
                             {["Common name","Latin name","Purpose","Zone","Planting notes"].map(h => (
-                              <th key={h} className="px-3 py-1.5 text-left text-[8px] font-bold uppercase tracking-wider" style={{ color: "#6b7280" }}>{h}</th>
+                              <th key={h} className="px-3 py-1.5 text-left text-[8px] font-bold uppercase tracking-wider text-slate-400">{h}</th>
                             ))}
                           </tr>
                         </thead>
                         <tbody>
                           {layerPlants.map((plant, i) => (
-                            <tr key={i} style={{ borderBottom: "1px solid #f3f4f6" }}>
-                              <td className="px-3 py-2 text-[11px] font-semibold" style={{ color: "#111827" }}>{plant.name}</td>
-                              <td className="px-3 py-2 text-[10px] italic" style={{ color: "#6b7280" }}>{plant.latinName}</td>
-                              <td className="px-3 py-2 text-[10px]" style={{ color: "#374151" }}>{plant.purpose}</td>
-                              <td className="px-3 py-2 text-[10px] whitespace-nowrap" style={{ color: "#166534", fontWeight: 600 }}>{plant.zones}</td>
-                              <td className="px-3 py-2 text-[10px]" style={{ color: "#6b7280" }}>{plant.notes}</td>
+                            <tr key={i} className="border-b border-slate-50">
+                              <td className="px-3 py-2 text-[11px] font-semibold text-slate-900">{plant.name}</td>
+                              <td className="px-3 py-2 text-[10px] italic text-slate-500">{plant.latinName}</td>
+                              <td className="px-3 py-2 text-[10px] text-slate-600">{plant.purpose}</td>
+                              <td className="px-3 py-2 text-[10px] whitespace-nowrap font-semibold text-emerald-700">{plant.zones}</td>
+                              <td className="px-3 py-2 text-[10px] text-slate-500">{plant.notes}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -1128,7 +1041,7 @@ function DocDesignRecommendations({ designRecs }: { designRecs: DesignRecsType |
 
           {/* Design elements */}
           <div>
-            <h3 className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: "#166534" }}>
+            <h3 className="text-[9px] font-bold uppercase tracking-widest mb-3 text-slate-500">
               Design Elements — {elements.length} infrastructure components
             </h3>
             {elements.length === 0 ? (
@@ -1136,30 +1049,30 @@ function DocDesignRecommendations({ designRecs }: { designRecs: DesignRecsType |
             ) : (
               <div className="grid grid-cols-2 gap-3">
                 {elements.map((el, i) => {
-                  const pc = PRIORITY_COLORS[el.priority] ?? { bg: "#1f2937", text: "#e5e7eb" };
+                  const ps = PRIORITY_STYLES[el.priority] ?? { bg: "#f8fafc", text: "#475569", border: "#e2e8f0" };
                   return (
-                    <div key={i} className="rounded-xl overflow-hidden" style={{ border: "1px solid #e5e7eb", background: "#fff" }}>
-                      <div className="px-4 py-2.5 flex items-start justify-between gap-2" style={{ background: "#f9fafb", borderBottom: "1px solid #e5e7eb" }}>
+                    <div key={i} className="border border-slate-200 overflow-hidden bg-white">
+                      <div className="px-4 py-2.5 flex items-start justify-between gap-2 bg-slate-50 border-b border-slate-100">
                         <div>
-                          <p className="text-[10px] font-bold" style={{ color: "#111827" }}>{el.name}</p>
-                          <p className="text-[9px] uppercase tracking-wide" style={{ color: "#9ca3af" }}>{el.type}</p>
+                          <p className="text-[10px] font-bold text-slate-900">{el.name}</p>
+                          <p className="text-[9px] uppercase tracking-wide text-slate-400">{el.type}</p>
                         </div>
                         <span
-                          className="shrink-0 mt-0.5 px-2 py-0.5 rounded-full text-[8px] font-bold uppercase tracking-wider"
-                          style={{ background: pc.bg, color: pc.text }}
+                          className="shrink-0 mt-0.5 px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider"
+                          style={{ background: ps.bg, color: ps.text, border: `1px solid ${ps.border}` }}
                         >
                           {el.priority}
                         </span>
                       </div>
                       <div className="px-4 py-3 space-y-1.5">
-                        <p className="text-[10px] leading-relaxed" style={{ color: "#374151" }}>{el.description}</p>
+                        <p className="text-[10px] leading-relaxed text-slate-700">{el.description}</p>
                         {el.placement && (
-                          <p className="text-[9px]" style={{ color: "#6b7280" }}>
-                            <span className="font-semibold" style={{ color: "#166534" }}>Placement: </span>{el.placement}
+                          <p className="text-[9px] text-slate-500">
+                            <span className="font-semibold text-emerald-700">Placement: </span>{el.placement}
                           </p>
                         )}
                         {el.rationale && (
-                          <p className="text-[9px] italic" style={{ color: "#9ca3af" }}>{el.rationale}</p>
+                          <p className="text-[9px] italic text-slate-400">{el.rationale}</p>
                         )}
                       </div>
                     </div>
@@ -1171,45 +1084,42 @@ function DocDesignRecommendations({ designRecs }: { designRecs: DesignRecsType |
 
           {/* Implementation phases */}
           <div>
-            <h3 className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: "#166534" }}>
+            <h3 className="text-[9px] font-bold uppercase tracking-widest mb-4 text-slate-500">
               Implementation Roadmap
             </h3>
             {phases.length === 0 ? (
               <DocPlaceholder message="No implementation phases generated yet." />
             ) : (
               <div className="relative">
-                {/* vertical spine */}
-                <div className="absolute left-4 top-4 bottom-4" style={{ width: 2, background: "#bbf7d0" }} />
+                <div className="absolute left-4 top-4 bottom-4 w-px bg-slate-200" />
                 <div className="space-y-4 pl-12">
                   {phases.map((ph, i) => (
                     <div key={i} className="relative">
-                      {/* phase dot */}
                       <div
-                        className="absolute flex items-center justify-center text-[9px] font-bold"
-                        style={{ left: -35, top: 4, width: 22, height: 22, borderRadius: "50%", background: "#166534", color: "#bbf7d0", border: "2px solid #bbf7d0" }}
+                        className="absolute flex items-center justify-center text-[9px] font-bold text-white bg-emerald-700"
+                        style={{ left: -35, top: 6, width: 22, height: 22, borderRadius: "50%", border: "2px solid white", outline: "1px solid #d1fae5" }}
                       >
                         {ph.phase}
                       </div>
-                      <div className="rounded-xl overflow-hidden" style={{ border: "1px solid #d1fae5" }}>
-                        <div className="px-4 py-2 flex items-center justify-between" style={{ background: "#f0fdf4", borderBottom: "1px solid #d1fae5" }}>
-                          <p className="text-[11px] font-bold" style={{ color: "#166534" }}>{ph.title}</p>
-                          <span className="text-[9px] font-semibold px-2 py-0.5 rounded-full" style={{ background: "#dcfce7", color: "#15803d" }}>{ph.duration}</span>
+                      <div className="border border-slate-200 overflow-hidden">
+                        <div className="px-4 py-2 flex items-center justify-between bg-slate-50 border-b border-slate-100">
+                          <p className="text-[11px] font-bold text-slate-900 tracking-tight">{ph.title}</p>
+                          <span className="text-[9px] font-semibold px-2 py-0.5 text-emerald-700 bg-emerald-50 border border-emerald-200">{ph.duration}</span>
                         </div>
-                        <div className="px-4 py-3" style={{ background: "#fff" }}>
+                        <div className="px-4 py-3 bg-white">
                           {ph.elements?.length > 0 && (
                             <div className="flex flex-wrap gap-1.5 mb-2">
                               {ph.elements.map((el, j) => (
                                 <span
                                   key={j}
-                                  className="px-2 py-0.5 rounded text-[9px] font-medium"
-                                  style={{ background: "#f3f4f6", color: "#374151", border: "1px solid #e5e7eb" }}
+                                  className="px-2 py-0.5 text-[9px] font-medium text-slate-600 bg-slate-100 border border-slate-200"
                                 >
                                   {el}
                                 </span>
                               ))}
                             </div>
                           )}
-                          <p className="text-[10px] italic leading-relaxed" style={{ color: "#6b7280" }}>{ph.rationale}</p>
+                          <p className="text-[10px] italic leading-relaxed text-slate-500">{ph.rationale}</p>
                         </div>
                       </div>
                     </div>
