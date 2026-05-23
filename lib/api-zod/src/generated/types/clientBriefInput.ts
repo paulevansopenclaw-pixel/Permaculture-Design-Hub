@@ -37,4 +37,6 @@ export interface ClientBriefInput {
   primaryGoal?: string | null;
   householdSize?: number | null;
   maintenanceCapacity?: string | null;
+  moodBoardImages?: string[] | null;
+  conceptRenders?: string[] | null;
 }

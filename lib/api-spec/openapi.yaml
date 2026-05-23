@@ -1346,6 +1346,16 @@ components:
         maintenanceCapacity:
           type: string
           nullable: true
+        moodBoardImages:
+          type: array
+          nullable: true
+          items:
+            type: string
+        conceptRenders:
+          type: array
+          nullable: true
+          items:
+            type: string
         aiAnalysisReport:
           type: string
           nullable: true
@@ -1442,6 +1452,16 @@ components:
         maintenanceCapacity:
           type: string
           nullable: true
+        moodBoardImages:
+          type: array
+          nullable: true
+          items:
+            type: string
+        conceptRenders:
+          type: array
+          nullable: true
+          items:
+            type: string
 
     Zone:
       type: object

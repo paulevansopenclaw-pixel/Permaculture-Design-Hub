@@ -39,6 +39,8 @@ export interface ClientBrief {
   primaryGoal?: string | null;
   householdSize?: number | null;
   maintenanceCapacity?: string | null;
+  moodBoardImages?: string[] | null;
+  conceptRenders?: string[] | null;
   aiAnalysisReport?: string | null;
   aiAnalysisGeneratedAt?: string | null;
   createdAt: string;

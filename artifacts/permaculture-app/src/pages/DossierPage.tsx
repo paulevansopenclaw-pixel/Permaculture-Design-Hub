@@ -12,7 +12,7 @@ import { StepNav } from "@/components/StepNav";
 
 export default function DossierPage() {
   const [, navigate] = useLocation();
-  const { activePropertyId } = useAppStore();
+  const { activePropertyId, role } = useAppStore();
   const [linkCopied, setLinkCopied] = useState(false);
 
   function handleGenerateLink() {
@@ -36,6 +36,8 @@ export default function DossierPage() {
     if (!brief?.aiAnalysisReport) return null;
     try { return JSON.parse(brief.aiAnalysisReport); } catch { return null; }
   })();
+
+  const moodImages = (brief?.moodBoardImages as string[] | null | undefined) ?? [];
 
   const today = new Date().toLocaleDateString("en-AU", { day: "numeric", month: "long", year: "numeric" });
 
@@ -211,6 +213,61 @@ export default function DossierPage() {
                       </div>
                     </DocSection>
                   )}
+
+                  {/* ── Mood Board & Concept Renders ── */}
+                  <DocSection title="Client Mood Board">
+                    {moodImages.length === 0 ? (
+                      <p className="text-sm italic" style={{ color: "#9ca3af" }}>
+                        No vision board photos uploaded yet. Ask the client to add inspiration photos via the Intake page.
+                      </p>
+                    ) : (
+                      <div className="grid grid-cols-3 gap-2 mb-4">
+                        {moodImages.map((src, i) => (
+                          <div
+                            key={i}
+                            className="rounded-lg overflow-hidden"
+                            style={{ aspectRatio: "4/3", background: "#f3f4f6", border: "1px solid #e5e7eb" }}
+                          >
+                            <img
+                              src={src}
+                              alt={`Mood board ${i + 1}`}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Designer-only: Generate AI Concept Renders */}
+                    {role === "designer" && (
+                      <div
+                        className="print:hidden mt-4 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3"
+                        style={{ background: "linear-gradient(135deg, #1e1048, #2d1564)", border: "1px solid #4c1d95" }}
+                      >
+                        <div>
+                          <p className="text-[12px] font-bold" style={{ color: "#c4b5fd" }}>AI Concept Renders</p>
+                          <p className="text-[11px] mt-0.5" style={{ color: "#7c6aa6" }}>
+                            Generate photorealistic concept renders from the client's mood board using Google Imagen.
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => { /* placeholder — Google Imagen integration */ }}
+                          className="shrink-0 flex items-center gap-2 px-5 py-2.5 rounded-xl text-[12px] font-bold transition-all"
+                          style={{
+                            background: "linear-gradient(135deg, #4c1d95, #6d28d9)",
+                            color: "#ede9fe",
+                            border: "1px solid #7c3aed",
+                            boxShadow: "0 4px 18px rgba(109,40,217,0.45)",
+                          }}
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                            <polygon points="13,2 3,14 12,14 11,22 21,10 12,10 13,2"/>
+                          </svg>
+                          Generate AI Concept Renders
+                        </button>
+                      </div>
+                    )}
+                  </DocSection>
 
                   {/* Infrastructure */}
                   {(brief.utilitiesOverheadPower || brief.utilitiesBuriedPipes || brief.utilitiesLegalEasements || brief.utilitiesActiveWell || brief.challengeSevereErosion || brief.challengeWinterFlooding || brief.challengeHighWind || brief.challengeWildlifePressure) && (

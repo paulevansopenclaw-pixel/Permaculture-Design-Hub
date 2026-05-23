@@ -396,6 +396,8 @@ export const GetClientBriefResponse = zod.object({
   "primaryGoal": zod.string().nullish(),
   "householdSize": zod.number().nullish(),
   "maintenanceCapacity": zod.string().nullish(),
+  "moodBoardImages": zod.array(zod.string()).nullish(),
+  "conceptRenders": zod.array(zod.string()).nullish(),
   "aiAnalysisReport": zod.string().nullish(),
   "aiAnalysisGeneratedAt": zod.string().nullish(),
   "createdAt": zod.string(),
@@ -440,7 +442,9 @@ export const UpsertClientBriefBody = zod.object({
   "challengeWildlifePressure": zod.boolean(),
   "primaryGoal": zod.string().nullish(),
   "householdSize": zod.number().nullish(),
-  "maintenanceCapacity": zod.string().nullish()
+  "maintenanceCapacity": zod.string().nullish(),
+  "moodBoardImages": zod.array(zod.string()).nullish(),
+  "conceptRenders": zod.array(zod.string()).nullish()
 })
 
 export const UpsertClientBriefResponse = zod.object({
@@ -476,6 +480,8 @@ export const UpsertClientBriefResponse = zod.object({
   "primaryGoal": zod.string().nullish(),
   "householdSize": zod.number().nullish(),
   "maintenanceCapacity": zod.string().nullish(),
+  "moodBoardImages": zod.array(zod.string()).nullish(),
+  "conceptRenders": zod.array(zod.string()).nullish(),
   "aiAnalysisReport": zod.string().nullish(),
   "aiAnalysisGeneratedAt": zod.string().nullish(),
   "createdAt": zod.string(),

@@ -44,6 +44,9 @@ export const clientBriefsTable = pgTable("client_briefs", {
   // Step 4 — Vision & Goals
   primaryGoal: text("primary_goal"),
   maintenanceCapacity: text("maintenance_capacity"),
+  // Mood Board & Concept Renders
+  moodBoardImages: text("mood_board_images"),
+  conceptRenders: text("concept_renders"),
   // AI Analysis
   aiAnalysisReport: text("ai_analysis_report"),
   aiAnalysisGeneratedAt: timestamp("ai_analysis_generated_at", { withTimezone: true }),
