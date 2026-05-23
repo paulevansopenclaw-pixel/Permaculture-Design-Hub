@@ -81,6 +81,45 @@ function PropertyMap({
   );
 }
 
+function MapPlaceholder({ caption, message }: { caption?: string; message?: string }) {
+  return (
+    <div className="mb-4" style={{ pageBreakInside: "avoid" }}>
+      <div
+        className="w-full rounded-lg flex flex-col items-center justify-center gap-2"
+        style={{ height: 180, background: "#f9fafb", border: "2px dashed #d1d5db" }}
+      >
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" strokeWidth="1.5">
+          <rect x="3" y="3" width="18" height="18" rx="2"/>
+          <circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/>
+        </svg>
+        <p className="text-[11px] font-medium" style={{ color: "#9ca3af" }}>
+          {message ?? "No boundary drawn on map yet"}
+        </p>
+        <p className="text-[10px]" style={{ color: "#d1d5db" }}>
+          Draw your property boundary in the Map workspace to generate this map
+        </p>
+      </div>
+      {caption && (
+        <p className="mt-1.5 text-center text-[9px] uppercase tracking-widest" style={{ color: "#d1d5db" }}>{caption}</p>
+      )}
+    </div>
+  );
+}
+
+function DocPlaceholder({ message }: { message: string }) {
+  return (
+    <div
+      className="rounded-lg px-4 py-3 flex items-center gap-3"
+      style={{ background: "#f9fafb", border: "1.5px dashed #e5e7eb" }}
+    >
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" strokeWidth="2" style={{ flexShrink: 0 }}>
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      <p className="text-[11px] italic" style={{ color: "#9ca3af" }}>{message}</p>
+    </div>
+  );
+}
+
 // ─── Sun Sector Diagram ────────────────────────────────────────────────────────
 function SunSectorDiagram({
   lat,
@@ -486,7 +525,7 @@ export default function DossierPage() {
             </div>
 
             {/* Property satellite overview map */}
-            {property?.boundaryGeojson && (
+            {property?.boundaryGeojson ? (
               <div style={{ position: "relative" }}>
                 <PropertyMap
                   boundaryGeojson={property.boundaryGeojson as unknown as string}
@@ -501,6 +540,8 @@ export default function DossierPage() {
                   }}
                 />
               </div>
+            ) : (
+              <MapPlaceholder caption="Property satellite overview" message="No boundary drawn — open the Map workspace to outline your property" />
             )}
 
             {/* Document body */}
@@ -518,13 +559,13 @@ export default function DossierPage() {
                   {/* Site Profile */}
                   <DocSection title="Site Profile">
                     <div className="grid grid-cols-2 gap-x-8 gap-y-1.5 text-sm">
-                      {brief.climateZone && <DocField label="Climate zone" value={brief.climateZone} />}
-                      {brief.elevationM != null && <DocField label="Elevation" value={`${brief.elevationM} m ASL`} />}
-                      {brief.annualRainfallMm != null && <DocField label="Annual rainfall" value={`${brief.annualRainfallMm.toLocaleString()} mm`} />}
-                      {brief.annualHumidityPct != null && <DocField label="Humidity" value={`${brief.annualHumidityPct}%`} />}
-                      {brief.meanAnnualTempC != null && <DocField label="Mean temp" value={`${brief.meanAnnualTempC} °C`} />}
-                      {brief.summerMaxTempC != null && <DocField label="Summer max" value={`${brief.summerMaxTempC} °C`} />}
-                      {brief.winterMinTempC != null && <DocField label="Winter min" value={`${brief.winterMinTempC} °C`} />}
+                      <DocField label="Climate zone" value={brief.climateZone ?? "—"} />
+                      <DocField label="Elevation" value={brief.elevationM != null ? `${brief.elevationM} m ASL` : "—"} />
+                      <DocField label="Annual rainfall" value={brief.annualRainfallMm != null ? `${brief.annualRainfallMm.toLocaleString()} mm` : "—"} />
+                      <DocField label="Humidity" value={brief.annualHumidityPct != null ? `${brief.annualHumidityPct}%` : "—"} />
+                      <DocField label="Mean temp" value={brief.meanAnnualTempC != null ? `${brief.meanAnnualTempC} °C` : "—"} />
+                      <DocField label="Summer max" value={brief.summerMaxTempC != null ? `${brief.summerMaxTempC} °C` : "—"} />
+                      <DocField label="Winter min" value={brief.winterMinTempC != null ? `${brief.winterMinTempC} °C` : "—"} />
                       {brief.frostDaysPerYear != null && <DocField label="Frost days" value={`${brief.frostDaysPerYear} days/yr`} />}
                       {brief.solarIrradianceKwhM2 != null && <DocField label="Solar irradiance" value={`${brief.solarIrradianceKwhM2.toLocaleString()} kWh/m²/yr`} />}
                       {brief.prevailingWindDir && <DocField label="Prevailing wind" value={brief.prevailingWindDir} />}
@@ -533,28 +574,24 @@ export default function DossierPage() {
                   </DocSection>
 
                   {/* Soil */}
-                  {(brief.soilTextureClass || brief.soilPH != null || brief.soilClay != null) && (
-                    <DocSection title="Soil Analysis (0–5 cm)">
-                      <div className="grid grid-cols-2 gap-x-8 gap-y-1.5 text-sm">
-                        {brief.soilTextureClass && <DocField label="Texture class" value={brief.soilTextureClass} />}
-                        {brief.soilPH != null && <DocField label="pH" value={String(brief.soilPH)} />}
-                        {brief.soilClay != null && <DocField label="Clay" value={`${brief.soilClay}%`} />}
-                        {brief.soilSand != null && <DocField label="Sand" value={`${brief.soilSand}%`} />}
-                        {brief.soilSilt != null && <DocField label="Silt" value={`${brief.soilSilt}%`} />}
-                        {brief.soilOrganicCarbonGkg != null && <DocField label="Organic carbon" value={`${brief.soilOrganicCarbonGkg} g/kg`} />}
-                      </div>
-                    </DocSection>
-                  )}
+                  <DocSection title="Soil Analysis (0–5 cm)">
+                    <div className="grid grid-cols-2 gap-x-8 gap-y-1.5 text-sm">
+                      <DocField label="Texture class" value={brief.soilTextureClass ?? "—"} />
+                      <DocField label="pH" value={brief.soilPH != null ? String(brief.soilPH) : "—"} />
+                      <DocField label="Clay" value={brief.soilClay != null ? `${brief.soilClay}%` : "—"} />
+                      <DocField label="Sand" value={brief.soilSand != null ? `${brief.soilSand}%` : "—"} />
+                      <DocField label="Silt" value={brief.soilSilt != null ? `${brief.soilSilt}%` : "—"} />
+                      <DocField label="Organic carbon" value={brief.soilOrganicCarbonGkg != null ? `${brief.soilOrganicCarbonGkg} g/kg` : "—"} />
+                    </div>
+                  </DocSection>
 
                   {/* Design Goals */}
-                  {(brief.primaryGoal || brief.maintenanceCapacity) && (
-                    <DocSection title="Design Goals">
-                      <div className="grid grid-cols-2 gap-x-8 gap-y-1.5 text-sm">
-                        {brief.primaryGoal && <DocField label="Primary goal" value={brief.primaryGoal} />}
-                        {brief.maintenanceCapacity && <DocField label="Maintenance" value={brief.maintenanceCapacity} />}
-                      </div>
-                    </DocSection>
-                  )}
+                  <DocSection title="Design Goals">
+                    <div className="grid grid-cols-2 gap-x-8 gap-y-1.5 text-sm">
+                      <DocField label="Primary goal" value={brief.primaryGoal ?? "—"} />
+                      <DocField label="Maintenance capacity" value={brief.maintenanceCapacity ?? "—"} />
+                    </div>
+                  </DocSection>
 
                   {/* ── Mood Board & Concept Renders ── */}
                   <DocSection title="Client Mood Board">
@@ -612,10 +649,14 @@ export default function DossierPage() {
                   </DocSection>
 
                   {/* Pattern Strategy */}
-                  {aiReport?.PatternStrategy && (
+                  {aiReport?.PatternStrategy ? (
                     <DocPatternStrategy
                       pattern={aiReport.PatternStrategy as { recommendedPattern?: string; rationale?: string; application?: string }}
                     />
+                  ) : (
+                    <DocSection title="Pattern Strategy">
+                      <DocPlaceholder message="Run the AI resilience analysis to generate the recommended nature-based design pattern for this site." />
+                    </DocSection>
                   )}
 
                   {/* Infrastructure */}
@@ -651,20 +692,26 @@ export default function DossierPage() {
                           { key: "ClimateResilience",     title: "🛡 Climate Resilience",     accent: "#e0e7ff", border: "#6366f1" },
                           { key: "InfrastructureCritique",title: "⚠️ Infrastructure Critique", accent: "#fff7ed", border: "#ea580c" },
                         ].map(({ key, title, accent, border }) => {
-                          const val = (aiReport as unknown as Record<string, unknown>)[key];
-                          if (val === undefined || val === null) return null;
+                          const val = aiReport
+                            ? (aiReport as unknown as Record<string, unknown>)[key]
+                            : undefined;
+                          const isMissing = val === undefined || val === null;
 
                           // Visual panels for mapped sections
                           let visualPanel: React.ReactNode = null;
-                          if (key === "WaterStrategy" && property?.boundaryGeojson) {
+                          if (key === "WaterStrategy") {
                             visualPanel = (
                               <div className="px-4 pt-3" style={{ background: "#f9fafb" }}>
-                                <PropertyMap
-                                  boundaryGeojson={property.boundaryGeojson as unknown as string}
-                                  style="outdoors-v12"
-                                  fillColor="#3b82f6"
-                                  caption="Terrain & contour map — darker shading = higher elevation, contour lines show water flow paths"
-                                />
+                                {property?.boundaryGeojson ? (
+                                  <PropertyMap
+                                    boundaryGeojson={property.boundaryGeojson as unknown as string}
+                                    style="outdoors-v12"
+                                    fillColor="#3b82f6"
+                                    caption="Terrain & contour map — darker shading = higher elevation, contour lines show water flow paths"
+                                  />
+                                ) : (
+                                  <MapPlaceholder caption="Terrain & contour map" />
+                                )}
                                 <div
                                   className="mb-3 rounded-lg px-3 py-2 text-[10px] leading-relaxed"
                                   style={{ background: "#eff6ff", border: "1px solid #bfdbfe", color: "#1e40af" }}
@@ -705,9 +752,9 @@ export default function DossierPage() {
                             );
                           } else if (key === "SoilAndFertility") {
                             const hasSoilData = brief?.soilClay != null || brief?.soilSand != null || brief?.soilPH != null;
-                            if (hasSoilData) {
-                              visualPanel = (
-                                <div className="px-4 pt-3 pb-1" style={{ background: "#f9fafb" }}>
+                            visualPanel = (
+                              <div className="px-4 pt-3 pb-1" style={{ background: "#f9fafb" }}>
+                                {hasSoilData ? (
                                   <SoilProfileViz
                                     clay={brief?.soilClay}
                                     sand={brief?.soilSand}
@@ -716,19 +763,23 @@ export default function DossierPage() {
                                     organicCarbon={brief?.soilOrganicCarbonGkg}
                                     textureClass={brief?.soilTextureClass}
                                   />
-                                  {property?.boundaryGeojson && (
-                                    <div className="mt-3">
-                                      <PropertyMap
-                                        boundaryGeojson={property.boundaryGeojson as unknown as string}
-                                        style="satellite-v9"
-                                        fillColor="#92400e"
-                                        caption="Property satellite view — bare soil patches, vegetation density & colour variation indicate soil moisture & organic matter zones"
-                                      />
-                                    </div>
+                                ) : (
+                                  <DocPlaceholder message="Soil sample data not yet recorded. Complete the intake survey — the SoilGrids fetch will populate clay, sand, silt, pH and organic carbon automatically." />
+                                )}
+                                <div className="mt-3">
+                                  {property?.boundaryGeojson ? (
+                                    <PropertyMap
+                                      boundaryGeojson={property.boundaryGeojson as unknown as string}
+                                      style="satellite-v9"
+                                      fillColor="#92400e"
+                                      caption="Property satellite view — bare soil patches, vegetation density & colour variation indicate soil moisture & organic matter zones"
+                                    />
+                                  ) : (
+                                    <MapPlaceholder caption="Property satellite view" />
                                   )}
                                 </div>
-                              );
-                            }
+                              </div>
+                            );
                           }
 
                           return (
@@ -738,7 +789,9 @@ export default function DossierPage() {
                               </div>
                               {visualPanel}
                               <div className="px-4 py-3 text-[12px] leading-relaxed" style={{ background: "#f9fafb", color: "#374151" }}>
-                                {typeof val === "string" ? (
+                                {isMissing ? (
+                                  <DocPlaceholder message="Run the AI resilience analysis in the War Room to generate this section." />
+                                ) : typeof val === "string" ? (
                                   <p className="whitespace-pre-wrap">{val}</p>
                                 ) : Array.isArray(val) ? (
                                   <AiTableDoc rows={val} />
@@ -922,7 +975,8 @@ function AiTableDoc({ rows }: { rows: unknown[] }) {
   );
 }
 
-function AiObjectDoc({ obj }: { obj: Record<string, unknown> }) {
+function AiObjectDoc({ obj }: { obj: Record<string, unknown> | null | undefined }) {
+  if (obj == null || typeof obj !== "object" || Array.isArray(obj)) return null;
   return (
     <div className="space-y-2">
       {Object.entries(obj).map(([key, val]) => (
