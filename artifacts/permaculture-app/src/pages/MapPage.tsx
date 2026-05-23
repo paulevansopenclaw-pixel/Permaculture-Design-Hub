@@ -47,6 +47,8 @@ import {
   useCreateSensoryVector,
   useDeleteSensoryVector,
   getListSensoryVectorsQueryKey,
+  useGetClientBrief,
+  getGetClientBriefQueryKey,
 } from "@workspace/api-client-react";
 import { useAppStore, type Role } from "@/store/useAppStore";
 import { generateContours } from "@/lib/contourEngine";
@@ -438,6 +440,9 @@ export default function MapPage() {
       queryKey: getListStructuresQueryKey(activePropertyId ?? ""),
       refetchInterval: 15_000,
     },
+  });
+  const { data: clientBrief } = useGetClientBrief(activePropertyId ?? "", {
+    query: { enabled: !!activePropertyId, queryKey: getGetClientBriefQueryKey(activePropertyId ?? "") },
   });
 
   const createProperty = useCreateProperty();
@@ -3940,6 +3945,90 @@ export default function MapPage() {
                   </div>
                 )}
               </div>
+
+              {/* ── Roof Catchment ────────────────────────────────── */}
+              {(() => {
+                const roofStructures = structures.filter((s) => s.footprintGeojson);
+                const perRoof = roofStructures.map((s) => {
+                  let areaM2 = 0;
+                  try {
+                    const geo = typeof s.footprintGeojson === "string"
+                      ? JSON.parse(s.footprintGeojson)
+                      : s.footprintGeojson;
+                    areaM2 = turf.area({ type: "Feature", geometry: geo, properties: {} });
+                  } catch { /* skip malformed */ }
+                  return { label: s.label, structureType: s.structureType, areaM2 };
+                }).filter((r) => r.areaM2 > 0);
+
+                const totalRoofM2 = perRoof.reduce((sum, r) => sum + r.areaM2, 0);
+                const rainfallMm = clientBrief?.annualRainfallMm ?? null;
+                const RUNOFF_COEFF = 0.85;
+                const annualKL = rainfallMm != null && totalRoofM2 > 0
+                  ? Math.round((totalRoofM2 * rainfallMm * RUNOFF_COEFF) / 1000)
+                  : null;
+
+                if (perRoof.length === 0) return null;
+
+                return (
+                  <div>
+                    <div className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: "#818cf8" }}>
+                      Roof Catchment Potential
+                    </div>
+                    <div className="rounded-xl p-4 space-y-3" style={{ background: "hsl(240, 30%, 9%)", border: "1px solid hsl(240, 40%, 20%)" }}>
+
+                      {/* Summary row */}
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="rounded-lg p-2.5" style={{ background: "hsl(240, 25%, 12%)", border: "1px solid hsl(240, 30%, 20%)" }}>
+                          <div className="text-[9px] uppercase tracking-widest mb-0.5" style={{ color: "#818cf8" }}>Structures</div>
+                          <div className="text-[13px] font-bold" style={{ color: "#e2d5b5" }}>{perRoof.length}</div>
+                        </div>
+                        <div className="rounded-lg p-2.5" style={{ background: "hsl(240, 25%, 12%)", border: "1px solid hsl(240, 30%, 20%)" }}>
+                          <div className="text-[9px] uppercase tracking-widest mb-0.5" style={{ color: "#818cf8" }}>Total Roof</div>
+                          <div className="text-[13px] font-bold" style={{ color: "#e2d5b5" }}>{totalRoofM2.toFixed(0)} m²</div>
+                        </div>
+                        <div className="rounded-lg p-2.5" style={{ background: "hsl(240, 25%, 12%)", border: "1px solid hsl(240, 30%, 20%)" }}>
+                          <div className="text-[9px] uppercase tracking-widest mb-0.5" style={{ color: "#818cf8" }}>Annual Yield</div>
+                          <div className="text-[13px] font-bold" style={{ color: annualKL != null ? "#a5f3fc" : "hsl(42,15%,45%)" }}>
+                            {annualKL != null ? `${annualKL.toLocaleString()} kL` : "—"}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Rainfall source note */}
+                      <p className="text-[9px]" style={{ color: "hsl(42,15%,40%)" }}>
+                        {rainfallMm != null
+                          ? `Based on ${rainfallMm.toLocaleString()} mm/yr site rainfall · 0.85 collection efficiency`
+                          : "Run Sync Site Data on the Intake page to add rainfall data for a yield estimate."}
+                      </p>
+
+                      {/* Per-structure breakdown */}
+                      {perRoof.length > 1 && (
+                        <div className="space-y-1">
+                          <div className="text-[9px] uppercase tracking-wider font-semibold mb-1" style={{ color: "hsl(240,30%,55%)" }}>
+                            Breakdown
+                          </div>
+                          {perRoof.map((r, i) => {
+                            const kl = rainfallMm != null
+                              ? Math.round((r.areaM2 * rainfallMm * RUNOFF_COEFF) / 1000)
+                              : null;
+                            return (
+                              <div key={i} className="flex items-center justify-between text-[10px] py-1 border-b" style={{ borderColor: "hsl(240,25%,15%)" }}>
+                                <div>
+                                  <span style={{ color: "#c7d2fe" }}>{r.label || r.structureType}</span>
+                                  <span className="ml-2" style={{ color: "hsl(42,15%,45%)" }}>{r.areaM2.toFixed(0)} m²</span>
+                                </div>
+                                {kl != null && (
+                                  <span style={{ color: "#a5f3fc" }}>{kl.toLocaleString()} kL/yr</span>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Saved swales summary */}
               {designedSwales.length > 0 && (
