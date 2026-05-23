@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Fingerprint } from "lucide-react";
 import { useLocation } from "wouter";
+import * as turf from "@turf/turf";
 import {
   useGetProperty,
   useGetClientBrief,
@@ -10,6 +11,317 @@ import {
 import type { SiteAnalysisReport } from "@workspace/api-client-react";
 import { useAppStore } from "@/store/useAppStore";
 import { StepNav } from "@/components/StepNav";
+
+// ─── Mapbox Static API helper ──────────────────────────────────────────────────
+function mapboxStaticUrl(
+  boundaryGeojson: string | null | undefined,
+  style: string,
+  w = 640,
+  h = 300,
+  fillColor = "#4a9a28",
+): string | null {
+  const token = import.meta.env.VITE_MAPBOX_TOKEN as string | undefined;
+  if (!token || !boundaryGeojson) return null;
+  try {
+    const parsed = JSON.parse(boundaryGeojson);
+    const asFeature = (
+      parsed.type === "Feature" ? parsed : { type: "Feature", geometry: parsed, properties: {} }
+    ) as GeoJSON.Feature;
+    const simplified = turf.simplify(asFeature as GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon>, {
+      tolerance: 0.00008,
+      highQuality: false,
+    });
+    const feature = {
+      ...simplified,
+      properties: {
+        stroke: fillColor,
+        "stroke-width": 3,
+        "stroke-opacity": 1,
+        fill: fillColor,
+        "fill-opacity": 0.15,
+      },
+    };
+    const encoded = encodeURIComponent(JSON.stringify(feature));
+    const bbox = turf.bbox(asFeature);
+    const bboxStr = `[${bbox[0]},${bbox[1]},${bbox[2]},${bbox[3]}]`;
+    const url = `https://api.mapbox.com/styles/v1/mapbox/${style}/static/geojson(${encoded})/${bboxStr}/${w}x${h}@2x?padding=60&access_token=${token}`;
+    return url;
+  } catch {
+    return null;
+  }
+}
+
+function PropertyMap({
+  boundaryGeojson,
+  style,
+  caption,
+  fillColor,
+}: {
+  boundaryGeojson: string | null | undefined;
+  style: string;
+  caption?: string;
+  fillColor?: string;
+}) {
+  const url = mapboxStaticUrl(boundaryGeojson, style, 640, 300, fillColor);
+  if (!url) return null;
+  return (
+    <div className="mb-4" style={{ pageBreakInside: "avoid" }}>
+      <img
+        src={url}
+        alt={caption ?? "Property map"}
+        className="w-full rounded-lg"
+        style={{ display: "block", border: "1px solid #e5e7eb" }}
+      />
+      {caption && (
+        <p className="mt-1.5 text-center text-[9px] uppercase tracking-widest" style={{ color: "#9ca3af" }}>
+          {caption}
+        </p>
+      )}
+    </div>
+  );
+}
+
+// ─── Sun Sector Diagram ────────────────────────────────────────────────────────
+function SunSectorDiagram({
+  lat,
+  prevailingWind,
+}: {
+  lat?: number | null;
+  prevailingWind?: string | null;
+}) {
+  const cx = 160, cy = 160, r = 112;
+  const isNorthern = (lat ?? -33) >= 0;
+
+  function toXY(compassDeg: number, radius: number): [number, number] {
+    const rad = ((compassDeg - 90) * Math.PI) / 180;
+    return [cx + radius * Math.cos(rad), cy + radius * Math.sin(rad)];
+  }
+
+  function annularArc(
+    start: number, end: number,
+    r1: number, r2: number,
+    la: 0 | 1, sw: 0 | 1,
+  ): string {
+    const [s1x, s1y] = toXY(start, r2);
+    const [e1x, e1y] = toXY(end, r2);
+    const [s2x, s2y] = toXY(start, r1);
+    const [e2x, e2y] = toXY(end, r1);
+    const rsw: 0 | 1 = sw === 0 ? 1 : 0;
+    return (
+      `M${f(s1x)} ${f(s1y)} A${r2} ${r2} 0 ${la} ${sw} ${f(e1x)} ${f(e1y)} ` +
+      `L${f(e2x)} ${f(e2y)} A${r1} ${r1} 0 ${la} ${rsw} ${f(s2x)} ${f(s2y)}Z`
+    );
+  }
+
+  function f(n: number) { return n.toFixed(1); }
+
+  // Southern hemisphere: sun transits through north (top of diagram)
+  //   Summer (long day): SE(120°) → SW(240°), large CCW arc through N  → la=1, sw=0
+  //   Winter (short day): ENE(65°) → WNW(295°), small CCW arc through N → la=0, sw=0
+  // Northern hemisphere: sun transits through south (bottom)
+  //   Summer: NNE(40°) → NNW(320°), large CW arc through S            → la=1, sw=1
+  //   Winter: SE(120°) → SW(240°), small CW arc through S              → la=0, sw=1
+  const [sumS, sumE, sumLa, sumSw, winS, winE, winLa, winSw]: [number,number,0|1,0|1,number,number,0|1,0|1] =
+    isNorthern
+      ? [40, 320, 1, 1, 120, 240, 0, 1]
+      : [120, 240, 1, 0,  65, 295, 0, 0];
+
+  const windMap: Record<string, number> = {
+    N:0,NNE:22,NE:45,ENE:67,E:90,ESE:112,SE:135,SSE:157,
+    S:180,SSW:202,SW:225,WSW:247,W:270,WNW:292,NW:315,NNW:337,
+  };
+  const windKey = (prevailingWind ?? "").toUpperCase().replace(/[^A-Z]/g, "");
+  const windDeg = windMap[windKey] ?? 270;
+
+  const summerPath = annularArc(sumS, sumE, r * 0.52, r * 0.95, sumLa, sumSw);
+  const winterPath = annularArc(winS, winE, r * 0.35, r * 0.52, winLa, winSw);
+  const windPath   = annularArc(windDeg - 28, windDeg + 28, r * 0.28, r * 0.88, 0, 1);
+
+  const compassPts = [
+    { l: "N", d: 0 }, { l: "NE", d: 45 }, { l: "E", d: 90 }, { l: "SE", d: 135 },
+    { l: "S", d: 180 }, { l: "SW", d: 225 }, { l: "W", d: 270 }, { l: "NW", d: 315 },
+  ];
+
+  const [nTx, nTy] = toXY(0, r * 0.48);
+  const [nL1x, nL1y] = toXY(350, r * 0.38);
+  const [nL2x, nL2y] = toXY(10,  r * 0.38);
+
+  return (
+    <figure style={{ pageBreakInside: "avoid", marginBottom: 0 }}>
+      <svg viewBox="0 0 320 320" style={{ width: "100%", maxWidth: 260, height: "auto", display: "block", margin: "0 auto" }}>
+        <circle cx={cx} cy={cy} r={r + 42} fill="#0c1a0c" />
+        {[0.35, 0.52, 0.75, 0.95].map((frac) => (
+          <circle key={frac} cx={cx} cy={cy} r={r * frac} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="0.5" />
+        ))}
+        {[0, 45, 90, 135].map((d) => {
+          const [x1, y1] = toXY(d, r * 0.95);
+          const [x2, y2] = toXY(d + 180, r * 0.95);
+          return <line key={d} x1={f(x1)} y1={f(y1)} x2={f(x2)} y2={f(y2)} stroke="rgba(255,255,255,0.05)" strokeWidth="0.5" />;
+        })}
+        <path d={windPath} fill="rgba(147,197,253,0.22)" stroke="#93c5fd" strokeWidth="1" />
+        <path d={winterPath} fill="rgba(96,165,250,0.32)" stroke="#60a5fa" strokeWidth="1" />
+        <path d={summerPath} fill="rgba(251,191,36,0.32)" stroke="#fbbf24" strokeWidth="1.5" />
+        <circle cx={cx} cy={cy} r={r * 0.28} fill="rgba(74,154,40,0.28)" stroke="#4a9a28" strokeWidth="1.5" />
+        <text x={cx} y={cy + 1} textAnchor="middle" dominantBaseline="middle" fill="#6cc040" fontSize="8" fontWeight="bold">SITE</text>
+        <polygon
+          points={`${f(nTx)},${f(nTy)} ${f(nL1x)},${f(nL1y)} ${f(nL2x)},${f(nL2y)}`}
+          fill="#f87171"
+        />
+        <circle cx={cx} cy={cy} r={r + 7} fill="none" stroke="rgba(255,255,255,0.13)" strokeWidth="0.5" />
+        {compassPts.map(({ l, d }) => {
+          const [lx, ly] = toXY(d, r + 20);
+          return (
+            <text key={l} x={f(lx)} y={f(ly)} fill={d % 90 === 0 ? "white" : "rgba(255,255,255,0.55)"}
+              fontSize={d % 90 === 0 ? 10 : 8} fontWeight={d % 90 === 0 ? "bold" : "normal"}
+              textAnchor="middle" dominantBaseline="middle">{l}</text>
+          );
+        })}
+        {windKey && (() => {
+          const [lx, ly] = toXY(windDeg, r + 33);
+          return <text x={f(lx)} y={f(ly)} fill="#93c5fd" fontSize="9" textAnchor="middle" dominantBaseline="middle">💨</text>;
+        })()}
+      </svg>
+      <div style={{ display: "flex", gap: 12, justifyContent: "center", marginTop: 8, flexWrap: "wrap" }}>
+        {[
+          { color: "#fbbf24", label: "Summer sun zone" },
+          { color: "#60a5fa", label: "Winter sun zone" },
+          { color: "#93c5fd", label: `Prevailing wind${windKey ? ` (${windKey})` : ""}` },
+        ].map(({ color, label }) => (
+          <div key={label} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <div style={{ width: 10, height: 10, borderRadius: 2, background: color, opacity: 0.7 }} />
+            <span style={{ fontSize: 9, color: "#6b7280" }}>{label}</span>
+          </div>
+        ))}
+      </div>
+    </figure>
+  );
+}
+
+// ─── Soil Profile Visualisation ────────────────────────────────────────────────
+function SoilProfileViz({
+  clay, sand, silt, ph, organicCarbon, textureClass,
+}: {
+  clay?: number | null; sand?: number | null; silt?: number | null;
+  ph?: number | null; organicCarbon?: number | null; textureClass?: string | null;
+}) {
+  const rawTotal = (clay ?? 0) + (sand ?? 0) + (silt ?? 0);
+  const total = rawTotal > 0 ? rawTotal : 100;
+  const clayPct  = rawTotal > 0 ? Math.round(((clay  ?? 0) / total) * 100) : (clay  ?? 30);
+  const sandPct  = rawTotal > 0 ? Math.round(((sand  ?? 0) / total) * 100) : (sand  ?? 40);
+  const siltPct  = rawTotal > 0 ? Math.round(100 - clayPct - sandPct)       : (silt  ?? 30);
+  const phVal    = ph ?? 6.5;
+  const ocVal    = organicCarbon ?? 0;
+  const ocWidth  = Math.min(100, Math.round(ocVal * 4));
+
+  const horizons = [
+    { label: "O", name: "Organic layer", depth: "0–5 cm",   fill: "#3d1f0a", h: 22 },
+    { label: "A", name: "Topsoil",       depth: "5–30 cm",  fill: `hsl(25,${38 + clayPct * 0.5}%,${36 - clayPct * 0.12}%)`, h: 48 },
+    { label: "B", name: "Subsoil",       depth: "30–80 cm", fill: `hsl(18,${28 + clayPct * 0.6}%,${32 - clayPct * 0.1}%)`,  h: 56 },
+    { label: "C", name: "Parent rock",   depth: "80+ cm",   fill: "#a89988", h: 34 },
+  ];
+
+  const colY = (i: number) => 8 + horizons.slice(0, i).reduce((acc, h) => acc + h.h + 2, 0);
+
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "140px 1fr", gap: "18px", alignItems: "start", pageBreakInside: "avoid" }}>
+      {/* Soil column SVG */}
+      <div>
+        <p style={{ fontSize: 9, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>
+          Soil Profile Column
+        </p>
+        <svg viewBox="0 0 160 180" style={{ width: "100%", height: "auto" }}>
+          {horizons.map((hz, i) => {
+            const y = colY(i);
+            return (
+              <g key={hz.label}>
+                <rect x={18} y={y} width={55} height={hz.h} fill={hz.fill} rx={2} />
+                <text x={78} y={y + hz.h * 0.38} fontSize="8" fill="#374151" dominantBaseline="middle" fontWeight="bold">{hz.label}</text>
+                <text x={78} y={y + hz.h * 0.65} fontSize="7" fill="#6b7280" dominantBaseline="middle">{hz.name}</text>
+                <text x={14} y={y + 2} fontSize="6.5" fill="#9ca3af" textAnchor="end" dominantBaseline="hanging">{hz.depth.split("–")[0]}cm</text>
+              </g>
+            );
+          })}
+          {/* Organic dots in A horizon */}
+          {[{x:28,y:44},{x:40,y:50},{x:54,y:42},{x:32,y:56},{x:48,y:62},{x:62,y:54}].map((p, i) => (
+            <circle key={i} cx={p.x} cy={p.y} r={1.3} fill="rgba(0,0,0,0.25)" />
+          ))}
+          {/* Sand grains in B horizon */}
+          {[{x:30,y:100},{x:44,y:110},{x:56,y:102},{x:38,y:118},{x:62,y:114}].map((p, i) => (
+            <rect key={i} x={p.x} y={p.y} width={3} height={2} fill="rgba(255,255,255,0.15)" rx={0.5} />
+          ))}
+        </svg>
+      </div>
+
+      {/* Right panel */}
+      <div style={{ paddingTop: 18 }}>
+        {textureClass && (
+          <div style={{ marginBottom: 10 }}>
+            <span style={{ fontSize: 9, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.1em" }}>Texture Class</span>
+            <div style={{ fontSize: 14, fontWeight: "bold", color: "#111827", marginTop: 2 }}>{textureClass}</div>
+          </div>
+        )}
+
+        {rawTotal > 0 && (
+          <div style={{ marginBottom: 12 }}>
+            <p style={{ fontSize: 9, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>
+              Particle Composition
+            </p>
+            {[
+              { label: "Clay",  pct: clayPct, color: "#b45309", imp: "Water retention · structure" },
+              { label: "Silt",  pct: siltPct, color: "#78716c", imp: "Nutrient holding · erosion risk" },
+              { label: "Sand",  pct: sandPct, color: "#d97706", imp: "Drainage · aeration" },
+            ].map(({ label, pct, color, imp }) => (
+              <div key={label} style={{ marginBottom: 7 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, color: "#374151", marginBottom: 2 }}>
+                  <span style={{ fontWeight: 600 }}>{label}</span><span>{pct}%</span>
+                </div>
+                <div style={{ height: 7, background: "#f3f4f6", borderRadius: 4, overflow: "hidden", marginBottom: 2 }}>
+                  <div style={{ height: "100%", width: `${pct}%`, background: color, borderRadius: 4 }} />
+                </div>
+                <div style={{ fontSize: 8, color: "#9ca3af" }}>{imp}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {ph != null && (
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, marginBottom: 3 }}>
+              <span style={{ textTransform: "uppercase", letterSpacing: "0.1em", color: "#6b7280" }}>Soil pH</span>
+              <span style={{ fontWeight: "bold", color: phVal < 6 ? "#dc2626" : phVal < 7.5 ? "#16a34a" : "#2563eb" }}>{ph}</span>
+            </div>
+            <div style={{ height: 8, borderRadius: 4, background: "linear-gradient(to right,#ef4444,#f97316,#facc15,#22c55e,#60a5fa,#8b5cf6)", position: "relative" }}>
+              <div style={{
+                position: "absolute", top: -3, width: 7, height: 14,
+                background: "white", border: "1.5px solid #374151", borderRadius: 3,
+                left: `${Math.max(2, Math.min(96, ((phVal - 4) / 6) * 100))}%`,
+                transform: "translateX(-50%)",
+              }} />
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 7, color: "#9ca3af", marginTop: 2 }}>
+              <span>Acid 4</span><span>Neutral 7</span><span>Alkaline 10</span>
+            </div>
+          </div>
+        )}
+
+        {ocVal > 0 && (
+          <div>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, marginBottom: 3 }}>
+              <span style={{ textTransform: "uppercase", letterSpacing: "0.1em", color: "#6b7280" }}>Organic Carbon</span>
+              <span style={{ fontWeight: "bold", color: "#374151" }}>{organicCarbon} g/kg</span>
+            </div>
+            <div style={{ height: 7, background: "#f3f4f6", borderRadius: 4, overflow: "hidden", marginBottom: 3 }}>
+              <div style={{ height: "100%", width: `${ocWidth}%`, background: "linear-gradient(to right,#d97706,#7c2d12)", borderRadius: 4 }} />
+            </div>
+            <div style={{ fontSize: 8, color: "#6b7280" }}>
+              {ocVal < 8 ? "⚠ Low — prioritise compost & mulching" : ocVal < 18 ? "Moderate — build with chop-and-drop & cover crops" : "High — excellent organic matter foundation"}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function DossierPage() {
   const [, navigate] = useLocation();
@@ -39,6 +351,17 @@ export default function DossierPage() {
   })();
 
   const moodImages = (brief?.moodBoardImages as string[] | null | undefined) ?? [];
+
+  const boundaryCentroid = (() => {
+    const bg = property?.boundaryGeojson as unknown as string | null | undefined;
+    if (!bg) return null;
+    try {
+      const geo = JSON.parse(bg);
+      const c = turf.centroid(geo as Parameters<typeof turf.centroid>[0]);
+      return c.geometry.coordinates as [number, number]; // [lng, lat]
+    } catch { return null; }
+  })();
+  const siteLat = boundaryCentroid?.[1] ?? null;
 
   const today = new Date().toLocaleDateString("en-AU", { day: "numeric", month: "long", year: "numeric" });
 
@@ -161,6 +484,24 @@ export default function DossierPage() {
                 </div>
               </div>
             </div>
+
+            {/* Property satellite overview map */}
+            {property?.boundaryGeojson && (
+              <div style={{ position: "relative" }}>
+                <PropertyMap
+                  boundaryGeojson={property.boundaryGeojson as unknown as string}
+                  style="satellite-streets-v12"
+                  fillColor="#4a9a28"
+                />
+                <div
+                  style={{
+                    position: "absolute", bottom: 0, left: 0, right: 0, height: 60,
+                    background: "linear-gradient(to top, white, transparent)",
+                    pointerEvents: "none",
+                  }}
+                />
+              </div>
+            )}
 
             {/* Document body */}
             <div className="px-10 py-8 space-y-8">
@@ -305,17 +646,97 @@ export default function DossierPage() {
                         {[
                           { key: "WaterStrategy",         title: "💧 Water Strategy",        accent: "#dbeafe", border: "#3b82f6" },
                           { key: "SunAndEnergy",          title: "☀️ Sun & Energy",           accent: "#fef9c3", border: "#ca8a04" },
+                          { key: "SoilAndFertility",      title: "🌱 Soil & Fertility",       accent: "#fef3c7", border: "#92400e" },
                           { key: "LandAndBiodiversity",   title: "🌾 Land & Biodiversity",    accent: "#dcfce7", border: "#16a34a" },
                           { key: "ClimateResilience",     title: "🛡 Climate Resilience",     accent: "#e0e7ff", border: "#6366f1" },
                           { key: "InfrastructureCritique",title: "⚠️ Infrastructure Critique", accent: "#fff7ed", border: "#ea580c" },
                         ].map(({ key, title, accent, border }) => {
                           const val = (aiReport as unknown as Record<string, unknown>)[key];
                           if (val === undefined || val === null) return null;
+
+                          // Visual panels for mapped sections
+                          let visualPanel: React.ReactNode = null;
+                          if (key === "WaterStrategy" && property?.boundaryGeojson) {
+                            visualPanel = (
+                              <div className="px-4 pt-3" style={{ background: "#f9fafb" }}>
+                                <PropertyMap
+                                  boundaryGeojson={property.boundaryGeojson as unknown as string}
+                                  style="outdoors-v12"
+                                  fillColor="#3b82f6"
+                                  caption="Terrain & contour map — darker shading = higher elevation, contour lines show water flow paths"
+                                />
+                                <div
+                                  className="mb-3 rounded-lg px-3 py-2 text-[10px] leading-relaxed"
+                                  style={{ background: "#eff6ff", border: "1px solid #bfdbfe", color: "#1e40af" }}
+                                >
+                                  <strong>Reading the map:</strong> Contour lines show elevation — water flows perpendicular to them, from high ground to low. Shade relief reveals ridges (water divides) and valleys (natural collection points). Swales should follow contour lines; dams sit at valley heads below natural catchment areas.
+                                </div>
+                              </div>
+                            );
+                          } else if (key === "SunAndEnergy") {
+                            visualPanel = (
+                              <div className="px-4 pt-3 pb-1" style={{ background: "#f9fafb" }}>
+                                <div style={{ display: "grid", gridTemplateColumns: "260px 1fr", gap: 16, alignItems: "start" }}>
+                                  <SunSectorDiagram lat={siteLat} prevailingWind={brief?.prevailingWindDir} />
+                                  <div style={{ paddingTop: 8 }}>
+                                    <p style={{ fontSize: 9, color: "#92400e", textTransform: "uppercase", letterSpacing: "0.12em", fontWeight: 700, marginBottom: 6 }}>
+                                      How to read this diagram
+                                    </p>
+                                    <ul style={{ fontSize: 10, color: "#374151", lineHeight: 1.7, paddingLeft: 14, margin: 0 }}>
+                                      <li><strong>Amber band</strong> — summer sun zone: maximum solar exposure, highest UV</li>
+                                      <li><strong>Blue band</strong> — winter sun zone: reduced arc, shade from buildings/trees has greater impact</li>
+                                      <li><strong>Blue wedge</strong> — prevailing wind sector: windbreaks should intercept this zone</li>
+                                      <li><strong>Red arrow</strong> — north (compass true north)</li>
+                                      <li>Food gardens &amp; solar panels: position in the summer sun zone, away from winter shade sources</li>
+                                      <li>Fire-breaks &amp; wind-sensitive crops: protect from the wind wedge sector</li>
+                                    </ul>
+                                    {brief?.solarIrradianceKwhM2 != null && (
+                                      <div style={{ marginTop: 10, padding: "6px 10px", borderRadius: 6, background: "#fef9c3", border: "1px solid #fde68a" }}>
+                                        <span style={{ fontSize: 9, color: "#92400e", fontWeight: 700 }}>Solar irradiance: </span>
+                                        <span style={{ fontSize: 11, color: "#78350f", fontWeight: 800 }}>{brief.solarIrradianceKwhM2.toLocaleString()} kWh/m²/yr</span>
+                                        <span style={{ fontSize: 8, color: "#a16207", marginLeft: 4 }}>
+                                          {brief.solarIrradianceKwhM2 >= 1600 ? "Excellent PV potential" : brief.solarIrradianceKwhM2 >= 1200 ? "Good PV potential" : "Moderate PV potential"}
+                                        </span>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          } else if (key === "SoilAndFertility") {
+                            const hasSoilData = brief?.soilClay != null || brief?.soilSand != null || brief?.soilPH != null;
+                            if (hasSoilData) {
+                              visualPanel = (
+                                <div className="px-4 pt-3 pb-1" style={{ background: "#f9fafb" }}>
+                                  <SoilProfileViz
+                                    clay={brief?.soilClay}
+                                    sand={brief?.soilSand}
+                                    silt={brief?.soilSilt}
+                                    ph={brief?.soilPH}
+                                    organicCarbon={brief?.soilOrganicCarbonGkg}
+                                    textureClass={brief?.soilTextureClass}
+                                  />
+                                  {property?.boundaryGeojson && (
+                                    <div className="mt-3">
+                                      <PropertyMap
+                                        boundaryGeojson={property.boundaryGeojson as unknown as string}
+                                        style="satellite-v9"
+                                        fillColor="#92400e"
+                                        caption="Property satellite view — bare soil patches, vegetation density & colour variation indicate soil moisture & organic matter zones"
+                                      />
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            }
+                          }
+
                           return (
                             <div key={key} className="rounded-xl overflow-hidden" style={{ border: `1px solid ${border}40` }}>
                               <div className="px-4 py-2.5 text-[11px] font-bold" style={{ background: accent, borderBottom: `1px solid ${border}40`, color: "#374151" }}>
                                 {title}
                               </div>
+                              {visualPanel}
                               <div className="px-4 py-3 text-[12px] leading-relaxed" style={{ background: "#f9fafb", color: "#374151" }}>
                                 {typeof val === "string" ? (
                                   <p className="whitespace-pre-wrap">{val}</p>
