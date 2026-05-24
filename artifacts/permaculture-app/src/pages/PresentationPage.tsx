@@ -157,45 +157,41 @@ export default function PresentationPage() {
 
   if (!id) {
     return (
-      <div className="h-screen w-screen flex items-center justify-center bg-slate-950">
-        <div className="text-center space-y-3">
-          <div className="w-12 h-12 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center mx-auto">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-slate-500">
-              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-            </svg>
-          </div>
-          <p className="text-slate-400 font-mono text-sm">No site ID in this link.</p>
+      <div style={{ height: "100vh", width: "100vw", display: "flex", alignItems: "center", justifyContent: "center", background: "#fff" }}>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ fontFamily: "monospace", fontSize: 9, textTransform: "uppercase", letterSpacing: "0.18em", color: "#1d4ed8", marginBottom: 12 }}>Error</div>
+          <p style={{ fontFamily: "monospace", fontSize: 12, color: "#888" }}>No site ID in this link.</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="h-screen w-screen flex flex-col overflow-hidden bg-slate-950">
+    <div style={{ height: "100vh", width: "100vw", display: "flex", flexDirection: "column", overflow: "hidden", background: "#fff" }}>
 
       {/* ── TOP BAR ──────────────────────────────────────────────── */}
-      <header className="shrink-0 h-11 flex items-center justify-between px-5 border-b border-slate-800 bg-slate-900/80 backdrop-blur-sm z-20">
-        <div className="flex items-center gap-3">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="text-emerald-500">
+      <header style={{ flexShrink: 0, height: 44, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 20px", borderBottom: "2px solid #111", background: "#fff", zIndex: 20 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style={{ color: "#1d4ed8" }}>
             <path d="M12 2L3 7v5c0 5.25 3.75 10.15 9 11.25C17.25 22.15 21 17.25 21 12V7L12 2z"/>
           </svg>
-          <span className="text-[13px] font-bold tracking-tight text-slate-100">TerraGuard</span>
-          <div className="w-px h-3.5 bg-slate-700" />
-          <span className="text-[10px] font-mono uppercase tracking-widest text-slate-500">Client View</span>
+          <span style={{ fontFamily: "monospace", fontSize: 12, fontWeight: 900, letterSpacing: "-0.01em", color: "#111" }}>TerraGuard</span>
+          <div style={{ width: 1, height: 14, background: "#ddd" }} />
+          <span style={{ fontFamily: "monospace", fontSize: 9, textTransform: "uppercase", letterSpacing: "0.14em", color: "#1d4ed8" }}>Client View</span>
           {property && (
             <>
-              <div className="w-px h-3.5 bg-slate-700" />
-              <span className="text-[12px] font-medium text-slate-300 truncate max-w-[200px]">{property.name}</span>
+              <div style={{ width: 1, height: 14, background: "#ddd" }} />
+              <span style={{ fontFamily: "monospace", fontSize: 11, color: "#555" }}>{property.name}</span>
             </>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           {(property?.areaHectares ?? 0) > 0 && (
-            <span className="text-[10px] font-mono bg-emerald-600/10 text-emerald-500 border border-emerald-600/20 px-2 py-0.5 rounded">
+            <span style={{ fontFamily: "monospace", fontSize: 9, color: "#1d4ed8", border: "1px solid #1d4ed8", padding: "2px 8px", letterSpacing: "0.06em" }}>
               {property?.areaHectares?.toFixed(2)} ha
             </span>
           )}
-          <span className="text-[10px] font-mono bg-slate-800 text-slate-500 border border-slate-700 px-2 py-0.5 rounded uppercase tracking-wider">
+          <span style={{ fontFamily: "monospace", fontSize: 9, color: "#888", border: "1px solid #ddd", padding: "2px 8px", textTransform: "uppercase", letterSpacing: "0.1em" }}>
             Read Only
           </span>
         </div>
@@ -207,10 +203,10 @@ export default function PresentationPage() {
         {/* MAP ── left panel */}
         <div className="flex-1 relative min-w-0">
           {isLoading ? (
-            <div className="absolute inset-0 flex items-center justify-center bg-slate-900">
+            <div className="absolute inset-0 flex items-center justify-center" style={{ background: "#f7f7f7" }}>
               <div className="flex flex-col items-center gap-3">
-                <div className="w-6 h-6 border-2 border-t-transparent rounded-full animate-spin border-emerald-500" />
-                <p className="text-[11px] text-slate-500 font-mono uppercase tracking-widest">Loading terrain...</p>
+                <div className="w-6 h-6 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: "#1d4ed8" }} />
+                <p className="text-[11px] font-mono uppercase tracking-widest" style={{ color: "#bbb" }}>Loading terrain...</p>
               </div>
             </div>
           ) : (
@@ -222,17 +218,17 @@ export default function PresentationPage() {
 
           {/* Map legend */}
           {zones.length > 0 && (
-            <div className="absolute bottom-4 left-4 z-10 bg-slate-900/90 border border-slate-700 rounded-lg px-3 py-2 space-y-1 backdrop-blur-sm">
-              <div className="text-[9px] font-mono uppercase tracking-widest text-slate-500 mb-1.5">Zone Legend</div>
+            <div className="absolute bottom-4 left-4 z-10 px-3 py-2 space-y-1" style={{ background: "rgba(255,255,255,0.92)", border: "1px solid #ddd" }}>
+              <div className="text-[9px] font-mono uppercase tracking-widest mb-1.5" style={{ color: "#888" }}>Zone Legend</div>
               {[1, 2, 3, 4, 5]
                 .filter((n) => zones.some((z) => z.zoneNumber === n))
                 .map((n) => (
                   <div key={n} className="flex items-center gap-2">
                     <div
-                      className="w-3 h-3 rounded-sm border"
+                      className="w-3 h-3 border"
                       style={{ background: ZONE_COLORS[n]?.fill, borderColor: ZONE_COLORS[n]?.stroke }}
                     />
-                    <span className="text-[10px] text-slate-400">Zone {n}</span>
+                    <span className="text-[10px]" style={{ color: "#555" }}>Zone {n}</span>
                   </div>
                 ))}
             </div>
@@ -240,21 +236,21 @@ export default function PresentationPage() {
 
           {/* No boundary notice */}
           {!isLoading && !property?.boundaryGeojson && (
-            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 bg-slate-900/90 border border-slate-700 rounded-lg px-4 py-2 backdrop-blur-sm">
-              <p className="text-[11px] text-slate-400 font-mono">No boundary mapped yet</p>
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 px-4 py-2" style={{ background: "rgba(255,255,255,0.92)", border: "1px solid #ddd" }}>
+              <p className="text-[11px] font-mono" style={{ color: "#888" }}>No boundary mapped yet</p>
             </div>
           )}
         </div>
 
         {/* SIDEBAR ── right panel */}
-        <aside className="w-[380px] shrink-0 flex flex-col bg-slate-900 border-l border-slate-800 overflow-hidden">
+        <aside className="w-[380px] shrink-0 flex flex-col overflow-hidden" style={{ background: "#fff", borderLeft: "2px solid #111" }}>
 
           {/* Sidebar header */}
-          <div className="shrink-0 px-5 py-4 border-b border-slate-800">
-            <h2 className="text-[11px] font-bold uppercase tracking-[0.15em] text-emerald-500 mb-0.5">
+          <div className="shrink-0 px-5 py-4" style={{ borderBottom: "2px solid #111" }}>
+            <h2 className="text-[11px] font-bold uppercase tracking-[0.15em] mb-0.5" style={{ color: "#1d4ed8" }}>
               Property Resilience Dossier
             </h2>
-            <p className="text-[10px] text-slate-500 font-mono">
+            <p className="text-[10px] font-mono" style={{ color: "#bbb" }}>
               {property?.name ?? "—"} · {brief?.aiAnalysisGeneratedAt
                 ? `Analysis ${new Date(brief.aiAnalysisGeneratedAt).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" })}`
                 : "Awaiting analysis"}
@@ -266,14 +262,14 @@ export default function PresentationPage() {
 
             {isLoading && (
               <div className="flex items-center justify-center py-12">
-                <div className="w-5 h-5 border-2 border-t-transparent rounded-full animate-spin border-emerald-500" />
+                <div className="w-5 h-5 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: "#1d4ed8" }} />
               </div>
             )}
 
             {!isLoading && !brief && (
-              <div className="rounded-lg bg-slate-800 border border-slate-700 p-4 text-center">
-                <p className="text-[12px] text-slate-400">Site survey not completed yet.</p>
-                <p className="text-[11px] text-slate-500 mt-1">Check back once your designer finishes the intake.</p>
+              <div className="p-4 text-center" style={{ background: "#f7f7f7", border: "1px solid #e5e5e5" }}>
+                <p className="text-[12px]" style={{ color: "#555" }}>Site survey not completed yet.</p>
+                <p className="text-[11px] mt-1" style={{ color: "#bbb" }}>Check back once your designer finishes the intake.</p>
               </div>
             )}
 
@@ -332,20 +328,20 @@ export default function PresentationPage() {
                         return (
                           <div
                             key={key}
-                            className="rounded-lg bg-slate-800 border border-slate-700 overflow-hidden"
-                            style={{ borderLeft: `3px solid ${accent}` }}
+                            className="overflow-hidden"
+                            style={{ border: "1px solid #e5e5e5", borderLeft: `3px solid ${accent}`, background: "#fff" }}
                           >
                             <div
                               className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest"
-                              style={{ color: accent }}
+                              style={{ color: accent, borderBottom: "1px solid #f0f0f0", background: "#fafafa" }}
                             >
                               {title}
                             </div>
-                            <div className="px-3 pb-3 text-[11px] leading-relaxed text-slate-300">
+                            <div className="px-3 pb-3 text-[11px] leading-relaxed" style={{ color: "#444" }}>
                               {typeof val === "string" ? (
                                 <p className="whitespace-pre-wrap">{val}</p>
                               ) : Array.isArray(val) ? (
-                                <ul className="list-disc pl-3 space-y-0.5 text-slate-400">
+                                <ul className="list-disc pl-3 space-y-0.5" style={{ color: "#666" }}>
                                   {val.map((item, i) => (
                                     <li key={i}>{typeof item === "object" ? JSON.stringify(item) : String(item)}</li>
                                   ))}
@@ -361,9 +357,9 @@ export default function PresentationPage() {
                   </PresentSection>
                 ) : (
                   <PresentSection title="AI Resilience Analysis">
-                    <div className="rounded-lg bg-slate-800 border border-slate-700 border-dashed p-4 text-center">
-                      <p className="text-[12px] text-slate-500">Analysis not yet generated.</p>
-                      <p className="text-[11px] text-slate-600 mt-1">Your designer will share results here once complete.</p>
+                    <div className="p-4 text-center" style={{ background: "#f7f7f7", border: "1px dashed #ddd" }}>
+                      <p className="text-[12px]" style={{ color: "#888" }}>Analysis not yet generated.</p>
+                      <p className="text-[11px] mt-1" style={{ color: "#bbb" }}>Your designer will share results here once complete.</p>
                     </div>
                   </PresentSection>
                 )}
@@ -372,9 +368,9 @@ export default function PresentationPage() {
           </div>
 
           {/* Sidebar footer */}
-          <div className="shrink-0 px-5 py-3 border-t border-slate-800 flex items-center justify-between">
-            <span className="text-[9px] font-mono uppercase tracking-widest text-slate-600">TerraGuard OS</span>
-            <span className="text-[9px] font-mono text-slate-600">Read-only · Client access</span>
+          <div className="shrink-0 px-5 py-3 flex items-center justify-between" style={{ borderTop: "1px solid #e5e5e5" }}>
+            <span className="text-[9px] font-mono uppercase tracking-widest" style={{ color: "#bbb" }}>TerraGuard OS</span>
+            <span className="text-[9px] font-mono" style={{ color: "#bbb" }}>Read-only · Client access</span>
           </div>
         </aside>
       </div>
@@ -386,8 +382,8 @@ function PresentSection({ title, children }: { title: string; children: React.Re
   return (
     <section>
       <div className="flex items-center gap-2 mb-3">
-        <h3 className="text-[9px] font-bold uppercase tracking-[0.18em] text-slate-500">{title}</h3>
-        <div className="flex-1 h-px bg-slate-800" />
+        <h3 className="text-[9px] font-bold uppercase tracking-[0.18em]" style={{ color: "#888" }}>{title}</h3>
+        <div className="flex-1 h-px" style={{ background: "#e5e5e5" }} />
       </div>
       {children}
     </section>
@@ -397,8 +393,8 @@ function PresentSection({ title, children }: { title: string; children: React.Re
 function PresentField({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex flex-col gap-0.5">
-      <span className="text-[9px] uppercase tracking-wide font-semibold text-slate-600">{label}</span>
-      <span className="text-[12px] font-medium text-slate-200">{value}</span>
+      <span className="text-[9px] uppercase tracking-wide font-semibold" style={{ color: "#bbb" }}>{label}</span>
+      <span className="text-[12px] font-medium" style={{ color: "#111" }}>{value}</span>
     </div>
   );
 }

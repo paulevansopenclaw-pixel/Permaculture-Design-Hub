@@ -155,29 +155,29 @@ export default function AnalysisPage() {
   });
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden" style={{ background: "hsl(103, 18%, 7%)" }}>
+    <div className="h-screen flex flex-col overflow-hidden" style={{ background: "#fff" }}>
       {/* ── TOP BAR ── */}
       <header
         className="shrink-0 flex items-center justify-between px-5 py-3 border-b"
-        style={{ background: "hsl(103, 22%, 9%)", borderColor: "hsl(103, 30%, 15%)", zIndex: 10 }}
+        style={{ background: "#fff", borderColor: "#e5e5e5", zIndex: 10 }}
       >
         <div className="flex items-center gap-4 min-w-0">
           <button
             onClick={() => navigate("/properties")}
             className="flex items-center gap-2 shrink-0 transition-opacity hover:opacity-70"
-            style={{ color: "hsl(42, 28%, 85%)" }}
+            style={{ color: "#111" }}
           >
             <span className="text-base">🛡</span>
             <span className="text-[13px] font-bold tracking-tight hidden sm:inline">TerraGuard</span>
           </button>
-          <div className="w-px h-4 shrink-0 hidden sm:block" style={{ background: "hsl(103, 22%, 22%)" }} />
-          <span className="text-[11px] font-semibold uppercase tracking-widest shrink-0" style={{ color: "hsl(84, 40%, 55%)" }}>
+          <div className="w-px h-4 shrink-0 hidden sm:block" style={{ background: "#ddd" }} />
+          <span className="text-[11px] font-semibold uppercase tracking-widest shrink-0" style={{ color: "#1d4ed8" }}>
             The War Room
           </span>
           {property?.name && (
             <>
-              <div className="w-px h-4 shrink-0" style={{ background: "hsl(103, 22%, 22%)" }} />
-              <span className="text-[12px] truncate" style={{ color: "hsl(42, 20%, 60%)" }}>{property.name}</span>
+              <div className="w-px h-4 shrink-0" style={{ background: "#ddd" }} />
+              <span className="text-[12px] truncate" style={{ color: "#555" }}>{property.name}</span>
             </>
           )}
         </div>
@@ -189,14 +189,14 @@ export default function AnalysisPage() {
         <div className="flex-1 flex items-center justify-center p-8">
           <div className="text-center space-y-3">
             <div className="text-4xl">⚡</div>
-            <h3 className="text-base font-semibold" style={{ color: "hsl(42, 28%, 82%)" }}>No property selected</h3>
-            <p className="text-sm" style={{ color: "hsl(42, 15%, 50%)" }}>
+            <h3 className="text-base font-semibold" style={{ color: "#111" }}>No property selected</h3>
+            <p className="text-sm" style={{ color: "#888" }}>
               Select a property and complete the site intake survey first.
             </p>
             <button
               onClick={() => navigate("/intake")}
-              className="mt-2 px-5 py-2.5 rounded-xl text-[13px] font-semibold"
-              style={{ background: "hsl(84, 38%, 22%)", color: "hsl(84, 55%, 80%)", border: "1px solid hsl(84, 35%, 30%)" }}
+              className="mt-2 px-5 py-2.5 text-[13px] font-semibold"
+              style={{ background: "#1d4ed8", color: "#fff", border: "2px solid #1d4ed8" }}
             >
               ← Go to Intake
             </button>
@@ -211,7 +211,7 @@ export default function AnalysisPage() {
           <div
             className="lg:w-[40%] shrink-0 relative border-r"
             style={{
-              borderColor: "hsl(103, 28%, 16%)",
+              borderColor: "#e5e5e5",
               minHeight: "220px",
               height: "40vh",
             }}
@@ -226,16 +226,16 @@ export default function AnalysisPage() {
               ) : (
                 <div
                   className="w-full h-full flex flex-col items-center justify-center gap-2"
-                  style={{ background: "hsl(103, 18%, 9%)" }}
+                  style={{ background: "#f7f7f7" }}
                 >
                   <span className="text-3xl opacity-30">🗺</span>
-                  <p className="text-[11px]" style={{ color: "hsl(42, 15%, 40%)" }}>
+                  <p className="text-[11px]" style={{ color: "#bbb" }}>
                     No boundary drawn
                   </p>
                   <button
                     onClick={() => navigate("/workspace")}
-                    className="text-[11px] px-3 py-1.5 rounded-lg mt-1"
-                    style={{ background: "hsl(103, 22%, 14%)", color: "hsl(42, 20%, 60%)", border: "1px solid hsl(103, 22%, 22%)" }}
+                    className="text-[11px] px-3 py-1.5 mt-1"
+                    style={{ background: "#fff", color: "#555", border: "1px solid #ddd" }}
                   >
                     Draw in Sandbox →
                   </button>
@@ -245,8 +245,8 @@ export default function AnalysisPage() {
 
             {/* Map label overlay */}
             <div
-              className="absolute bottom-2 left-2 px-2 py-1 rounded text-[9px] font-bold uppercase tracking-widest pointer-events-none"
-              style={{ background: "rgba(4,10,4,0.7)", color: "hsl(84, 40%, 55%)", zIndex: 20 }}
+              className="absolute bottom-2 left-2 px-2 py-1 text-[9px] font-bold uppercase tracking-widest pointer-events-none"
+              style={{ background: "rgba(0,0,0,0.55)", color: "#fff", zIndex: 20 }}
             >
               Site Overview
             </div>
@@ -255,14 +255,14 @@ export default function AnalysisPage() {
           {/* RIGHT — AI Analysis */}
           <div
             className="flex-1 overflow-y-auto"
-            style={{ background: "hsl(103, 18%, 8%)" }}
+            style={{ background: "#fff" }}
           >
             <div className="px-6 py-6 max-w-2xl">
               {/* No brief warning */}
               {!brief && (
                 <div
-                  className="rounded-xl p-4 mb-6 text-[12px]"
-                  style={{ background: "hsl(38, 30%, 10%)", border: "1px solid hsl(38, 30%, 20%)", color: "hsl(38, 70%, 65%)" }}
+                  className="p-4 mb-6 text-[12px]"
+                  style={{ background: "#fffbeb", border: "1px solid #fbbf24", color: "#92400e" }}
                 >
                   <span className="font-bold">Site survey incomplete.</span>{" "}
                   <button onClick={() => navigate("/intake")} className="underline">
@@ -287,19 +287,19 @@ export default function AnalysisPage() {
             {/* Bottom navigation */}
             <div
               className="px-6 py-4 border-t flex items-center justify-between sticky bottom-0"
-              style={{ background: "hsl(103, 22%, 9%)", borderColor: "hsl(103, 22%, 16%)" }}
+              style={{ background: "#fff", borderColor: "#e5e5e5" }}
             >
               <button
                 onClick={() => navigate("/workspace")}
-                className="text-[11px] px-3 py-1.5 rounded-lg"
-                style={{ color: "hsl(42, 20%, 55%)", border: "1px solid hsl(103, 22%, 20%)", background: "transparent" }}
+                className="text-[11px] px-3 py-1.5"
+                style={{ color: "#888", border: "1px solid #ddd", background: "transparent" }}
               >
                 ← Sandbox
               </button>
               <button
                 onClick={() => navigate("/dossier")}
-                className="flex items-center gap-2 px-5 py-2 rounded-xl text-[12px] font-semibold"
-                style={{ background: "linear-gradient(135deg, #1a4a0d, #3a8220)", color: "#e8f5e2", border: "1px solid #4a9a28" }}
+                className="flex items-center gap-2 px-5 py-2 text-[12px] font-semibold"
+                style={{ background: "#1d4ed8", color: "#fff", border: "2px solid #1d4ed8" }}
               >
                 Next: Export Studio →
               </button>

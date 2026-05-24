@@ -219,23 +219,23 @@ export default function IntakePage() {
   const showWizardTabs = !!activePropertyId && hasBoundary && hasBrief;
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: "hsl(103, 18%, 7%)" }}>
+    <div className="min-h-screen flex flex-col" style={{ background: "#fff" }}>
       {/* ── TOP BAR ── */}
       <header
         className="shrink-0 flex items-center justify-between px-5 py-3 border-b"
-        style={{ background: "hsl(103, 22%, 9%)", borderColor: "hsl(103, 30%, 15%)" }}
+        style={{ background: "#fff", borderColor: "#e5e5e5" }}
       >
         <div className="flex items-center gap-4">
           <button
             onClick={() => navigate("/properties")}
             className="flex items-center gap-2 transition-opacity hover:opacity-70"
-            style={{ color: "hsl(42, 28%, 85%)" }}
+            style={{ color: "#111" }}
           >
             <span className="text-base">🛡</span>
             <span className="text-[13px] font-bold tracking-tight hidden sm:inline">TerraGuard</span>
           </button>
-          <div className="w-px h-4 hidden sm:block" style={{ background: "hsl(103, 22%, 22%)" }} />
-          <span className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "hsl(84, 40%, 55%)" }}>
+          <div className="w-px h-4 hidden sm:block" style={{ background: "#ddd" }} />
+          <span className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "#1d4ed8" }}>
             Mission Control
           </span>
         </div>
@@ -246,13 +246,13 @@ export default function IntakePage() {
       <main className="flex-1 px-4 sm:px-8 py-8 max-w-5xl mx-auto w-full">
         {/* Property selector */}
         <div className="mb-6">
-          <label className="block text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: "hsl(42, 15%, 45%)" }}>
+          <label className="block text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: "#888" }}>
             Active Property
           </label>
           <div className="flex gap-2 items-center">
             <select
-              className="flex-1 max-w-xs text-sm px-3 py-2 rounded-lg border outline-none"
-              style={{ background: "hsl(103, 30%, 11%)", borderColor: "hsl(103, 28%, 20%)", color: "hsl(42, 28%, 88%)" }}
+              className="flex-1 max-w-xs text-sm px-3 py-2 border outline-none"
+              style={{ background: "#fff", borderColor: "#111", color: "#111", borderWidth: 2 }}
               value={activePropertyId ?? ""}
               onChange={(e) => { setActivePropertyId(e.target.value || null); setWizardStep(0); }}
             >
@@ -263,8 +263,8 @@ export default function IntakePage() {
             </select>
             <button
               onClick={() => navigate("/properties")}
-              className="text-[11px] px-3 py-2 rounded-lg"
-              style={{ color: "hsl(42, 20%, 55%)", border: "1px solid hsl(103, 22%, 20%)", background: "transparent" }}
+              className="text-[11px] px-3 py-2"
+              style={{ color: "#888", border: "1px solid #ddd", background: "transparent" }}
             >
               Manage →
             </button>
@@ -273,19 +273,21 @@ export default function IntakePage() {
 
         {/* ── Wizard tabs (only shown once survey is complete) ── */}
         {showWizardTabs && (
-          <div className="flex gap-1 mb-6 p-1 rounded-xl w-fit" style={{ background: "hsl(103, 22%, 10%)", border: "1px solid hsl(103, 22%, 17%)" }}>
+          <div className="flex gap-1 mb-6 p-1 w-fit" style={{ background: "#f7f7f7", border: "1px solid #e5e5e5" }}>
             {(["Survey", "Vision Board"] as const).map((label, idx) => (
               <button
                 key={label}
                 onClick={() => setWizardStep(idx as 0 | 1)}
-                className="px-4 py-1.5 rounded-lg text-[12px] font-semibold transition-all"
+                className="px-4 py-1.5 text-[12px] font-semibold transition-all"
                 style={wizardStep === idx ? {
-                  background: "hsl(103, 30%, 18%)",
-                  color: "hsl(84, 55%, 72%)",
-                  boxShadow: "0 1px 4px rgba(0,0,0,0.4)",
+                  background: "#fff",
+                  color: "#1d4ed8",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+                  border: "1px solid #e5e5e5",
                 } : {
-                  color: "hsl(42, 15%, 48%)",
+                  color: "#888",
                   background: "transparent",
+                  border: "1px solid transparent",
                 }}
               >
                 {idx === 0 ? "📋" : "🖼"} {label}
@@ -316,7 +318,7 @@ export default function IntakePage() {
                   <button
                     onClick={() => navigate("/workspace")}
                     className="mt-4 px-5 py-2.5 rounded-xl text-[13px] font-semibold"
-                    style={{ background: "hsl(84, 38%, 30%)", color: "hsl(84, 55%, 85%)", border: "1px solid hsl(84, 38%, 40%)" }}
+                    style={{ background: "#1d4ed8", color: "#fff", border: "2px solid #1d4ed8" }}
                   >
                     Go to Sandbox →
                   </button>
@@ -328,29 +330,29 @@ export default function IntakePage() {
             {activePropertyId && hasBoundary && !brief && (
               <div className="space-y-6">
                 <div
-                  className="rounded-2xl p-8 text-center space-y-4"
-                  style={{ background: "hsl(103, 22%, 10%)", border: "1px solid hsl(103, 22%, 18%)" }}
+                  className="p-8 text-center space-y-4"
+                  style={{ background: "#f7f7f7", border: "2px solid #111" }}
                 >
                   <div className="text-4xl mb-2">🌿</div>
-                  <h2 className="text-lg font-bold" style={{ color: "hsl(42, 28%, 88%)" }}>
+                  <h2 className="text-lg font-bold" style={{ color: "#111" }}>
                     Start the Site Survey
                   </h2>
-                  <p className="text-sm max-w-md mx-auto" style={{ color: "hsl(42, 15%, 55%)" }}>
+                  <p className="text-sm max-w-md mx-auto" style={{ color: "#666" }}>
                     The 4-step site survey gathers climate, soil, goals, and infrastructure data. This feeds the AI resilience analysis.
                   </p>
                   <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
                     <button
                       onClick={() => setShowOnboarding(true)}
-                      className="px-6 py-3 rounded-xl text-[13px] font-semibold"
-                      style={{ background: "linear-gradient(135deg, #1a4a0d, #3a8220)", color: "#e8f5e2", border: "1px solid #4a9a28", boxShadow: "0 4px 18px rgba(45,106,26,0.4)" }}
+                      className="px-6 py-3 text-[13px] font-semibold"
+                      style={{ background: "#1d4ed8", color: "#fff", border: "2px solid #1d4ed8" }}
                     >
                       🌿 Start Site Survey
                     </button>
                     <button
                       onClick={handleSyncSiteData}
                       disabled={isSyncing}
-                      className="px-5 py-3 rounded-xl text-[13px] font-medium"
-                      style={{ background: "hsl(103, 22%, 13%)", color: "hsl(42, 20%, 65%)", border: "1px solid hsl(103, 22%, 22%)" }}
+                      className="px-5 py-3 text-[13px] font-medium"
+                      style={{ background: "#fff", color: "#555", border: "1px solid #ddd" }}
                     >
                       {isSyncing ? "Syncing…" : "⟳ Auto-fill from Climate APIs"}
                     </button>
@@ -365,11 +367,11 @@ export default function IntakePage() {
                 {/* Header row */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div>
-                    <h2 className="text-xl font-bold" style={{ color: "hsl(42, 28%, 90%)" }}>
+                    <h2 className="text-xl font-bold" style={{ color: "#111" }}>
                       {property?.name}
                     </h2>
                     {(property?.areaHectares ?? 0) > 0 && (
-                      <p className="text-sm mt-0.5" style={{ color: "hsl(42, 15%, 55%)" }}>
+                      <p className="text-sm mt-0.5" style={{ color: "#888" }}>
                         {property?.areaHectares?.toFixed(2)} ha · {property?.areaAcres?.toFixed(2)} acres
                       </p>
                     )}
@@ -378,22 +380,22 @@ export default function IntakePage() {
                     <button
                       onClick={handleSyncSiteData}
                       disabled={isSyncing}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all"
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium transition-all"
                       style={{
-                        background: syncStatus === "ok" ? "hsl(103, 30%, 13%)" : syncStatus === "error" ? "hsl(0, 25%, 13%)" : "hsl(103, 22%, 13%)",
-                        color: syncStatus === "ok" ? "#4a9a28" : syncStatus === "error" ? "#f87171" : "hsl(42, 20%, 60%)",
-                        border: `1px solid ${syncStatus === "ok" ? "hsl(103, 30%, 22%)" : syncStatus === "error" ? "hsl(0, 25%, 22%)" : "hsl(103, 22%, 20%)"}`,
+                        background: "#fff",
+                        color: syncStatus === "ok" ? "#16a34a" : syncStatus === "error" ? "#ef4444" : "#555",
+                        border: `1px solid ${syncStatus === "ok" ? "#16a34a" : syncStatus === "error" ? "#ef4444" : "#ddd"}`,
                         opacity: isSyncing ? 0.7 : 1,
                       }}
                     >
                       {isSyncing ? (
-                        <><div className="w-3 h-3 border border-t-transparent rounded-full animate-spin" style={{ borderColor: "hsl(42,20%,60%)" }} />Syncing…</>
+                        <><div className="w-3 h-3 border border-t-transparent rounded-full animate-spin" style={{ borderColor: "#555" }} />Syncing…</>
                       ) : syncStatus === "ok" ? "✓ Synced" : syncStatus === "error" ? "✗ Failed" : "⟳ Sync Site Data"}
                     </button>
                     <button
                       onClick={() => setShowOnboarding(true)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all"
-                      style={{ background: "hsl(103, 22%, 13%)", color: "hsl(103, 40%, 65%)", border: "1px solid hsl(103, 22%, 22%)" }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium transition-all"
+                      style={{ background: "#fff", color: "#1d4ed8", border: "1px solid #1d4ed8" }}
                     >
                       ✎ Edit Survey
                     </button>
@@ -474,18 +476,18 @@ export default function IntakePage() {
                 </div>
 
                 {/* Navigation row */}
-                <div className="flex items-center justify-between pt-4 border-t" style={{ borderColor: "hsl(103, 22%, 16%)" }}>
+                <div className="flex items-center justify-between pt-4 border-t" style={{ borderColor: "#e5e5e5" }}>
                   <button
                     onClick={() => setWizardStep(1)}
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl text-[12px] font-medium"
-                    style={{ background: "hsl(270, 25%, 12%)", color: "#c4b5fd", border: "1px solid hsl(270, 35%, 22%)" }}
+                    className="flex items-center gap-2 px-4 py-2 text-[12px] font-medium"
+                    style={{ background: "#fff", color: "#1d4ed8", border: "1px solid #1d4ed8" }}
                   >
                     🖼 Add Vision Board →
                   </button>
                   <button
                     onClick={() => navigate("/workspace")}
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-[13px] font-semibold"
-                    style={{ background: "linear-gradient(135deg, #1a4a0d, #3a8220)", color: "#e8f5e2", border: "1px solid #4a9a28" }}
+                    className="flex items-center gap-2 px-5 py-2.5 text-[13px] font-semibold"
+                    style={{ background: "#1d4ed8", color: "#fff", border: "2px solid #1d4ed8" }}
                   >
                     Next: The Sandbox →
                   </button>
@@ -501,8 +503,8 @@ export default function IntakePage() {
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <h2 className="text-xl font-bold" style={{ color: "hsl(42, 28%, 90%)" }}>Vision Board</h2>
-                <p className="text-sm mt-1" style={{ color: "hsl(42, 15%, 52%)" }}>
+                <h2 className="text-xl font-bold" style={{ color: "#111" }}>Vision Board</h2>
+                <p className="text-sm mt-1" style={{ color: "#888" }}>
                   Upload up to 5 photos that capture the feel, style, or inspiration for this property.
                 </p>
               </div>
@@ -510,8 +512,8 @@ export default function IntakePage() {
                 {photos.length < 5 && (
                   <button
                     onClick={() => fileInputRef.current?.click()}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[12px] font-semibold"
-                    style={{ background: "hsl(270, 30%, 14%)", color: "#c4b5fd", border: "1px solid hsl(270, 40%, 24%)" }}
+                    className="flex items-center gap-1.5 px-3 py-2 text-[12px] font-semibold"
+                    style={{ background: "#fff", color: "#1d4ed8", border: "1px solid #1d4ed8" }}
                   >
                     <span className="text-sm">＋</span> Add Photo
                     <span className="text-[10px] ml-1 opacity-60">({photos.length}/5)</span>
@@ -520,18 +522,18 @@ export default function IntakePage() {
                 <button
                   onClick={handleSavePhotos}
                   disabled={isSavingPhotos}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-[12px] font-semibold transition-all"
+                  className="flex items-center gap-1.5 px-4 py-2 text-[12px] font-semibold transition-all"
                   style={photosSaveStatus === "ok" ? {
-                    background: "hsl(103, 30%, 13%)", color: "#4ade80", border: "1px solid hsl(103, 30%, 22%)",
+                    background: "#fff", color: "#16a34a", border: "1px solid #16a34a",
                   } : photosSaveStatus === "error" ? {
-                    background: "hsl(0, 25%, 13%)", color: "#f87171", border: "1px solid hsl(0, 25%, 22%)",
+                    background: "#fff", color: "#ef4444", border: "1px solid #ef4444",
                   } : {
-                    background: "linear-gradient(135deg, #1a4a0d, #3a8220)", color: "#e8f5e2", border: "1px solid #4a9a28",
+                    background: "#1d4ed8", color: "#fff", border: "2px solid #1d4ed8",
                     opacity: isSavingPhotos ? 0.7 : 1,
                   }}
                 >
                   {isSavingPhotos ? (
-                    <><div className="w-3 h-3 border border-t-transparent rounded-full animate-spin" style={{ borderColor: "#e8f5e2" }} />Saving…</>
+                    <><div className="w-3 h-3 border border-t-transparent rounded-full animate-spin" style={{ borderColor: "#fff" }} />Saving…</>
                   ) : photosSaveStatus === "ok" ? "✓ Saved" : photosSaveStatus === "error" ? "✗ Failed" : "Save Vision Board"}
                 </button>
               </div>
@@ -551,19 +553,15 @@ export default function IntakePage() {
             {photos.length === 0 ? (
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="w-full rounded-2xl flex flex-col items-center justify-center gap-4 py-16 transition-all"
-                style={{
-                  background: "hsl(270, 22%, 8%)",
-                  border: "2px dashed hsl(270, 35%, 22%)",
-                  color: "hsl(270, 30%, 50%)",
-                }}
+                className="w-full flex flex-col items-center justify-center gap-4 py-16 transition-all"
+                style={{ background: "#f7f7f7", border: "2px dashed #ddd", color: "#888" }}
               >
-                <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl" style={{ background: "hsl(270, 25%, 12%)" }}>
+                <div className="w-16 h-16 flex items-center justify-center text-3xl" style={{ background: "#eee" }}>
                   🖼
                 </div>
                 <div className="text-center space-y-1">
-                  <p className="text-[13px] font-semibold" style={{ color: "#c4b5fd" }}>Click to upload inspiration photos</p>
-                  <p className="text-[11px]" style={{ color: "hsl(270, 20%, 42%)" }}>JPG, PNG, WebP · up to 5 images · resized to 900 px automatically</p>
+                  <p className="text-[13px] font-semibold" style={{ color: "#111" }}>Click to upload inspiration photos</p>
+                  <p className="text-[11px]" style={{ color: "#bbb" }}>JPG, PNG, WebP · up to 5 images · resized to 900 px automatically</p>
                 </div>
               </button>
             ) : (
@@ -571,21 +569,21 @@ export default function IntakePage() {
                 {photos.map((src, i) => (
                   <div
                     key={i}
-                    className="relative group rounded-xl overflow-hidden"
-                    style={{ background: "hsl(103, 18%, 9%)", border: "1px solid hsl(103, 20%, 17%)", aspectRatio: "4/3" }}
+                    className="relative group overflow-hidden"
+                    style={{ background: "#f7f7f7", border: "1px solid #e5e5e5", aspectRatio: "4/3" }}
                   >
                     <img src={src} alt={`Vision board photo ${i + 1}`} className="w-full h-full object-cover" />
                     <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center">
                       <button
                         onClick={() => handleRemovePhoto(i)}
-                        className="opacity-0 group-hover:opacity-100 transition-all w-8 h-8 rounded-full flex items-center justify-center text-[13px] font-bold"
+                        className="opacity-0 group-hover:opacity-100 transition-all w-8 h-8 flex items-center justify-center text-[13px] font-bold"
                         style={{ background: "rgba(239,68,68,0.85)", color: "white" }}
                         aria-label="Remove photo"
                       >
                         ✕
                       </button>
                     </div>
-                    <div className="absolute bottom-2 left-2 text-[9px] px-1.5 py-0.5 rounded font-semibold" style={{ background: "rgba(0,0,0,0.6)", color: "rgba(255,255,255,0.75)" }}>
+                    <div className="absolute bottom-2 left-2 text-[9px] px-1.5 py-0.5 font-semibold" style={{ background: "rgba(0,0,0,0.6)", color: "rgba(255,255,255,0.75)" }}>
                       {i + 1}
                     </div>
                   </div>
@@ -593,15 +591,10 @@ export default function IntakePage() {
                 {photos.length < 5 && (
                   <button
                     onClick={() => fileInputRef.current?.click()}
-                    className="rounded-xl flex flex-col items-center justify-center gap-2 transition-all"
-                    style={{
-                      background: "hsl(270, 22%, 8%)",
-                      border: "2px dashed hsl(270, 30%, 20%)",
-                      aspectRatio: "4/3",
-                      color: "hsl(270, 25%, 45%)",
-                    }}
+                    className="flex flex-col items-center justify-center gap-2 transition-all"
+                    style={{ background: "#f7f7f7", border: "2px dashed #ddd", aspectRatio: "4/3", color: "#bbb" }}
                   >
-                    <span className="text-2xl" style={{ color: "#a78bfa" }}>＋</span>
+                    <span className="text-2xl" style={{ color: "#1d4ed8" }}>＋</span>
                     <span className="text-[10px]">{photos.length}/5</span>
                   </button>
                 )}
@@ -609,18 +602,18 @@ export default function IntakePage() {
             )}
 
             {/* Footer nav */}
-            <div className="flex items-center justify-between pt-4 border-t" style={{ borderColor: "hsl(103, 22%, 16%)" }}>
+            <div className="flex items-center justify-between pt-4 border-t" style={{ borderColor: "#e5e5e5" }}>
               <button
                 onClick={() => setWizardStep(0)}
-                className="text-[11px] px-3 py-1.5 rounded-lg"
-                style={{ color: "hsl(42, 20%, 55%)", border: "1px solid hsl(103, 22%, 20%)", background: "transparent" }}
+                className="text-[11px] px-3 py-1.5"
+                style={{ color: "#888", border: "1px solid #ddd", background: "transparent" }}
               >
                 ← Back to Survey
               </button>
               <button
                 onClick={() => navigate("/workspace")}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-[13px] font-semibold"
-                style={{ background: "linear-gradient(135deg, #1a4a0d, #3a8220)", color: "#e8f5e2", border: "1px solid #4a9a28" }}
+                className="flex items-center gap-2 px-5 py-2.5 text-[13px] font-semibold"
+                style={{ background: "#1d4ed8", color: "#fff", border: "2px solid #1d4ed8" }}
               >
                 Next: The Sandbox →
               </button>
@@ -645,12 +638,12 @@ export default function IntakePage() {
 function EmptyState({ icon, title, body, action }: { icon: string; title: string; body: string; action?: ReactNode }) {
   return (
     <div
-      className="rounded-2xl p-12 text-center space-y-3"
-      style={{ background: "hsl(103, 18%, 9%)", border: "1px solid hsl(103, 18%, 16%)" }}
+      className="p-12 text-center space-y-3"
+      style={{ background: "#f7f7f7", border: "2px solid #e5e5e5" }}
     >
       <div className="text-4xl mb-3">{icon}</div>
-      <h3 className="text-base font-semibold" style={{ color: "hsl(42, 28%, 82%)" }}>{title}</h3>
-      <p className="text-sm max-w-sm mx-auto" style={{ color: "hsl(42, 15%, 50%)" }}>{body}</p>
+      <h3 className="text-base font-semibold" style={{ color: "#111" }}>{title}</h3>
+      <p className="text-sm max-w-sm mx-auto" style={{ color: "#888" }}>{body}</p>
       {action}
     </div>
   );
@@ -658,9 +651,9 @@ function EmptyState({ icon, title, body, action }: { icon: string; title: string
 
 function BriefCard({ heading, children }: { heading: string; children: ReactNode }) {
   return (
-    <div className="rounded-xl overflow-hidden" style={{ background: "hsl(103, 18%, 9%)", border: "1px solid hsl(103, 20%, 17%)" }}>
-      <div className="px-4 py-2.5" style={{ background: "hsl(103, 22%, 12%)", borderBottom: "1px solid hsl(103, 20%, 17%)" }}>
-        <span className="text-[11px] font-bold uppercase tracking-widest" style={{ color: "hsl(84, 35%, 58%)" }}>
+    <div className="overflow-hidden" style={{ background: "#fff", border: "2px solid #111" }}>
+      <div className="px-4 py-2.5" style={{ background: "#f7f7f7", borderBottom: "1px solid #e5e5e5" }}>
+        <span className="text-[11px] font-bold uppercase tracking-widest" style={{ color: "#111" }}>
           {heading}
         </span>
       </div>
@@ -673,10 +666,10 @@ function BriefRow({ label, value }: { label: string; value: string }) {
   return (
     <div
       className="flex items-center gap-3 px-4 py-2 text-[12px]"
-      style={{ borderBottom: "1px solid hsl(103, 18%, 14%)" }}
+      style={{ borderBottom: "1px solid #f0f0f0" }}
     >
-      <span className="shrink-0 min-w-[7rem]" style={{ color: "hsl(42, 15%, 48%)" }}>{label}</span>
-      <span className="font-medium truncate" style={{ color: "hsl(42, 28%, 85%)" }}>{value}</span>
+      <span className="shrink-0 min-w-[7rem]" style={{ color: "#888" }}>{label}</span>
+      <span className="font-medium truncate" style={{ color: "#111" }}>{value}</span>
     </div>
   );
 }

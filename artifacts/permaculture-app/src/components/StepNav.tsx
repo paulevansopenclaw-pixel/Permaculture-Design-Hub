@@ -1,6 +1,8 @@
 import { useLocation } from "wouter";
 import { useAppStore } from "@/store/useAppStore";
 
+const A = "#1d4ed8";
+
 const STEPS = [
   { path: "/intake",    short: "Intake",   label: "Mission Control", num: "01" },
   { path: "/workspace", short: "Sandbox",  label: "The Sandbox",     num: "02" },
@@ -26,27 +28,25 @@ export function StepNav({ className = "" }: { className?: string }) {
             {i > 0 && (
               <div
                 className="w-5 h-px shrink-0"
-                style={{ background: isPast ? "hsl(84, 35%, 28%)" : "hsl(103, 20%, 20%)" }}
+                style={{ background: isPast ? A : "#ddd" }}
               />
             )}
             <button
               onClick={() => canNav && navigate(step.path)}
               disabled={!canNav}
               title={step.label}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all"
+              className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium transition-all"
               style={{
-                background: isActive ? "hsl(84, 38%, 16%)" : "transparent",
-                color: isActive ? "hsl(84, 55%, 75%)" : isPast ? "hsl(42, 20%, 60%)" : "hsl(42, 15%, 38%)",
-                border: isActive ? "1px solid hsl(84, 35%, 28%)" : "1px solid transparent",
+                background: isActive ? "#eff6ff" : "transparent",
+                color: isActive ? A : isPast ? "#555" : "#bbb",
+                border: isActive ? `1px solid ${A}` : "1px solid transparent",
                 cursor: canNav ? "pointer" : "default",
-                opacity: canNav ? 1 : 0.4,
+                opacity: canNav ? 1 : 0.35,
               }}
             >
               <span
                 className="font-mono font-bold text-[9px]"
-                style={{
-                  color: isActive ? "hsl(84, 55%, 52%)" : isPast ? "hsl(84, 35%, 42%)" : "hsl(42, 15%, 28%)",
-                }}
+                style={{ color: isActive ? A : isPast ? "#888" : "#ccc" }}
               >
                 {step.num}
               </span>
