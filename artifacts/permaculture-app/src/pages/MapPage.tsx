@@ -444,6 +444,16 @@ export default function MapPage() {
   const [editPathwayMode, setEditPathwayMode] = useState(false);
   const [pendingFootprintEdits, setPendingFootprintEdits] = useState<Array<{ id: string; geojson: string }> | null>(null);
   const [pendingPathwayEdits, setPendingPathwayEdits] = useState<Array<{ id: string; label: string; pathwayType: string; geojson: string }> | null>(null);
+
+  // ─── DUAL-MODE ────────────────────────────────────────────────────────────
+  const [inputMode, setInputMode] = useState<"native" | "upload">("native");
+  const [uploadedMaps, setUploadedMaps] = useState<{
+    sector: string | null;
+    water: string | null;
+    zone: string | null;
+    crossSection: string | null;
+  }>({ sector: null, water: null, zone: null, crossSection: null });
+
   const overpassPreview = overpassCandidates[overpassSelectedIdx] ?? null;
 
   const { data: properties = [] } = useListProperties();
@@ -574,7 +584,7 @@ export default function MapPage() {
     // Polygon draw handler — activated programmatically by sidebar button
     const PolygonHandler = (L as any).Draw.Polygon;
     const polygonHandler = new PolygonHandler(map, {
-      shapeOptions: { color: "#2D6A1A", weight: 2, fillColor: "#2D6A1A", fillOpacity: 0.12 },
+      shapeOptions: { color: "#4ade80", weight: 2.5, opacity: 1, fillColor: "#4ade80", fillOpacity: 0.30, dashArray: undefined },
       allowIntersection: false,
     });
     drawPolygonHandlerRef.current = polygonHandler;
@@ -2747,6 +2757,33 @@ export default function MapPage() {
           </div>
         </div>
 
+        {/* ── INPUT MODE TOGGLE ── */}
+        <div className="px-4 py-3 border-b" style={{ borderColor: "hsl(103, 35%, 18%)" }}>
+          <div className="text-[10px] font-semibold uppercase tracking-widest mb-2" style={{ color: "hsl(42, 15%, 50%)" }}>
+            Input Mode
+          </div>
+          <div className="flex rounded-md overflow-hidden border" style={{ borderColor: "hsl(103, 35%, 20%)" }}>
+            {(["native", "upload"] as const).map((mode) => (
+              <button
+                key={mode}
+                onClick={() => setInputMode(mode)}
+                className="flex-1 py-1.5 text-[11px] font-medium transition-colors"
+                style={{
+                  background: inputMode === mode ? "#1d4ed8" : "transparent",
+                  color: inputMode === mode ? "#fff" : "hsl(42, 15%, 55%)",
+                }}
+              >
+                {mode === "native" ? "⚙ Native Tools" : "📷 Image Upload"}
+              </button>
+            ))}
+          </div>
+          {inputMode === "upload" && (
+            <p className="text-[10px] mt-2 leading-relaxed" style={{ color: "hsl(42, 15%, 45%)" }}>
+              Canvas locked to 16:9. Upload iPad images using the zones on the map below.
+            </p>
+          )}
+        </div>
+
         {/* Property selector */}
         <div className="px-4 py-3 border-b" style={{ borderColor: "hsl(103, 35%, 18%)" }}>
           <label className="text-[10px] font-semibold uppercase tracking-widest mb-1.5 block" style={{ color: "hsl(42, 15%, 50%)" }}>
@@ -2910,6 +2947,39 @@ export default function MapPage() {
             </div>
           )}
         </SidebarSection>
+
+        {/* ── LAYER SECTIONS — native mode only ── */}
+        {inputMode === "upload" ? (
+          <div className="px-4 py-5 space-y-3">
+            <div className="rounded-xl p-3 text-center" style={{ background: "hsl(220,35%,10%)", border: "1px solid #1d4ed855" }}>
+              <div className="text-2xl mb-2">📷</div>
+              <div className="text-[11px] font-bold mb-1" style={{ color: "#60a5fa" }}>Image Upload Mode Active</div>
+              <div className="text-[10px] leading-relaxed" style={{ color: "hsl(42,15%,45%)" }}>
+                Use the four upload zones on the map canvas to overlay your iPad-exported maps. The canvas is locked to 16:9 to match your device aspect ratio.
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              {[
+                { key: "sector", label: "Sector Map", color: "#f59e0b", icon: "🧭" },
+                { key: "water", label: "Water Map", color: "#38bdf8", icon: "💧" },
+                { key: "zone", label: "Zone Map", color: "#4ade80", icon: "🗺" },
+                { key: "crossSection", label: "Cross-Section", color: "#c084fc", icon: "📐" },
+              ].map(({ key, label, color, icon }) => {
+                const uploaded = !!uploadedMaps[key as keyof typeof uploadedMaps];
+                return (
+                  <div key={key} className="flex items-center gap-2.5 rounded-lg px-3 py-2" style={{ background: "hsl(103,35%,12%)", border: `1px solid ${uploaded ? color + "55" : "hsl(103,28%,18%)"}` }}>
+                    <span className="text-base">{icon}</span>
+                    <span className="text-[11px] flex-1" style={{ color: uploaded ? color : "hsl(42,15%,50%)" }}>{label}</span>
+                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ background: uploaded ? color + "22" : "hsl(103,25%,16%)", color: uploaded ? color : "hsl(42,15%,40%)" }}>
+                      {uploaded ? "✓ Loaded" : "Empty"}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ) : (
+        <>
 
         {/* ── LAYER 1: BOUNDARY ── */}
         <SidebarSection label="Layer 1 — Property Boundary" defaultOpen>
@@ -4181,6 +4251,9 @@ export default function MapPage() {
           )}
         </SidebarSection>
 
+        </> /* end native-mode sections */
+        )}
+
         <div className="flex-1" />
 
         {/* ── WORKFLOW NAVIGATION ── */}
@@ -4200,8 +4273,106 @@ export default function MapPage() {
       </aside>
 
       {/* ── MAP ── */}
-      <div className="flex-1 relative">
-        <div ref={mapContainerRef} className="absolute inset-0" />
+      <div className="flex-1 relative" style={{ background: "hsl(103, 18%, 5%)" }}>
+
+        {/* ── 16:9 CANVAS HOST — full-bleed in native mode, centred+locked in upload mode ── */}
+        <div
+          style={inputMode === "upload" ? {
+            position: "absolute",
+            top: "50%", left: "50%",
+            transform: "translate(-50%, -50%)",
+            width: "min(100%, calc((100vh - 0px) * 16 / 9))",
+            aspectRatio: "16 / 9",
+            maxWidth: "100%",
+            border: "1px solid rgba(255,255,255,0.12)",
+            borderRadius: "6px",
+            overflow: "hidden",
+            boxShadow: "0 0 0 9999px hsl(103,18%,5%)",
+          } : {
+            position: "absolute", inset: 0,
+          }}
+        >
+          <div ref={mapContainerRef} className="absolute inset-0" />
+
+          {/* ── UPLOADED IMAGE OVERLAYS (upload mode) ── */}
+          {inputMode === "upload" && (
+            <>
+              {uploadedMaps.sector && (
+                <img src={uploadedMaps.sector} alt="Sector Map" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: 0.8, pointerEvents: "none", zIndex: 10 }} />
+              )}
+              {uploadedMaps.water && (
+                <img src={uploadedMaps.water} alt="Water Map" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: 0.8, pointerEvents: "none", zIndex: 11 }} />
+              )}
+              {uploadedMaps.zone && (
+                <img src={uploadedMaps.zone} alt="Zone Map" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: 0.8, pointerEvents: "none", zIndex: 12 }} />
+              )}
+              {uploadedMaps.crossSection && (
+                <img src={uploadedMaps.crossSection} alt="Cross-Section" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: 0.8, pointerEvents: "none", zIndex: 13 }} />
+              )}
+              {/* ── UPLOAD ZONE LABELS (shown before any image loaded for that slot) ── */}
+              {[
+                { key: "sector",       label: "Sector Map",    icon: "🧭", color: "#f59e0b", pos: "top-3 left-3"     },
+                { key: "water",        label: "Water Map",     icon: "💧", color: "#38bdf8", pos: "top-3 right-3"    },
+                { key: "zone",         label: "Zone Map",      icon: "🗺", color: "#4ade80", pos: "bottom-10 left-3" },
+                { key: "crossSection", label: "Cross-Section", icon: "📐", color: "#c084fc", pos: "bottom-10 right-3" },
+              ].map(({ key, label, icon, color, pos }) => {
+                const loaded = !!uploadedMaps[key as keyof typeof uploadedMaps];
+                return (
+                  <label
+                    key={key}
+                    title={loaded ? `Replace ${label}` : `Upload ${label}`}
+                    className={`absolute ${pos}`}
+                    style={{ zIndex: 20, cursor: "pointer" }}
+                  >
+                    <input
+                      type="file"
+                      accept="image/*"
+                      style={{ display: "none" }}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        const objectUrl = URL.createObjectURL(file);
+                        setUploadedMaps((prev) => ({ ...prev, [key]: objectUrl }));
+                        e.target.value = "";
+                      }}
+                    />
+                    <div style={{
+                      display: "flex", alignItems: "center", gap: 6,
+                      padding: "6px 10px",
+                      background: loaded ? "rgba(5,15,5,0.85)" : "rgba(5,15,5,0.75)",
+                      border: `1.5px ${loaded ? "solid" : "dashed"} ${loaded ? color : "rgba(255,255,255,0.25)"}`,
+                      borderRadius: 8,
+                      backdropFilter: "blur(6px)",
+                    }}>
+                      <span style={{ fontSize: 14 }}>{icon}</span>
+                      <div>
+                        <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: loaded ? color : "rgba(255,255,255,0.55)" }}>
+                          {loaded ? "✓ " : ""}{label}
+                        </div>
+                        <div style={{ fontSize: 8, color: "rgba(255,255,255,0.35)", marginTop: 1 }}>
+                          {loaded ? "click to replace" : "click to upload"}
+                        </div>
+                      </div>
+                      {loaded && (
+                        <button
+                          onClick={(e) => { e.preventDefault(); setUploadedMaps((prev) => ({ ...prev, [key]: null })); }}
+                          style={{ marginLeft: 2, width: 14, height: 14, background: "rgba(200,0,0,0.7)", border: "none", borderRadius: 3, color: "#fff", fontSize: 8, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                        >✕</button>
+                      )}
+                    </div>
+                  </label>
+                );
+              })}
+            </>
+          )}
+
+          {/* Mapbox GL 3D terrain overlay — lives inside the canvas host so it clips correctly */}
+          <div
+            ref={gl3DContainerRef}
+            className="absolute inset-0"
+            style={{ zIndex: show3D ? 400 : -1, opacity: show3D ? 1 : 0, pointerEvents: show3D ? "auto" : "none", transition: "opacity 0.3s ease" }}
+          />
+        </div>
 
         {/* ── HAMBURGER TOGGLE (overlay mode only) ── */}
         {sidebarIsOverlay && !sidebarOpen && (
@@ -4225,13 +4396,6 @@ export default function MapPage() {
             Layers
           </button>
         )}
-
-        {/* Mapbox GL 3D terrain overlay */}
-        <div
-          ref={gl3DContainerRef}
-          className="absolute inset-0"
-          style={{ zIndex: show3D ? 400 : -1, opacity: show3D ? 1 : 0, pointerEvents: show3D ? "auto" : "none", transition: "opacity 0.3s ease" }}
-        />
 
         {/* 3D toggle button */}
         {mapLoaded && (
