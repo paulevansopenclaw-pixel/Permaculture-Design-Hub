@@ -461,11 +461,14 @@ router.post(
       .set({ aiAnalysisReport: rawJson, aiAnalysisGeneratedAt: generatedAt, updatedAt: generatedAt })
       .where(eq(clientBriefsTable.propertyId, propertyId));
 
-    // ── Auto-create damaging wind sector ─────────────────────────────────────
+    // ── Auto-create (or replace) damaging wind sector ────────────────────────
     let autoCreatedWindSector = false;
-    const existingWindSector = sectors.find((s) => s.sectorType === "wind");
     const windDirRaw = climate.prevailingWind ?? brief.prevailingWindDir ?? null;
-    if (!existingWindSector && windDirRaw && centroid) {
+    if (windDirRaw && centroid) {
+      // Delete any existing wind sectors first so the AI-derived one is always current
+      await db.delete(sectorsTable).where(
+        and(eq(sectorsTable.propertyId, propertyId), eq(sectorsTable.sectorType, "wind")),
+      );
       const bearing = compassToBearing(windDirRaw);
       if (bearing !== null) {
         const spread = 22; // ±22° ≈ 45° total wedge (integer-safe)
