@@ -27,6 +27,7 @@ export const ListPropertiesResponseItem = zod.object({
 }).passthrough().nullish(),
   "areaHectares": zod.number().nullish(),
   "areaAcres": zod.number().nullish(),
+  "tileImage": zod.string().nullish(),
   "createdAt": zod.string()
 })
 export const ListPropertiesResponse = zod.array(ListPropertiesResponseItem)
@@ -44,7 +45,8 @@ export const CreatePropertyBody = zod.object({
 
 }).passthrough().nullish(),
   "areaHectares": zod.number().nullish(),
-  "areaAcres": zod.number().nullish()
+  "areaAcres": zod.number().nullish(),
+  "tileImage": zod.string().nullish()
 })
 
 
@@ -63,6 +65,7 @@ export const GetPropertyResponse = zod.object({
 }).passthrough().nullish(),
   "areaHectares": zod.number().nullish(),
   "areaAcres": zod.number().nullish(),
+  "tileImage": zod.string().nullish(),
   "createdAt": zod.string()
 })
 
@@ -83,7 +86,8 @@ export const UpdatePropertyBody = zod.object({
 
 }).passthrough().nullish(),
   "areaHectares": zod.number().nullish(),
-  "areaAcres": zod.number().nullish()
+  "areaAcres": zod.number().nullish(),
+  "tileImage": zod.string().nullish()
 })
 
 export const UpdatePropertyResponse = zod.object({
@@ -94,6 +98,7 @@ export const UpdatePropertyResponse = zod.object({
 }).passthrough().nullish(),
   "areaHectares": zod.number().nullish(),
   "areaAcres": zod.number().nullish(),
+  "tileImage": zod.string().nullish(),
   "createdAt": zod.string()
 })
 

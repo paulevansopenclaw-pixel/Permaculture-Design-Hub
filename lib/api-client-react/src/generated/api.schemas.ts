@@ -23,6 +23,8 @@ export interface Property {
   areaHectares?: number | null;
   /** @nullable */
   areaAcres?: number | null;
+  /** @nullable */
+  tileImage?: string | null;
   createdAt: string;
 }
 
@@ -40,6 +42,8 @@ export interface PropertyInput {
   areaHectares?: number | null;
   /** @nullable */
   areaAcres?: number | null;
+  /** @nullable */
+  tileImage?: string | null;
 }
 
 /**
@@ -56,6 +60,8 @@ export interface PropertyUpdate {
   areaHectares?: number | null;
   /** @nullable */
   areaAcres?: number | null;
+  /** @nullable */
+  tileImage?: string | null;
 }
 
 export interface PropertyStats {

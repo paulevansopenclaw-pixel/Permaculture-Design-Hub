@@ -16,4 +16,6 @@ export interface PropertyInput {
   areaHectares?: number | null;
   /** @nullable */
   areaAcres?: number | null;
+  /** @nullable */
+  tileImage?: string | null;
 }

@@ -9,6 +9,7 @@ export const propertiesTable = pgTable("properties", {
   boundaryGeojson: text("boundary_geojson"),
   areaHectares: real("area_hectares"),
   areaAcres: real("area_acres"),
+  tileImage: text("tile_image"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

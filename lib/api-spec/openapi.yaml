@@ -917,6 +917,8 @@ components:
           type: ["number", "null"]
         areaAcres:
           type: ["number", "null"]
+        tileImage:
+          type: ["string", "null"]
         createdAt:
           type: string
 
@@ -933,6 +935,8 @@ components:
           type: ["number", "null"]
         areaAcres:
           type: ["number", "null"]
+        tileImage:
+          type: ["string", "null"]
 
     PropertyUpdate:
       type: object
@@ -946,6 +950,8 @@ components:
           type: ["number", "null"]
         areaAcres:
           type: ["number", "null"]
+        tileImage:
+          type: ["string", "null"]
 
     PropertyStats:
       type: object

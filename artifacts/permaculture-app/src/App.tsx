@@ -94,7 +94,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
           <div style={{ textAlign: "center" }}>
             <div style={{ fontSize: 36, marginBottom: 12 }}>🛡</div>
             <h1 style={{ margin: "0 0 6px", fontFamily: "monospace", fontSize: 22, fontWeight: 900, letterSpacing: "-0.03em", textTransform: "uppercase", color: "#111" }}>TerraGuard OS</h1>
-            <p style={{ margin: 0, fontFamily: "monospace", fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase", color: "#A0522D" }}>
+            <p style={{ margin: 0, fontFamily: "monospace", fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase", color: "#1d4ed8" }}>
               Property Resilience & Security
             </p>
           </div>
