@@ -1223,6 +1223,9 @@ components:
         climateSource:
           type: string
           description: Whether climate data was fetched live or failed
+        autoCreatedWindSector:
+          type: boolean
+          description: True when the server automatically created a damaging-wind sector from the prevailing wind direction
         generatedAt:
           type: string
         rawJson:

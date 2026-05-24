@@ -30,10 +30,13 @@ export function AiAnalysisPanel({ propertyId, hasBrief, savedReport, savedAt, on
   const [loadingMsgIdx, setLoadingMsgIdx] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
+  const [windSectorAdded, setWindSectorAdded] = useState(false);
+
   const analyze = useAnalyzeSite({
     mutation: {
       onMutate: () => {
         setError(null);
+        setWindSectorAdded(false);
         setLoadingMsgIdx(0);
         const interval = setInterval(() =>
           setLoadingMsgIdx((i) => Math.min(i + 1, LOADING_MESSAGES.length - 1)), 3500);
@@ -42,6 +45,7 @@ export function AiAnalysisPanel({ propertyId, hasBrief, savedReport, savedAt, on
       onSuccess: (data, _vars, ctx) => {
         clearInterval(ctx as ReturnType<typeof setInterval>);
         setReport(data);
+        if (data.autoCreatedWindSector) setWindSectorAdded(true);
         onReportSaved();
       },
       onError: (err, _vars, ctx) => {
@@ -100,6 +104,13 @@ export function AiAnalysisPanel({ propertyId, hasBrief, savedReport, savedAt, on
           </p>
         )}
       </div>
+
+      {windSectorAdded && (
+        <div className="rounded-lg px-3 py-2 text-[11px] flex items-center gap-2" style={{ background: "hsl(210, 50%, 12%)", border: "1px solid hsl(210, 50%, 22%)", color: "#7dd3fc" }}>
+          <span>💨</span>
+          <span>Damaging wind sector automatically added to your map based on the prevailing wind direction.</span>
+        </div>
+      )}
 
       {error && (
         <div className="rounded-lg p-3 text-[11px]" style={{ background: "hsl(0, 25%, 12%)", border: "1px solid hsl(0, 25%, 22%)", color: "#f87171" }}>

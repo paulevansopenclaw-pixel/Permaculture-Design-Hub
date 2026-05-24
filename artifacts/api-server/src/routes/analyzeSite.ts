@@ -345,6 +345,21 @@ BASED ON ALL OF THE ABOVE, RETURN A JSON OBJECT WITH THE EXACT FOLLOWING STRUCTU
 Ensure the response is raw, valid JSON only.`;
 }
 
+// ─── Compass → bearing (degrees clockwise from North) ──────────────────────────
+
+const COMPASS_BEARINGS: Record<string, number> = {
+  N: 0, NNE: 22.5, NE: 45, ENE: 67.5,
+  E: 90, ESE: 112.5, SE: 135, SSE: 157.5,
+  S: 180, SSW: 202.5, SW: 225, WSW: 247.5,
+  W: 270, WNW: 292.5, NW: 315, NNW: 337.5,
+};
+
+function compassToBearing(dir: string): number | null {
+  // Normalise: strip whitespace, uppercase, handle "NW wind", "from NW", etc.
+  const clean = dir.trim().toUpperCase().replace(/^FROM\s+/, "").split(/\s+/)[0];
+  return COMPASS_BEARINGS[clean] ?? null;
+}
+
 // ─── Rate limiter ─────────────────────────────────────────────────────────────
 
 const analyzeRateLimit = rateLimit({
@@ -446,6 +461,38 @@ router.post(
       .set({ aiAnalysisReport: rawJson, aiAnalysisGeneratedAt: generatedAt, updatedAt: generatedAt })
       .where(eq(clientBriefsTable.propertyId, propertyId));
 
+    // ── Auto-create damaging wind sector ─────────────────────────────────────
+    let autoCreatedWindSector = false;
+    const existingWindSector = sectors.find((s) => s.sectorType === "wind");
+    const windDirRaw = climate.prevailingWind ?? brief.prevailingWindDir ?? null;
+    if (!existingWindSector && windDirRaw && centroid) {
+      const bearing = compassToBearing(windDirRaw);
+      if (bearing !== null) {
+        const spread = 22; // ±22° ≈ 45° total wedge (integer-safe)
+        let startAngle = Math.round(bearing - spread);
+        let endAngle   = Math.round(bearing + spread);
+        // Normalise to [0, 360)
+        startAngle = ((startAngle % 360) + 360) % 360;
+        endAngle   = ((endAngle   % 360) + 360) % 360;
+        // Radius: scale to property, capped 0.4–2 km
+        const radiusKm = Math.min(2, Math.max(0.4, Math.sqrt(property.areaHectares ?? 1) * 0.3));
+        const compassLabel = windDirRaw.trim().toUpperCase().replace(/^FROM\s+/, "").split(/\s+/)[0];
+        await db.insert(sectorsTable).values({
+          id: crypto.randomUUID(),
+          propertyId,
+          sectorType: "wind",
+          centerLng:  centroid.lng,
+          centerLat:  centroid.lat,
+          radiusKm,
+          startAngle,
+          endAngle,
+          label: `Damaging Winds (${compassLabel})`,
+        });
+        autoCreatedWindSector = true;
+        req.log.info({ propertyId, bearing, startAngle, endAngle, radiusKm }, "auto-created wind sector");
+      }
+    }
+
     res.json({
       propertyId,
       WaterStrategy:            parsed.WaterStrategy            ?? "",
@@ -455,6 +502,7 @@ router.post(
       InfrastructureCritique:   parsed.InfrastructureCritique   ?? "",
       PatternStrategy:          parsed.PatternStrategy          ?? null,
       DesignRecommendations:    parsed.DesignRecommendations    ?? null,
+      autoCreatedWindSector,
       generatedAt: generatedAt.toISOString(),
       climateSource: climate.source,
       rawJson,

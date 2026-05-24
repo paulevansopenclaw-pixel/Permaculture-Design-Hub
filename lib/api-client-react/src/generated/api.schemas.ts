@@ -245,6 +245,8 @@ export interface SiteAnalysisReport {
   DesignRecommendations?: SiteAnalysisReportDesignRecommendations;
   /** Whether climate data was fetched live or failed */
   climateSource?: string;
+  /** True when the server automatically created a damaging-wind sector from the prevailing wind direction */
+  autoCreatedWindSector?: boolean;
   generatedAt: string;
   rawJson: string;
 }

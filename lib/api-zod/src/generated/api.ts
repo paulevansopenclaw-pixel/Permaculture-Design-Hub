@@ -333,6 +333,7 @@ export const AnalyzeSiteResponse = zod.object({
 })).optional()
 }).optional().describe('Final compiled design — plant palette, design elements, and implementation phases synthesised from all site data'),
   "climateSource": zod.string().optional().describe('Whether climate data was fetched live or failed'),
+  "autoCreatedWindSector": zod.boolean().optional().describe('True when the server automatically created a damaging-wind sector from the prevailing wind direction'),
   "generatedAt": zod.string(),
   "rawJson": zod.string()
 })

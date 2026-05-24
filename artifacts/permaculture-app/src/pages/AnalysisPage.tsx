@@ -12,6 +12,7 @@ import {
   getGetPropertyQueryKey,
   getListZonesQueryKey,
   getListStructuresQueryKey,
+  getListSectorsQueryKey,
 } from "@workspace/api-client-react";
 import { useAppStore } from "@/store/useAppStore";
 import { AiAnalysisPanel } from "@/components/AiAnalysisPanel";
@@ -276,9 +277,10 @@ export default function AnalysisPage() {
                 hasBrief={!!brief}
                 savedReport={brief?.aiAnalysisReport}
                 savedAt={brief?.aiAnalysisGeneratedAt ?? null}
-                onReportSaved={() =>
-                  queryClient.invalidateQueries({ queryKey: getGetClientBriefQueryKey(activePropertyId) })
-                }
+                onReportSaved={() => {
+                  queryClient.invalidateQueries({ queryKey: getGetClientBriefQueryKey(activePropertyId) });
+                  queryClient.invalidateQueries({ queryKey: getListSectorsQueryKey(activePropertyId) });
+                }}
               />
             </div>
 
