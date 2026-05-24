@@ -368,6 +368,8 @@ export default function MapPage() {
   const [pendingFootprint, setPendingFootprint] = useState<GeoJSON.Polygon | null>(null);
   const [structureLabel, setStructureLabel] = useState("");
   const [structureType, setStructureType] = useState("house");
+  const [structureVolumeLiters, setStructureVolumeLiters] = useState("");
+  const [structureAttachedBuilding, setStructureAttachedBuilding] = useState("");
   const [showSectors, setShowSectors] = useState(true);
   const [showSolarArcs, setShowSolarArcs] = useState(true);
   const [dropSectorCenterMode, setDropSectorCenterMode] = useState(false);
@@ -2246,6 +2248,7 @@ export default function MapPage() {
         setZoneAuditWarning(null);
       }
     }
+    const volumeNum = parseFloat(structureVolumeLiters);
     createStructure.mutate(
       {
         propertyId: activePropertyId,
@@ -2255,6 +2258,8 @@ export default function MapPage() {
           label: structureLabel.trim(),
           structureType,
           footprintGeojson: pendingFootprint ? JSON.stringify(pendingFootprint) : null,
+          volumeLiters: structureType === "tank" && !isNaN(volumeNum) && volumeNum > 0 ? volumeNum : null,
+          attachedToBuilding: structureType === "tank" && structureAttachedBuilding.trim() ? structureAttachedBuilding.trim() : null,
         },
       },
       {
@@ -2273,6 +2278,8 @@ export default function MapPage() {
           setDrawBuildingOutlineMode(false);
           setStructureLabel("");
           setStructureType("house");
+          setStructureVolumeLiters("");
+          setStructureAttachedBuilding("");
         },
       },
     );
@@ -2341,6 +2348,8 @@ export default function MapPage() {
     setDrawBuildingOutlineMode(false);
     setStructureLabel("");
     setStructureType("house");
+    setStructureVolumeLiters("");
+    setStructureAttachedBuilding("");
   }
 
   // ─── BOUNDARY REQUEST (CLIENT) ────────────────────────────────────────────
@@ -3175,6 +3184,27 @@ export default function MapPage() {
                     onKeyDown={(e) => e.key === "Enter" && handleSaveStructure()}
                     autoFocus
                   />
+                  {structureType === "tank" && (
+                    <>
+                      <input
+                        type="number"
+                        min="0"
+                        step="500"
+                        className="w-full text-xs px-2.5 py-1.5 rounded border outline-none"
+                        style={{ background: "hsl(198, 35%, 13%)", borderColor: "hsl(198, 40%, 22%)", color: "hsl(42, 28%, 88%)" }}
+                        placeholder="💧 Tank volume (litres, e.g. 22700)"
+                        value={structureVolumeLiters}
+                        onChange={(e) => setStructureVolumeLiters(e.target.value)}
+                      />
+                      <input
+                        className="w-full text-xs px-2.5 py-1.5 rounded border outline-none"
+                        style={{ background: "hsl(198, 35%, 13%)", borderColor: "hsl(198, 40%, 22%)", color: "hsl(42, 28%, 88%)" }}
+                        placeholder="🏠 Feeds from building (e.g. Main House)"
+                        value={structureAttachedBuilding}
+                        onChange={(e) => setStructureAttachedBuilding(e.target.value)}
+                      />
+                    </>
+                  )}
                   <div className="flex gap-1.5">
                     <button
                       onClick={handleSaveStructure}
@@ -3254,12 +3284,21 @@ export default function MapPage() {
                   <div className="space-y-1 max-h-44 overflow-y-auto">
                     {structures.map((s) => {
                       const entry = STRUCTURE_TYPES.find((t) => t.value === s.structureType);
+                      const isTankItem = s.structureType === "tank";
                       return (
                         <div key={s.id} className="flex items-center gap-2 px-2 py-1.5 rounded" style={{ background: "hsl(103, 35%, 14%)" }}>
                           <span className="text-sm">{entry?.emoji ?? "📍"}</span>
                           <div className="flex-1 min-w-0">
                             <div className="text-[11px] font-medium truncate" style={{ color: "hsl(42, 28%, 85%)" }}>{s.label}</div>
-                            <div className="text-[10px]" style={{ color: "hsl(42, 15%, 50%)" }}>{entry?.label ?? s.structureType}</div>
+                            <div className="text-[10px]" style={{ color: "hsl(42, 15%, 50%)" }}>
+                              {entry?.label ?? s.structureType}
+                              {isTankItem && s.volumeLiters != null && (
+                                <span style={{ color: "#38bdf8", marginLeft: 4 }}>· {(s.volumeLiters / 1000).toFixed(1)} kL</span>
+                              )}
+                              {isTankItem && s.attachedToBuilding && (
+                                <span style={{ color: "hsl(42,15%,40%)", marginLeft: 4 }}>← {s.attachedToBuilding}</span>
+                              )}
+                            </div>
                           </div>
                           <button onClick={() => handleDeleteStructure(s.id)} className="text-[10px] flex-shrink-0" style={{ color: "hsl(0, 55%, 50%)" }}>
                             ×
@@ -3283,12 +3322,21 @@ export default function MapPage() {
                   <div className="space-y-1 max-h-44 overflow-y-auto">
                     {structures.map((s) => {
                       const entry = STRUCTURE_TYPES.find((t) => t.value === s.structureType);
+                      const isTankItem = s.structureType === "tank";
                       return (
                         <div key={s.id} className="flex items-center gap-2 px-2 py-1.5 rounded" style={{ background: "hsl(103, 35%, 14%)" }}>
                           <span className="text-sm">{entry?.emoji ?? "📍"}</span>
                           <div className="flex-1 min-w-0">
                             <div className="text-[11px] font-medium truncate" style={{ color: "hsl(42, 28%, 85%)" }}>{s.label}</div>
-                            <div className="text-[10px]" style={{ color: "hsl(42, 15%, 50%)" }}>{entry?.label ?? s.structureType}</div>
+                            <div className="text-[10px]" style={{ color: "hsl(42, 15%, 50%)" }}>
+                              {entry?.label ?? s.structureType}
+                              {isTankItem && s.volumeLiters != null && (
+                                <span style={{ color: "#38bdf8", marginLeft: 4 }}>· {(s.volumeLiters / 1000).toFixed(1)} kL</span>
+                              )}
+                              {isTankItem && s.attachedToBuilding && (
+                                <span style={{ color: "hsl(42,15%,40%)", marginLeft: 4 }}>← {s.attachedToBuilding}</span>
+                              )}
+                            </div>
                           </div>
                         </div>
                       );
@@ -4048,6 +4096,33 @@ export default function MapPage() {
                           })}
                         </div>
                       )}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* ── Existing Tank Storage Summary ─────────────────── */}
+              {(() => {
+                const tanks = structures.filter((s) => s.structureType === "tank" && s.volumeLiters != null && s.volumeLiters > 0);
+                if (tanks.length === 0) return null;
+                const totalKL = tanks.reduce((sum, t) => sum + (t.volumeLiters ?? 0), 0) / 1000;
+                return (
+                  <div className="rounded-xl p-3 space-y-2" style={{ background: "hsl(198,35%,9%)", border: "1px solid hsl(198,45%,18%)" }}>
+                    <div className="flex items-center justify-between">
+                      <div className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "#38bdf8" }}>
+                        💧 Existing Tank Storage
+                      </div>
+                      <div className="text-[13px] font-bold" style={{ color: "#7dd3fc" }}>
+                        {totalKL.toFixed(1)} kL
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      {tanks.map((t) => (
+                        <div key={t.id} className="flex items-center justify-between text-[10px]" style={{ color: "hsl(42,15%,55%)" }}>
+                          <span>{t.label}{t.attachedToBuilding ? <span style={{ color: "hsl(42,10%,38%)" }}> ← {t.attachedToBuilding}</span> : null}</span>
+                          <span style={{ color: "#7dd3fc" }}>{((t.volumeLiters ?? 0) / 1000).toFixed(1)} kL</span>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 );

@@ -14,5 +14,9 @@ export interface Structure {
   label: string;
   structureType: string;
   footprintGeojson?: string | null;
+  /** Storage volume in litres (populated for structureType=tank) */
+  volumeLiters?: number | null;
+  /** Label of the building this tank collects from */
+  attachedToBuilding?: string | null;
   createdAt: string;
 }

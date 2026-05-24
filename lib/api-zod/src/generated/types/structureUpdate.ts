@@ -11,4 +11,6 @@ export interface StructureUpdate {
   label?: string;
   structureType?: string;
   footprintGeojson?: string | null;
+  volumeLiters?: number | null;
+  attachedToBuilding?: string | null;
 }

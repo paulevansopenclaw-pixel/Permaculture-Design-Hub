@@ -75,6 +75,10 @@ export interface Structure {
   label: string;
   structureType: string;
   footprintGeojson?: string | null;
+  /** Storage volume in litres (populated for structureType=tank) */
+  volumeLiters?: number | null;
+  /** Label of the building this tank collects from */
+  attachedToBuilding?: string | null;
   createdAt: string;
 }
 
@@ -85,6 +89,8 @@ export interface StructureInput {
   label: string;
   structureType: string;
   footprintGeojson?: string | null;
+  volumeLiters?: number | null;
+  attachedToBuilding?: string | null;
 }
 
 export interface StructureUpdate {
@@ -92,6 +98,8 @@ export interface StructureUpdate {
   label?: string;
   structureType?: string;
   footprintGeojson?: string | null;
+  volumeLiters?: number | null;
+  attachedToBuilding?: string | null;
 }
 
 export interface Sector {

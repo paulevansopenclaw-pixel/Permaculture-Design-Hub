@@ -979,6 +979,14 @@ components:
         footprintGeojson:
           type: string
           nullable: true
+        volumeLiters:
+          type: number
+          nullable: true
+          description: Storage volume in litres (populated for structureType=tank)
+        attachedToBuilding:
+          type: string
+          nullable: true
+          description: Label of the building this tank collects from
         createdAt:
           type: string
 
@@ -998,6 +1006,12 @@ components:
         footprintGeojson:
           type: string
           nullable: true
+        volumeLiters:
+          type: number
+          nullable: true
+        attachedToBuilding:
+          type: string
+          nullable: true
 
     StructureUpdate:
       type: object
@@ -1008,6 +1022,12 @@ components:
         structureType:
           type: string
         footprintGeojson:
+          type: string
+          nullable: true
+        volumeLiters:
+          type: number
+          nullable: true
+        attachedToBuilding:
           type: string
           nullable: true
 

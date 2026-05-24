@@ -10,6 +10,9 @@ export const structuresTable = pgTable("structures", {
   label: text("label").notNull(),
   structureType: text("structure_type").notNull().default("other"),
   footprintGeojson: text("footprint_geojson"),
+  // Water tank fields (only populated when structureType === "tank")
+  volumeLiters: real("volume_liters"),
+  attachedToBuilding: text("attached_to_building"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

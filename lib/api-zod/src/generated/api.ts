@@ -136,6 +136,8 @@ export const ListStructuresResponseItem = zod.object({
   "label": zod.string(),
   "structureType": zod.string(),
   "footprintGeojson": zod.string().nullish(),
+  "volumeLiters": zod.number().nullish().describe('Storage volume in litres (populated for structureType=tank)'),
+  "attachedToBuilding": zod.string().nullish().describe('Label of the building this tank collects from'),
   "createdAt": zod.string()
 })
 export const ListStructuresResponse = zod.array(ListStructuresResponseItem)
@@ -156,7 +158,9 @@ export const CreateStructureBody = zod.object({
   "lat": zod.number(),
   "label": zod.string().min(1),
   "structureType": zod.string(),
-  "footprintGeojson": zod.string().nullish()
+  "footprintGeojson": zod.string().nullish(),
+  "volumeLiters": zod.number().nullish(),
+  "attachedToBuilding": zod.string().nullish()
 })
 
 
@@ -174,7 +178,9 @@ export const UpdateStructureParams = zod.object({
 export const UpdateStructureBody = zod.object({
   "label": zod.string().min(1).optional(),
   "structureType": zod.string().optional(),
-  "footprintGeojson": zod.string().nullish()
+  "footprintGeojson": zod.string().nullish(),
+  "volumeLiters": zod.number().nullish(),
+  "attachedToBuilding": zod.string().nullish()
 })
 
 export const UpdateStructureResponse = zod.object({
@@ -185,6 +191,8 @@ export const UpdateStructureResponse = zod.object({
   "label": zod.string(),
   "structureType": zod.string(),
   "footprintGeojson": zod.string().nullish(),
+  "volumeLiters": zod.number().nullish().describe('Storage volume in litres (populated for structureType=tank)'),
+  "attachedToBuilding": zod.string().nullish().describe('Label of the building this tank collects from'),
   "createdAt": zod.string()
 })
 

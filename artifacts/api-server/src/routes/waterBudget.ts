@@ -113,6 +113,11 @@ router.post(
       db.select().from(designedSwalesTable).where(eq(designedSwalesTable.propertyId, propertyId)),
     ]);
 
+    // ── Existing tank inventory ─────────────────────────────────────────────
+    const tankStructures = structures.filter((s) => s.structureType === "tank" && s.volumeLiters != null && s.volumeLiters > 0);
+    const existingTankTotalL  = tankStructures.reduce((sum, s) => sum + (s.volumeLiters ?? 0), 0);
+    const existingTankTotalKL = +(existingTankTotalL / 1000).toFixed(1);
+
     // ── Roof catchment ─────────────────────────────────────────────────────
     const RUNOFF_COEFF = 0.85;
     const rainfallMm = brief.annualRainfallMm ?? 600;
@@ -150,6 +155,11 @@ router.post(
       .map(r => `  - ${r.label} (${r.type}): ${r.areaM2.toFixed(1)} m²`)
       .join("\n");
 
+    const tankLines = tankStructures.length > 0
+      ? tankStructures.map(t => `  - ${t.label}${t.attachedToBuilding ? ` (feeds from: ${t.attachedToBuilding})` : ""}: ${((t.volumeLiters ?? 0) / 1000).toFixed(1)} kL`)
+      .join("\n")
+      : "  - None recorded yet";
+
     const swaleLines = swales.length > 0
       ? swales.map(s => `  - "${s.name}" (${s.swaleType}): ${s.lengthM.toFixed(0)} m @ ${s.elevationM.toFixed(1)} m elev`).join("\n")
       : "  - None designed yet";
@@ -177,6 +187,10 @@ Total roof area: ${totalRoofM2.toFixed(1)} m²
 Collection efficiency: ${RUNOFF_COEFF * 100}% (mixed roofing, first-flush excluded)
 Annual catchment yield: ${annualCatchmentKL} kL/yr [pre-calculated]
 
+=== EXISTING TANK INVENTORY (mapped by designer) ===
+${tankLines}
+Total existing storage: ${existingTankTotalKL} kL
+
 === DESIGNED SWALES & WATER CHANNELS ===
 ${swaleLines}
 
@@ -196,10 +210,11 @@ Surplus for food production:  ${availableForProductionKL} kL/yr [pre-calculated]
 Produce a complete water budget. Adjust figures where your climate knowledge warrants it (e.g. hot/dry climates need more per person; cool temperate need less; seasonal rainfall changes tank sizing). Reference the specific region and climate zone in your reasoning.
 
 1. HOUSEHOLD BUDGET — validate/adjust the 150 L/person/day for this climate. Show final totals.
-2. TANK CONFIGURATION — size tanks to bridge the longest typical dry period (60–90 days standard; extend for strongly seasonal climates). Recommend:
+2. TANK CONFIGURATION — the designer has already mapped ${existingTankTotalKL} kL of existing storage (see inventory above). Size the recommended system to bridge the longest typical dry period (60–90 days standard; extend for strongly seasonal climates). Recommend:
    - Household potable tank(s): capacity, material (corrugated steel / poly / ferrocement), placement (gravity-feed from highest roof)
    - Irrigation buffer tank(s) if surplus > 10 kL: separate from potable
    - Total system capacity in kL and state design dry period in days
+   - Additional storage required beyond existing inventory: max(0, recommendedTotalCapacityKL - ${existingTankTotalKL}) kL
 3. FOOD PRODUCTION BUDGET — calculate max sustainable growing areas:
    - Vegetable beds: 600 L/m²/yr base irrigation (adjust for ET and soil retention)
    - Food forest/orchard (established): 400 L/m²/yr
@@ -271,6 +286,12 @@ RETURN RAW JSON ONLY — no markdown fences, no text outside the JSON object:
       roofAreaM2: totalRoofM2,
       annualCatchmentKL,
       occupants,
+      existingTankTotalKL,
+      tankInventory: tankStructures.map((t) => ({
+        label: t.label,
+        volumeKL: +((t.volumeLiters ?? 0) / 1000).toFixed(1),
+        attachedToBuilding: t.attachedToBuilding ?? null,
+      })),
       ...(parsed as object),
     });
   },

@@ -13,4 +13,6 @@ export interface StructureInput {
   label: string;
   structureType: string;
   footprintGeojson?: string | null;
+  volumeLiters?: number | null;
+  attachedToBuilding?: string | null;
 }
