@@ -1,3 +1,4 @@
 - [Turf type imports](turf-types.md) — @turf/turf v7 does not export `Feature`, `Polygon`, etc. as types; use `GeoJSON.Feature` and cast with `as unknown as` for API fields.
 - [Vision board image upload](vision-board-images.md) — Use FileReader.readAsDataURL first, then canvas-resize from the data URL; blob URLs fail silently in sandboxed iframes.
 - [Property boundaryGeojson type](boundary-geojson-type.md) — API schema types `boundaryGeojson` as `{ [key: string]: unknown }`, not `string`; cast with `as unknown as string` at every use site.
+- [Freehand + reshape draw architecture](freehand-reshape-draw.md) — global freehandMode state gates all draw effects; reshape uses L.EditToolbar.Edit on dedicated feature groups per shape type.

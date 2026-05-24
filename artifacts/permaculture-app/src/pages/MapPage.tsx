@@ -21,6 +21,7 @@ import {
   useDeleteComment,
   useListStructures,
   useCreateStructure,
+  useUpdateStructure,
   useDeleteStructure,
   useListSectors,
   useCreateSector,
@@ -56,6 +57,7 @@ import { useAppStore, type Role } from "@/store/useAppStore";
 import { generateContours } from "@/lib/contourEngine";
 import { analyzeWaterPaths, type WaterAnalysisResult, type AnalyzedSwale } from "@/lib/keylineEngine";
 import { StepNav } from "@/components/StepNav";
+import { FreehandDrawer } from "@/lib/freehandDraw";
 
 async function fetchMapboxToken(): Promise<string> {
   try {
@@ -342,6 +344,15 @@ export default function MapPage() {
   const pendingSensoryLinePreviewRef = useRef<L.Polyline | null>(null);
   const sensoryLineHandlerRef = useRef<any>(null);
   const sensoryLineDrawActiveRef = useRef(false);
+  const freehandDrawerRef = useRef<FreehandDrawer | null>(null);
+  const boundaryEditGroupRef = useRef<L.FeatureGroup | null>(null);
+  const boundaryEditHandlerRef = useRef<any>(null);
+  const footprintEditGroupRef = useRef<L.FeatureGroup | null>(null);
+  const footprintEditHandlerRef = useRef<any>(null);
+  const footprintLayerToIdRef = useRef<Map<number, string>>(new Map());
+  const pathwayEditGroupRef = useRef<L.FeatureGroup | null>(null);
+  const pathwayEditHandlerRef = useRef<any>(null);
+  const pathwayLayerToIdRef = useRef<Map<number, { id: string; label: string; pathwayType: string }>>(new Map());
 
   const [mapboxToken, setMapboxToken] = useState("");
   const [mapLoaded, setMapLoaded] = useState(false);
@@ -427,6 +438,12 @@ export default function MapPage() {
   const [waterBudget, setWaterBudget] = useState<WaterBudgetReport | null>(null);
   const [isRunningWaterBudget, setIsRunningWaterBudget] = useState(false);
   const [waterBudgetError, setWaterBudgetError] = useState<string | null>(null);
+  const [freehandMode, setFreehandMode] = useState(false);
+  const [editBoundaryMode, setEditBoundaryMode] = useState(false);
+  const [editFootprintMode, setEditFootprintMode] = useState(false);
+  const [editPathwayMode, setEditPathwayMode] = useState(false);
+  const [pendingFootprintEdits, setPendingFootprintEdits] = useState<Array<{ id: string; geojson: string }> | null>(null);
+  const [pendingPathwayEdits, setPendingPathwayEdits] = useState<Array<{ id: string; label: string; pathwayType: string; geojson: string }> | null>(null);
   const overpassPreview = overpassCandidates[overpassSelectedIdx] ?? null;
 
   const { data: properties = [] } = useListProperties();
@@ -457,6 +474,7 @@ export default function MapPage() {
   const createComment = useCreateComment();
   const deleteComment = useDeleteComment();
   const createStructure = useCreateStructure();
+  const updateStructure = useUpdateStructure();
   const deleteStructure = useDeleteStructure();
 
   const { data: sectors = [] } = useListSectors(activePropertyId ?? "", {
@@ -499,6 +517,10 @@ export default function MapPage() {
   });
   const zonesRef = useRef(zones);
   zonesRef.current = zones;
+  const structuresRef = useRef(structures);
+  structuresRef.current = structures;
+  const pathwaysRef = useRef(pathways);
+  pathwaysRef.current = pathways;
   const sectorsRef = useRef(sectors);
   sectorsRef.current = sectors;
   const activePropertyRef = useRef(activeProperty);
@@ -579,6 +601,22 @@ export default function MapPage() {
     map.addLayer(zonesEditGroup);
     zonesEditGroupRef.current = zonesEditGroup;
 
+    // Feature groups for boundary / footprint / pathway vertex-editing
+    const boundaryEditGroup = new L.FeatureGroup();
+    map.addLayer(boundaryEditGroup);
+    boundaryEditGroupRef.current = boundaryEditGroup;
+
+    const footprintEditGroup = new L.FeatureGroup();
+    map.addLayer(footprintEditGroup);
+    footprintEditGroupRef.current = footprintEditGroup;
+
+    const pathwayEditGroup = new L.FeatureGroup();
+    map.addLayer(pathwayEditGroup);
+    pathwayEditGroupRef.current = pathwayEditGroup;
+
+    // Freehand drawer — pointer-event based, works with Apple Pencil
+    freehandDrawerRef.current = new FreehandDrawer(map);
+
     // Pathway polyline handler
     const PolylineHandler = (L as any).Draw.Polyline;
     const pathwayPolylineHandler = new PolylineHandler(map, {
@@ -637,20 +675,44 @@ export default function MapPage() {
     });
 
     map.on((L as any).Draw.Event.EDITED, (e: any) => {
-      const updates: Array<{ id: string; zoneNumber: number; geojson: string }> = [];
+      const zoneUpdates: Array<{ id: string; zoneNumber: number; geojson: string }> = [];
+      const footprintUpdates: Array<{ id: string; geojson: string }> = [];
+      const pathwayUpdates: Array<{ id: string; label: string; pathwayType: string; geojson: string }> = [];
+
       e.layers.eachLayer((layer: any) => {
-        const data = zoneLayerToIdRef.current.get(layer._leaflet_id);
-        if (data) {
-          updates.push({ id: data.id, zoneNumber: data.zoneNumber, geojson: JSON.stringify(layer.toGeoJSON().geometry) });
+        const lid = layer._leaflet_id as number;
+        const geomJson = JSON.stringify(layer.toGeoJSON().geometry);
+
+        const zoneData = zoneLayerToIdRef.current.get(lid);
+        if (zoneData) zoneUpdates.push({ id: zoneData.id, zoneNumber: zoneData.zoneNumber, geojson: geomJson });
+
+        const structId = footprintLayerToIdRef.current.get(lid);
+        if (structId) footprintUpdates.push({ id: structId, geojson: geomJson });
+
+        const pathwayData = pathwayLayerToIdRef.current.get(lid);
+        if (pathwayData) pathwayUpdates.push({ id: pathwayData.id, label: pathwayData.label, pathwayType: pathwayData.pathwayType, geojson: geomJson });
+
+        if (boundaryEditGroupRef.current?.hasLayer(layer)) {
+          const geom = layer.toGeoJSON().geometry as GeoJSON.Polygon;
+          const ha = turf.area({ type: "Feature", geometry: geom, properties: {} }) / 10000;
+          setPendingBoundary(geom);
+          setPendingAreaHa(ha);
+          setPendingAreaAc(ha * 2.47105);
+          setEditBoundaryMode(false);
         }
       });
-      if (updates.length > 0) setPendingZoneEdits(updates);
+
+      if (zoneUpdates.length > 0) setPendingZoneEdits(zoneUpdates);
+      if (footprintUpdates.length > 0) setPendingFootprintEdits(footprintUpdates);
+      if (pathwayUpdates.length > 0) setPendingPathwayEdits(pathwayUpdates);
     });
 
     mapRef.current = map;
     setMapLoaded(true);
 
     return () => {
+      freehandDrawerRef.current?.disable();
+      freehandDrawerRef.current = null;
       map.remove();
       mapRef.current = null;
       drawnItemsRef.current = null;
@@ -995,25 +1057,54 @@ export default function MapPage() {
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapLoaded || !drawBuildingOutlineMode) return;
-    buildingDrawActiveRef.current = true;
-    buildingPolygonHandlerRef.current?.enable();
-    return () => {
-      buildingDrawActiveRef.current = false;
-      buildingPolygonHandlerRef.current?.disable();
-    };
-  }, [drawBuildingOutlineMode, mapLoaded]);
+    if (freehandMode) {
+      const drawer = freehandDrawerRef.current;
+      if (!drawer) return;
+      drawer.enablePolygon((geom: GeoJSON.Polygon) => {
+        const feat = { type: "Feature", geometry: geom, properties: {} } as GeoJSON.Feature;
+        const centroid = turf.centroid(feat);
+        const [lng, lat] = centroid.geometry.coordinates;
+        setPendingFootprint(geom);
+        setPendingStructure({ lng, lat });
+        if (pendingFootprintPreviewRef.current) map.removeLayer(pendingFootprintPreviewRef.current);
+        const previewLayer = L.geoJSON(feat as any, {
+          style: () => ({ color: "#000", weight: 2.5, opacity: 1, fillColor: "#000", fillOpacity: 0.06 }),
+        }).addTo(map);
+        pendingFootprintPreviewRef.current = previewLayer;
+        setDrawBuildingOutlineMode(false);
+      });
+      return () => { drawer.disable(); };
+    } else {
+      buildingDrawActiveRef.current = true;
+      buildingPolygonHandlerRef.current?.enable();
+      return () => {
+        buildingDrawActiveRef.current = false;
+        buildingPolygonHandlerRef.current?.disable();
+      };
+    }
+  }, [drawBuildingOutlineMode, mapLoaded, freehandMode]);
 
   // ─── PATHWAY DRAW MODE ───────────────────────────────────────────────────
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapLoaded || !drawPathwayMode) return;
-    pathwayDrawActiveRef.current = true;
-    pathwayPolylineHandlerRef.current?.enable();
-    return () => {
-      pathwayDrawActiveRef.current = false;
-      pathwayPolylineHandlerRef.current?.disable();
-    };
-  }, [drawPathwayMode, mapLoaded]);
+    if (freehandMode) {
+      const drawer = freehandDrawerRef.current;
+      if (!drawer) return;
+      drawer.enablePolyline((geom: GeoJSON.LineString) => {
+        setPendingPathway(geom);
+        setDrawPathwayMode(false);
+      });
+      return () => { drawer.disable(); };
+    } else {
+      pathwayDrawActiveRef.current = true;
+      pathwayPolylineHandlerRef.current?.enable();
+      return () => {
+        pathwayDrawActiveRef.current = false;
+        pathwayPolylineHandlerRef.current?.disable();
+      };
+    }
+  }, [drawPathwayMode, mapLoaded, freehandMode]);
 
   // ─── SENSORY VECTOR POINT DROP ────────────────────────────────────────────
   useEffect(() => {
@@ -1259,17 +1350,48 @@ export default function MapPage() {
     const handlers = zonePolygonHandlersRef.current;
     if (!mapLoaded) return;
     Object.values(handlers).forEach((h: any) => h.disable());
-    if (activeZoneDraw !== null) {
+    zoneDrawActiveRef.current = null;
+
+    if (activeZoneDraw === null) return;
+
+    if (freehandMode) {
+      const drawer = freehandDrawerRef.current;
+      if (!drawer) return;
+      drawer.enablePolygon((geom: GeoJSON.Polygon) => {
+        setPendingZoneGeom({ zoneNumber: activeZoneDraw, geojson: JSON.stringify(geom) });
+        setActiveZoneDraw(null);
+      });
+      return () => { drawer.disable(); };
+    } else {
       zoneDrawActiveRef.current = activeZoneDraw;
       handlers[activeZoneDraw]?.enable();
-    } else {
-      zoneDrawActiveRef.current = null;
+      return () => {
+        Object.values(handlers).forEach((h: any) => h.disable());
+        zoneDrawActiveRef.current = null;
+      };
     }
-    return () => {
-      Object.values(handlers).forEach((h: any) => h.disable());
-      zoneDrawActiveRef.current = null;
-    };
-  }, [activeZoneDraw, mapLoaded]);
+  }, [activeZoneDraw, mapLoaded, freehandMode]);
+
+  // ─── BOUNDARY FREEHAND DRAW MODE ─────────────────────────────────────────
+  useEffect(() => {
+    if (!mapLoaded || !isBoundaryDrawing || !freehandMode) return;
+    drawPolygonHandlerRef.current?.disable();
+    const drawer = freehandDrawerRef.current;
+    if (!drawer) return;
+    drawer.enablePolygon((geom: GeoJSON.Polygon) => {
+      const feat = { type: "Feature", geometry: geom, properties: {} } as GeoJSON.Feature;
+      const ha = turf.area(feat) / 10000;
+      if (drawnItemsRef.current) {
+        drawnItemsRef.current.clearLayers();
+        drawnItemsRef.current.addLayer(L.geoJSON(feat as any));
+      }
+      setPendingBoundary(geom);
+      setPendingAreaHa(ha);
+      setPendingAreaAc(ha * 2.47105);
+      setIsBoundaryDrawing(false);
+    });
+    return () => { drawer.disable(); };
+  }, [isBoundaryDrawing, mapLoaded, freehandMode]);
 
   // ─── ZONE EDIT MODE (vertex-drag editing) ────────────────────────────────
   useEffect(() => {
@@ -1354,6 +1476,172 @@ export default function MapPage() {
     );
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingZoneEdits, activePropertyId]);
+
+  // ─── BOUNDARY EDIT MODE (vertex-drag reshaping) ──────────────────────────
+  useEffect(() => {
+    const map = mapRef.current;
+    const editGroup = boundaryEditGroupRef.current;
+    if (!map || !mapLoaded || !editGroup) return;
+    if (!editBoundaryMode) {
+      if (boundaryEditHandlerRef.current) {
+        boundaryEditHandlerRef.current.disable();
+        boundaryEditHandlerRef.current = null;
+      }
+      editGroup.clearLayers();
+      return;
+    }
+    editGroup.clearLayers();
+    const rawGeo = activePropertyRef.current?.boundaryGeojson;
+    if (!rawGeo) { setEditBoundaryMode(false); return; }
+    try {
+      const geo = typeof rawGeo === "string" ? JSON.parse(rawGeo) : rawGeo;
+      const geoLayer = L.geoJSON({ type: "Feature", geometry: geo, properties: {} } as any, {
+        style: () => ({ color: "#2D6A1A", weight: 2.5, opacity: 0.9, fillColor: "#2D6A1A", fillOpacity: 0.12 }),
+      });
+      let polyLayer: L.Layer | null = null;
+      geoLayer.eachLayer((l) => { polyLayer = l; });
+      if (polyLayer) editGroup.addLayer(polyLayer);
+    } catch { setEditBoundaryMode(false); return; }
+    const EditHandler = (L as any).EditToolbar.Edit;
+    const handler = new EditHandler(map, { featureGroup: editGroup });
+    handler.enable();
+    boundaryEditHandlerRef.current = handler;
+    return () => {
+      if (boundaryEditHandlerRef.current) {
+        boundaryEditHandlerRef.current.disable();
+        boundaryEditHandlerRef.current = null;
+      }
+      editGroup.clearLayers();
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editBoundaryMode, mapLoaded]);
+
+  // ─── FOOTPRINT EDIT MODE (vertex-drag reshaping) ─────────────────────────
+  useEffect(() => {
+    const map = mapRef.current;
+    const editGroup = footprintEditGroupRef.current;
+    if (!map || !mapLoaded || !editGroup) return;
+    if (!editFootprintMode) {
+      if (footprintEditHandlerRef.current) {
+        footprintEditHandlerRef.current.disable();
+        footprintEditHandlerRef.current = null;
+      }
+      editGroup.clearLayers();
+      footprintLayerToIdRef.current.clear();
+      return;
+    }
+    editGroup.clearLayers();
+    footprintLayerToIdRef.current.clear();
+    structuresRef.current.forEach((s) => {
+      if (!s.footprintGeojson) return;
+      try {
+        const geo = JSON.parse(s.footprintGeojson) as GeoJSON.Polygon;
+        const geoLayer = L.geoJSON({ type: "Feature", geometry: geo, properties: {} } as any, {
+          style: () => ({ color: "#000", weight: 2.5, opacity: 1, fillColor: "#000", fillOpacity: 0.06 }),
+        });
+        let polyLayer: L.Layer | null = null;
+        geoLayer.eachLayer((l) => { polyLayer = l; });
+        if (polyLayer) {
+          editGroup.addLayer(polyLayer);
+          footprintLayerToIdRef.current.set((polyLayer as any)._leaflet_id, s.id);
+        }
+      } catch { /* skip malformed */ }
+    });
+    const EditHandler = (L as any).EditToolbar.Edit;
+    const handler = new EditHandler(map, { featureGroup: editGroup });
+    handler.enable();
+    footprintEditHandlerRef.current = handler;
+    return () => {
+      if (footprintEditHandlerRef.current) {
+        footprintEditHandlerRef.current.disable();
+        footprintEditHandlerRef.current = null;
+      }
+      editGroup.clearLayers();
+      footprintLayerToIdRef.current.clear();
+    };
+  }, [editFootprintMode, mapLoaded]);
+
+  // ─── PATHWAY EDIT MODE (vertex-drag reshaping) ───────────────────────────
+  useEffect(() => {
+    const map = mapRef.current;
+    const editGroup = pathwayEditGroupRef.current;
+    if (!map || !mapLoaded || !editGroup) return;
+    if (!editPathwayMode) {
+      if (pathwayEditHandlerRef.current) {
+        pathwayEditHandlerRef.current.disable();
+        pathwayEditHandlerRef.current = null;
+      }
+      editGroup.clearLayers();
+      pathwayLayerToIdRef.current.clear();
+      return;
+    }
+    editGroup.clearLayers();
+    pathwayLayerToIdRef.current.clear();
+    pathwaysRef.current.forEach((p) => {
+      try {
+        const geo = JSON.parse(p.lineGeojson) as GeoJSON.LineString;
+        const pt = PATHWAY_TYPES.find((t) => t.value === p.pathwayType);
+        const geoLayer = L.geoJSON({ type: "Feature", geometry: geo, properties: {} } as any, {
+          style: () => ({ color: pt?.color ?? "#8B6914", weight: 3, opacity: 0.9 }),
+        });
+        let lineLayer: L.Layer | null = null;
+        geoLayer.eachLayer((l) => { lineLayer = l; });
+        if (lineLayer) {
+          editGroup.addLayer(lineLayer);
+          pathwayLayerToIdRef.current.set((lineLayer as any)._leaflet_id, { id: p.id, label: p.label, pathwayType: p.pathwayType });
+        }
+      } catch { /* skip */ }
+    });
+    const EditHandler = (L as any).EditToolbar.Edit;
+    const handler = new EditHandler(map, { featureGroup: editGroup });
+    handler.enable();
+    pathwayEditHandlerRef.current = handler;
+    return () => {
+      if (pathwayEditHandlerRef.current) {
+        pathwayEditHandlerRef.current.disable();
+        pathwayEditHandlerRef.current = null;
+      }
+      editGroup.clearLayers();
+      pathwayLayerToIdRef.current.clear();
+    };
+  }, [editPathwayMode, mapLoaded]);
+
+  // ─── SAVE EDITED FOOTPRINTS ───────────────────────────────────────────────
+  useEffect(() => {
+    if (!pendingFootprintEdits || !activePropertyId) return;
+    const edits = pendingFootprintEdits;
+    setPendingFootprintEdits(null);
+    setEditFootprintMode(false);
+    edits.forEach(({ id, geojson }) => {
+      updateStructure.mutate(
+        { propertyId: activePropertyId, structureId: id, data: { footprintGeojson: geojson } },
+        { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListStructuresQueryKey(activePropertyId) }) },
+      );
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingFootprintEdits, activePropertyId]);
+
+  // ─── SAVE EDITED PATHWAYS (delete + recreate) ────────────────────────────
+  useEffect(() => {
+    if (!pendingPathwayEdits || !activePropertyId) return;
+    const edits = pendingPathwayEdits;
+    setPendingPathwayEdits(null);
+    setEditPathwayMode(false);
+    edits.forEach(({ id, label, pathwayType, geojson }) => {
+      deletePathway.mutate(
+        { propertyId: activePropertyId, pathwayId: id },
+        {
+          onSuccess: () => {
+            createPathway.mutate(
+              { propertyId: activePropertyId, data: { label, pathwayType: pathwayType as any, lineGeojson: geojson } },
+              { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListPathwaysQueryKey(activePropertyId) }) },
+            );
+          },
+        },
+      );
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingPathwayEdits, activePropertyId]);
 
   // ─── BUILDING OUTLINE POLYGONS (saved) ───────────────────────────────────
   useEffect(() => {
@@ -2691,19 +2979,41 @@ export default function MapPage() {
                 </p>
               </div>
 
+              {/* Freehand / Precise toggle */}
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] flex-1" style={{ color: "hsl(42,15%,50%)" }}>Draw mode</span>
+                <button
+                  onClick={() => setFreehandMode(false)}
+                  className="text-[10px] px-2 py-0.5 rounded-l"
+                  style={{ background: freehandMode ? "hsl(103,35%,14%)" : "hsl(84,38%,30%)", border: "1px solid hsl(84,38%,25%)", color: freehandMode ? "hsl(42,15%,50%)" : "hsl(84,55%,80%)" }}
+                >
+                  ✦ Precise
+                </button>
+                <button
+                  onClick={() => setFreehandMode(true)}
+                  className="text-[10px] px-2 py-0.5 rounded-r -ml-px"
+                  style={{ background: freehandMode ? "hsl(200,50%,22%)" : "hsl(103,35%,14%)", border: "1px solid hsl(200,50%,30%)", color: freehandMode ? "#7dd3fc" : "hsl(42,15%,50%)" }}
+                >
+                  ✏ Freehand
+                </button>
+              </div>
+
               {isBoundaryDrawing ? (
                 <div className="space-y-2">
                   <div className="rounded p-2.5" style={{ background: "hsl(103, 40%, 12%)", border: "1px solid hsl(84, 50%, 35%)" }}>
                     <p className="text-[10px] font-semibold mb-1" style={{ color: "hsl(84, 60%, 65%)" }}>
-                      ✏ Drawing active
+                      {freehandMode ? "✏ Freehand active" : "✏ Drawing active"}
                     </p>
                     <p className="text-[10px]" style={{ color: "hsl(42, 15%, 60%)" }}>
-                      Click on the map to place corner points. Double-click the last point to finish the polygon.
+                      {freehandMode
+                        ? "Hold & trace the boundary with your finger or Apple Pencil — release to finish."
+                        : "Click on the map to place corner points. Double-click the last point to finish the polygon."}
                     </p>
                   </div>
                   <button
                     onClick={() => {
                       drawPolygonHandlerRef.current?.disable();
+                      freehandDrawerRef.current?.disable();
                       setIsBoundaryDrawing(false);
                     }}
                     className="w-full text-xs px-3 py-1.5 rounded transition-colors"
@@ -2713,16 +3023,51 @@ export default function MapPage() {
                   </button>
                 </div>
               ) : (
-                <button
-                  onClick={() => {
-                    drawPolygonHandlerRef.current?.enable();
-                    setIsBoundaryDrawing(true);
-                  }}
-                  className="w-full text-xs px-3 py-2 rounded font-medium text-left transition-colors"
-                  style={{ background: "hsl(103, 35%, 17%)", border: "1px solid hsl(103, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
-                >
-                  ✏ Draw Property Boundary
-                </button>
+                <div className="space-y-1.5">
+                  <button
+                    onClick={() => {
+                      if (!freehandMode) drawPolygonHandlerRef.current?.enable();
+                      setIsBoundaryDrawing(true);
+                    }}
+                    className="w-full text-xs px-3 py-2 rounded font-medium text-left transition-colors"
+                    style={{ background: "hsl(103, 35%, 17%)", border: "1px solid hsl(103, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
+                  >
+                    {freehandMode ? "✏ Freehand Boundary" : "✏ Draw Property Boundary"}
+                  </button>
+                  {activeProperty?.boundaryGeojson && !editBoundaryMode && (
+                    <button
+                      onClick={() => setEditBoundaryMode(true)}
+                      className="w-full text-[11px] px-3 py-1.5 rounded"
+                      style={{ background: "hsl(220,40%,22%)", border: "1px solid hsl(220,40%,32%)", color: "hsl(210,70%,75%)" }}
+                    >
+                      ↔ Reshape Boundary
+                    </button>
+                  )}
+                  {editBoundaryMode && (
+                    <div className="space-y-1.5">
+                      <p className="text-[9px]" style={{ color: "hsl(42,15%,50%)" }}>
+                        Drag vertex handles to reshape the boundary outline.
+                      </p>
+                      <div className="flex gap-1.5">
+                        <button
+                          onClick={() => boundaryEditHandlerRef.current?.save()}
+                          disabled={updateProperty.isPending}
+                          className="flex-1 text-[11px] py-1.5 rounded font-medium"
+                          style={{ background: "hsl(84,38%,30%)", color: "hsl(84,55%,80%)" }}
+                        >
+                          {updateProperty.isPending ? "Saving…" : "Save Edits"}
+                        </button>
+                        <button
+                          onClick={() => { boundaryEditHandlerRef.current?.revertLayers(); setEditBoundaryMode(false); }}
+                          className="px-3 text-[11px] py-1.5 rounded"
+                          style={{ color: "hsl(42,15%,55%)", border: "1px solid hsl(103,30%,22%)" }}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               )}
 
               {(displayAreaHa || displayAreaAc) && (
@@ -3235,7 +3580,9 @@ export default function MapPage() {
                       color: drawBuildingOutlineMode ? "#fff" : "hsl(42, 28%, 88%)",
                     }}
                   >
-                    {drawBuildingOutlineMode ? "Click points on map · double-click to finish" : "⬛ Draw Building Outline"}
+                    {drawBuildingOutlineMode
+                      ? (freehandMode ? "Hold & trace the outline — release to finish" : "Click points on map · double-click to finish")
+                      : (freehandMode ? "✏ Freehand Building Outline" : "⬛ Draw Building Outline")}
                   </button>
                   <button
                     onClick={() => { setDropStructureMode(true); setDrawBuildingOutlineMode(false); }}
@@ -3277,8 +3624,8 @@ export default function MapPage() {
               )}
 
               {structures.length > 0 && !pendingStructure && (
-                <div>
-                  <div className="text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: "hsl(42, 15%, 50%)" }}>
+                <div className="space-y-1.5">
+                  <div className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "hsl(42, 15%, 50%)" }}>
                     {structures.length} {structures.length === 1 ? "Structure" : "Structures"}
                   </div>
                   <div className="space-y-1 max-h-44 overflow-y-auto">
@@ -3307,6 +3654,38 @@ export default function MapPage() {
                       );
                     })}
                   </div>
+                  {structures.some((s) => s.footprintGeojson) && !editFootprintMode && (
+                    <button
+                      onClick={() => { setEditFootprintMode(true); setDrawBuildingOutlineMode(false); }}
+                      className="w-full text-[11px] px-3 py-1.5 rounded"
+                      style={{ background: "hsl(220,40%,22%)", border: "1px solid hsl(220,40%,32%)", color: "hsl(210,70%,75%)" }}
+                    >
+                      ↔ Reshape Building Outlines
+                    </button>
+                  )}
+                  {editFootprintMode && (
+                    <div className="space-y-1.5">
+                      <p className="text-[9px]" style={{ color: "hsl(42,15%,50%)" }}>
+                        Drag vertex handles to reshape building outlines.
+                      </p>
+                      <div className="flex gap-1.5">
+                        <button
+                          onClick={() => footprintEditHandlerRef.current?.save()}
+                          className="flex-1 text-[11px] py-1.5 rounded font-medium"
+                          style={{ background: "hsl(84,38%,30%)", color: "hsl(84,55%,80%)" }}
+                        >
+                          Save Edits
+                        </button>
+                        <button
+                          onClick={() => { footprintEditHandlerRef.current?.revertLayers(); setEditFootprintMode(false); }}
+                          className="px-3 text-[11px] py-1.5 rounded"
+                          style={{ color: "hsl(42,15%,55%)", border: "1px solid hsl(103,30%,22%)" }}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -3402,12 +3781,14 @@ export default function MapPage() {
                     color: drawPathwayMode ? "#fff" : "hsl(42, 28%, 88%)",
                   }}
                 >
-                  {drawPathwayMode ? "Click points on map · double-click to finish" : "✏ Draw Access or Pathway"}
+                  {drawPathwayMode
+                    ? (freehandMode ? "Hold & trace the path — release to finish" : "Click points on map · double-click to finish")
+                    : (freehandMode ? "✏ Freehand Pathway" : "✏ Draw Access or Pathway")}
                 </button>
               )}
               {pathways.length > 0 && !pendingPathway && (
-                <div>
-                  <div className="text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: "hsl(42, 15%, 50%)" }}>
+                <div className="space-y-1.5">
+                  <div className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "hsl(42, 15%, 50%)" }}>
                     {pathways.length} {pathways.length === 1 ? "Pathway" : "Pathways"}
                   </div>
                   <div className="space-y-1 max-h-40 overflow-y-auto">
@@ -3425,6 +3806,38 @@ export default function MapPage() {
                       );
                     })}
                   </div>
+                  {!editPathwayMode && (
+                    <button
+                      onClick={() => { setEditPathwayMode(true); setDrawPathwayMode(false); }}
+                      className="w-full text-[11px] px-3 py-1.5 rounded"
+                      style={{ background: "hsl(220,40%,22%)", border: "1px solid hsl(220,40%,32%)", color: "hsl(210,70%,75%)" }}
+                    >
+                      ↔ Reshape Pathways
+                    </button>
+                  )}
+                  {editPathwayMode && (
+                    <div className="space-y-1.5">
+                      <p className="text-[9px]" style={{ color: "hsl(42,15%,50%)" }}>
+                        Drag handles to reshape any pathway line.
+                      </p>
+                      <div className="flex gap-1.5">
+                        <button
+                          onClick={() => pathwayEditHandlerRef.current?.save()}
+                          className="flex-1 text-[11px] py-1.5 rounded font-medium"
+                          style={{ background: "hsl(84,38%,30%)", color: "hsl(84,55%,80%)" }}
+                        >
+                          Save Edits
+                        </button>
+                        <button
+                          onClick={() => { pathwayEditHandlerRef.current?.revertLayers(); setEditPathwayMode(false); }}
+                          className="px-3 text-[11px] py-1.5 rounded"
+                          style={{ color: "hsl(42,15%,55%)", border: "1px solid hsl(103,30%,22%)" }}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -3497,7 +3910,9 @@ export default function MapPage() {
 
                   {activeZoneDraw !== null && (
                     <p className="text-[9px]" style={{ color: "hsl(42,15%,50%)" }}>
-                      Click to place vertices. Double-click or click the first point to close.
+                      {freehandMode
+                        ? "Hold & trace the zone boundary — release to finish."
+                        : "Click to place vertices. Double-click or click the first point to close."}
                     </p>
                   )}
 
