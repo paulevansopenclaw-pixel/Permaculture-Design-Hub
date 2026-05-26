@@ -297,7 +297,7 @@ function pendingPinIcon() {
 
 export default function MapPage() {
   const [, navigate] = useLocation();
-  const { role, setRole, activePropertyId, setActivePropertyId } = useAppStore();
+  const { role, setRole, activePropertyId, setActivePropertyId, pendingMapElement, setPendingMapElement } = useAppStore();
   const queryClient = useQueryClient();
 
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -4272,8 +4272,41 @@ export default function MapPage() {
         </div>
       </aside>
 
+      {/* ── PENDING ELEMENT BANNER ── */}
+      {pendingMapElement && (
+        <div
+          className="absolute left-0 right-0 flex items-center gap-3 px-4 py-2.5 z-50"
+          style={{
+            top: 0,
+            background: "linear-gradient(90deg, #1e3a8a, #1d4ed8)",
+            borderBottom: "2px solid #3b82f6",
+            boxShadow: "0 4px 20px rgba(29,78,216,0.5)",
+          }}
+        >
+          <span style={{ fontSize: 15 }}>📌</span>
+          <div className="flex-1 min-w-0">
+            <span className="text-[11px] font-bold text-white">Add to Map: </span>
+            <span className="text-[11px] text-blue-200 font-semibold">{pendingMapElement.name}</span>
+            <span className="text-[10px] text-blue-300 ml-2 hidden sm:inline">— {pendingMapElement.placement}</span>
+          </div>
+          <span className="text-[9px] uppercase tracking-widest text-blue-300 hidden md:block">
+            Drop a pin or draw a structure, then dismiss
+          </span>
+          <button
+            onClick={() => setPendingMapElement(null)}
+            className="text-[10px] font-bold px-2.5 py-1 rounded transition-colors"
+            style={{ background: "rgba(255,255,255,0.15)", color: "#fff", border: "1px solid rgba(255,255,255,0.25)" }}
+          >
+            ✕ Dismiss
+          </button>
+        </div>
+      )}
+
       {/* ── MAP ── */}
-      <div className="flex-1 relative" style={{ background: "hsl(103, 18%, 5%)" }}>
+      <div
+        className="flex-1 relative"
+        style={{ background: "hsl(103, 18%, 5%)", marginTop: pendingMapElement ? "48px" : 0, transition: "margin-top 0.2s ease" }}
+      >
 
         {/* ── 16:9 CANVAS HOST — full-bleed in native mode, centred+locked in upload mode ── */}
         <div
