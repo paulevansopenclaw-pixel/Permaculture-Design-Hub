@@ -7,3 +7,4 @@
 - [Route auth & owner scoping](route-auth-pattern.md) — authMiddleware only populates req.user; every protected route must enforce isAuthenticated() + owner scoping itself.
 - [Plan-render staleness](plan-render-staleness.md) — concept renders detect staleness via per-layer content hash (no updatedAt on source tables); hash must be order-independent for record lists.
 - [@assets alias needs tsconfig path](assets-alias.md) — vite alias alone isn't enough; tsconfig paths must also map @assets/* or tsc fails.
+- [esbuild asset embedding](esbuild-asset-loader.md) — to bundle a binary asset into api-server use the `base64` loader (not `binary`; `binary` calls Uint8Array.fromBase64 which crashes on Node 24).

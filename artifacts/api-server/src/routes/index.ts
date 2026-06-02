@@ -16,6 +16,7 @@ import sensoryVectorsRouter from "./sensoryVectors";
 import storageRouter from "./storage";
 import conceptRenderRouter from "./conceptRender";
 import publicRouter from "./public";
+import shareRouter from "./share";
 
 const router: IRouter = Router();
 
@@ -36,5 +37,6 @@ router.use(waterBudgetRouter);
 router.use(storageRouter);
 router.use(conceptRenderRouter);
 router.use(publicRouter);
+router.use(shareRouter);
 
 export default router;
