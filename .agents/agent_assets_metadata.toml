@@ -1,0 +1,49 @@
+uploads = []
+
+[[generated]]
+id = "BiUK5mALx6R7-T88s2DY4"
+uri = "file://attached_assets/layer_samples/boundary_professional.png"
+type = "image"
+title = "boundary professional cartography"
+
+[[generated]]
+id = "sLi7LPz7QwnTL8JS1QNYR"
+uri = "file://attached_assets/layer_samples/boundary_concept.png"
+type = "image"
+title = "boundary concept art"
+
+[[generated]]
+id = "HrPrRWtSpGxR9du3MFbd-"
+uri = "file://attached_assets/layer_samples/contour_professional.png"
+type = "image"
+title = "contour professional cartography"
+
+[[generated]]
+id = "eAMoNjynlyVTBGlSdVrMM"
+uri = "file://attached_assets/layer_samples/contour_concept.png"
+type = "image"
+title = "contour concept art"
+
+[[outputs]]
+id = "WVjhbPJq-XPhqhAH-HRZq"
+uri = "file://attached_assets/layer_samples/boundary_professional.png"
+type = "image"
+title = "Boundary — Professional Cartography"
+
+[[outputs]]
+id = "XPwszBXbFYfN15tOp-oCx"
+uri = "file://attached_assets/layer_samples/boundary_concept.png"
+type = "image"
+title = "Boundary — AI Concept Art"
+
+[[outputs]]
+id = "fKy7AD_ci234XJQCe5T8C"
+uri = "file://attached_assets/layer_samples/contour_professional.png"
+type = "image"
+title = "Contour — Professional Cartography"
+
+[[outputs]]
+id = "1jvZaz-H9KWfoHJRKXlUF"
+uri = "file://attached_assets/layer_samples/contour_concept.png"
+type = "image"
+title = "Contour — AI Concept Art"
