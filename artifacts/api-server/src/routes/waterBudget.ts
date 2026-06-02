@@ -260,7 +260,7 @@ RETURN RAW JSON ONLY — no markdown fences, no text outside the JSON object:
 
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
-      model: "gemini-2.0-flash-lite",
+      model: "gemini-2.0-flash",
       generationConfig: { responseMimeType: "application/json", maxOutputTokens: 4096 },
     });
 
