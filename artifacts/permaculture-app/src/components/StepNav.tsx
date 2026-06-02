@@ -1,6 +1,6 @@
 import { useLocation } from "wouter";
 import { useAppStore } from "@/store/useAppStore";
-import { ClipboardList, Map, BarChart3, FolderOpen } from "lucide-react";
+import { ClipboardList, Map, BarChart3, Layers, FolderOpen } from "lucide-react";
 
 const GREEN = "#2d6a4f";
 const MID   = "#6b5f4e";
@@ -10,6 +10,7 @@ const LAYERS = [
   { path: "/intake",    label: "Intake",   Icon: ClipboardList },
   { path: "/workspace", label: "Map",      Icon: Map           },
   { path: "/analysis",  label: "Analysis", Icon: BarChart3     },
+  { path: "/plans",     label: "Plans",    Icon: Layers        },
   { path: "/dossier",   label: "Dossier",  Icon: FolderOpen    },
 ];
 

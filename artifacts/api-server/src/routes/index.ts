@@ -13,6 +13,8 @@ import configRouter from "./config";
 import analyzeSiteRouter from "./analyzeSite";
 import waterBudgetRouter from "./waterBudget";
 import sensoryVectorsRouter from "./sensoryVectors";
+import storageRouter from "./storage";
+import conceptRenderRouter from "./conceptRender";
 
 const router: IRouter = Router();
 
@@ -30,5 +32,7 @@ router.use(zonesRouter);
 router.use(sensoryVectorsRouter);
 router.use(analyzeSiteRouter);
 router.use(waterBudgetRouter);
+router.use(storageRouter);
+router.use(conceptRenderRouter);
 
 export default router;

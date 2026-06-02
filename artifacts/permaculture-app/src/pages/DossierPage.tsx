@@ -5,12 +5,28 @@ import * as turf from "@turf/turf";
 import {
   useGetProperty,
   useGetClientBrief,
+  useListZones,
+  useListStructures,
+  useListSectors,
+  useListDesignedSwales,
+  useListPathways,
+  useListSensoryVectors,
+  useListPlanRenders,
   getGetPropertyQueryKey,
   getGetClientBriefQueryKey,
+  getListZonesQueryKey,
+  getListStructuresQueryKey,
+  getListSectorsQueryKey,
+  getListDesignedSwalesQueryKey,
+  getListPathwaysQueryKey,
+  getListSensoryVectorsQueryKey,
+  getListPlanRendersQueryKey,
 } from "@workspace/api-client-react";
 import type { SiteAnalysisReport } from "@workspace/api-client-react";
 import { useAppStore } from "@/store/useAppStore";
 import { StepNav } from "@/components/StepNav";
+import { PlanPlate, type PlanLayerKey, type PlanPlateProps } from "@/components/plans/PlanPlate";
+import { SoilPlate, type SoilPlateProps } from "@/components/plans/SoilPlate";
 
 interface PlantRec { name: string; latinName: string; layer: string; purpose: string; zones: string; notes: string; }
 interface DesignElementRec { type: string; name: string; description: string; rationale: string; placement: string; priority: string; }
@@ -570,6 +586,9 @@ export default function DossierPage() {
               </section>
             </>}
 
+            {/* Design Layer Plans */}
+            <DesignPlansSection propertyId={activePropertyId} property={property} brief={brief}/>
+
             {/* Design Recommendations */}
             <DesignRecsSection designRecs={aiReport?(aiReport as unknown as Record<string,unknown>)["DesignRecommendations"] as DesignRecsType|undefined:undefined}/>
 
@@ -588,6 +607,76 @@ export default function DossierPage() {
         </main>
       )}
     </div>
+  );
+}
+
+// ─── Design Layer Plans ───────────────────────────────────────────────────────
+function DesignPlansSection({
+  propertyId,
+  property,
+  brief,
+}: {
+  propertyId: string;
+  property: PlanPlateProps["property"] | undefined;
+  brief: SoilPlateProps["brief"];
+}) {
+  const enabled = !!propertyId && !!property?.boundaryGeojson;
+  const q = <K extends readonly unknown[]>(key: K) => ({
+    query: { enabled, queryKey: key },
+  });
+  const { data: zones = [] } = useListZones(propertyId, q(getListZonesQueryKey(propertyId)));
+  const { data: structures = [] } = useListStructures(propertyId, q(getListStructuresQueryKey(propertyId)));
+  const { data: sectors = [] } = useListSectors(propertyId, q(getListSectorsQueryKey(propertyId)));
+  const { data: swales = [] } = useListDesignedSwales(propertyId, q(getListDesignedSwalesQueryKey(propertyId)));
+  const { data: pathways = [] } = useListPathways(propertyId, q(getListPathwaysQueryKey(propertyId)));
+  const { data: sensoryVectors = [] } = useListSensoryVectors(propertyId, q(getListSensoryVectorsQueryKey(propertyId)));
+  const { data: planRenders = [] } = useListPlanRenders(propertyId, q(getListPlanRendersQueryKey(propertyId)));
+
+  if (!enabled || !property) return null;
+
+  const allVisible: Record<PlanLayerKey, boolean> = {
+    boundary: true, water: true, zones: true, sectors: true, structures: true,
+  };
+  const LAYER_LABELS: Record<string, string> = {
+    boundary: "Boundary", water: "Water & Contour", zones: "Zones",
+    sectors: "Sectors", structures: "Structures", soil: "Soil Profile",
+  };
+  const layerConcepts = planRenders.filter((r) => LAYER_LABELS[r.layerKey]);
+  const bust = (r: { url: string; updatedAt?: string }) =>
+    r.updatedAt ? `${r.url}?v=${encodeURIComponent(r.updatedAt)}` : r.url;
+
+  return (
+    <section>
+      <SectionLabel n="08" title="Design Layer Plans"/>
+      <p style={{ fontFamily:"monospace", fontSize:9, textTransform:"uppercase", letterSpacing:"0.1em", color:"#bbb", margin:"0 0 16px" }}>
+        Professional cartographic plates and AI concept restyles · generated in Design Plans
+      </p>
+      <div style={{ display:"flex", flexDirection:"column", gap:24 }}>
+        <figure style={{ margin:0, border:RULE }}>
+          <PlanPlate
+            property={property}
+            visible={allVisible}
+            zones={zones}
+            sectors={sectors}
+            structures={structures}
+            swales={swales}
+            pathways={pathways}
+            sensoryVectors={sensoryVectors}
+          />
+        </figure>
+        <figure style={{ margin:0, border:RULE }}>
+          <SoilPlate property={property} brief={brief}/>
+        </figure>
+        {layerConcepts.map((r) => (
+          <figure key={r.layerKey} style={{ margin:0, border:RULE }}>
+            <img src={bust(r)} alt={`${LAYER_LABELS[r.layerKey]} concept`} style={{ display:"block", width:"100%" }}/>
+            <figcaption style={{ fontFamily:"monospace", fontSize:9, textTransform:"uppercase", letterSpacing:"0.1em", color:"#a89880", padding:"6px 10px", borderTop:RULE }}>
+              {LAYER_LABELS[r.layerKey]} — AI concept restyle
+            </figcaption>
+          </figure>
+        ))}
+      </div>
+    </section>
   );
 }
 

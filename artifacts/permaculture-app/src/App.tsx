@@ -8,6 +8,7 @@ import MapPage from "@/pages/MapPage";
 import PropertiesPage from "@/pages/PropertiesPage";
 import IntakePage from "@/pages/IntakePage";
 import AnalysisPage from "@/pages/AnalysisPage";
+import PlansPage from "@/pages/PlansPage";
 import DossierPage from "@/pages/DossierPage";
 import PresentationPage from "@/pages/PresentationPage";
 import { useAuth } from "@workspace/replit-auth-web";
@@ -69,6 +70,7 @@ function Router() {
       <Route path="/intake" component={IntakePage} />
       <Route path="/workspace" component={MapPage} />
       <Route path="/analysis" component={AnalysisPage} />
+      <Route path="/plans" component={PlansPage} />
       <Route path="/dossier" component={DossierPage} />
       <Route path="/presentation/:id" component={PresentationPage} />
       <Route component={NotFound} />

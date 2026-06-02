@@ -536,6 +536,47 @@ export interface SensoryVectorInput {
   geojsonGeometry: string;
 }
 
+export interface ConceptRenderRequest {
+  /** Which design layer this render represents (e.g. boundary, water, zones, sectors, structures, soil, composite). */
+  layerKey: string;
+  /** Concept style preset key. */
+  style?: string;
+  /** Base64 PNG (data URL or raw base64) of the accurate plan plate to restyle. */
+  plateImage: string;
+  /** Optional extra style direction appended to the base prompt. */
+  prompt?: string;
+}
+
+export interface PlanRenderItem {
+  id: string;
+  propertyId: string;
+  layerKey: string;
+  style: string;
+  objectPath: string;
+  /** Server path to fetch the rendered image. */
+  url: string;
+  prompt?: string | null;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export type PlanRenderList = PlanRenderItem[];
+
+export interface UploadUrlRequest {
+  /** @minLength 1 */
+  name: string;
+  /** @minimum 1 */
+  size: number;
+  /** @minLength 1 */
+  contentType: string;
+}
+
+export interface UploadUrlResponse {
+  uploadURL: string;
+  objectPath: string;
+  metadata?: UploadUrlRequest;
+}
+
 export interface ErrorEnvelope {
   error: string;
 }

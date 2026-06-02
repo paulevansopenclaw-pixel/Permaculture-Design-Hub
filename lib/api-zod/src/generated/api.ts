@@ -845,3 +845,100 @@ export const LogoutMobileSessionResponse = zod.object({
 })
 
 
+/**
+ * @summary Restyle an accurate plan plate into AI concept art (image-to-image)
+ */
+export const GenerateConceptRenderParams = zod.object({
+  "propertyId": zod.coerce.string()
+})
+
+export const GenerateConceptRenderBody = zod.object({
+  "layerKey": zod.string().describe('Which design layer this render represents (e.g. boundary, water, zones, sectors, structures, soil, composite).'),
+  "style": zod.string().optional().describe('Concept style preset key.'),
+  "plateImage": zod.string().describe('Base64 PNG (data URL or raw base64) of the accurate plan plate to restyle.'),
+  "prompt": zod.string().optional().describe('Optional extra style direction appended to the base prompt.')
+})
+
+export const GenerateConceptRenderResponse = zod.object({
+  "id": zod.string(),
+  "propertyId": zod.string(),
+  "layerKey": zod.string(),
+  "style": zod.string(),
+  "objectPath": zod.string(),
+  "url": zod.string().describe('Server path to fetch the rendered image.'),
+  "prompt": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string().optional()
+})
+
+
+/**
+ * @summary List cached AI concept renders for a property
+ */
+export const ListPlanRendersParams = zod.object({
+  "propertyId": zod.coerce.string()
+})
+
+export const ListPlanRendersResponseItem = zod.object({
+  "id": zod.string(),
+  "propertyId": zod.string(),
+  "layerKey": zod.string(),
+  "style": zod.string(),
+  "objectPath": zod.string(),
+  "url": zod.string().describe('Server path to fetch the rendered image.'),
+  "prompt": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string().optional()
+})
+export const ListPlanRendersResponse = zod.array(ListPlanRendersResponseItem)
+
+
+/**
+ * Returns a presigned GCS URL for direct upload. The client sends JSON
+metadata here, then uploads the file directly to the returned URL.
+
+ * @summary Request a presigned URL for file upload
+ */
+
+
+
+
+
+export const RequestUploadUrlBody = zod.object({
+  "name": zod.string().min(1),
+  "size": zod.number().min(1),
+  "contentType": zod.string().min(1)
+})
+
+
+
+
+
+
+export const RequestUploadUrlResponse = zod.object({
+  "uploadURL": zod.string().url(),
+  "objectPath": zod.string(),
+  "metadata": zod.object({
+  "name": zod.string().min(1),
+  "size": zod.number().min(1),
+  "contentType": zod.string().min(1)
+}).optional()
+})
+
+
+/**
+ * @summary Serve a public asset from PUBLIC_OBJECT_SEARCH_PATHS
+ */
+export const GetPublicObjectParams = zod.object({
+  "filePath": zod.coerce.string().describe('Relative file path within the public search paths.')
+})
+
+
+/**
+ * @summary Serve an object entity from PRIVATE_OBJECT_DIR
+ */
+export const GetStorageObjectParams = zod.object({
+  "objectPath": zod.coerce.string().describe('Object path within the private object dir.')
+})
+
+
