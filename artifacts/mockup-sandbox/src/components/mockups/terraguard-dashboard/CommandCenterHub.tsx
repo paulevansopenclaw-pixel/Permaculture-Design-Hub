@@ -1,39 +1,56 @@
 import { useState } from "react";
 
-const INK = "#111";
-const BLUE = "#1d4ed8";
-const LIGHT = "#f7f7f7";
-const RULE = `2px solid ${INK}`;
+// ── Organic warm palette ──────────────────────────────────────────────────────
+const PAPER  = "#f8f5f0";
+const CARD   = "#fffdf9";
+const INK    = "#2c2416";
+const MID    = "#6b5f4e";
+const DIM    = "#a89880";
+const RULE   = "1px solid #ddd6cc";
+const BLUE   = "#1d4ed8";
+const GREEN  = "#2d6a4f";
+const AMBER  = "#92400e";
+
+const shadow = (px = 6, alpha = 0.07) =>
+  `0 ${px / 2}px ${px}px rgba(44,36,22,${alpha}), 0 1px 2px rgba(44,36,22,0.05)`;
 
 const PROPERTIES = [
-  { id: "1", name: "Whitewater Hollow", location: "Blue Ridge, VA", area: "3.2 ha", status: "active", phase: "Design", thumb: "🌿", progress: 68 },
-  { id: "2", name: "Ridgeline Ranch", location: "Taos, NM", area: "12.7 ha", status: "review", phase: "Analysis", thumb: "🏔️", progress: 34 },
-  { id: "3", name: "Fernwood Commons", location: "Portland, OR", area: "0.8 ha", status: "draft", phase: "Intake", thumb: "🌲", progress: 12 },
+  { id: "1", name: "Whitewater Hollow", location: "Blue Ridge, VA", area: "3.2 ha", phase: "Design",   thumb: "🌿", progress: 68, accent: GREEN },
+  { id: "2", name: "Ridgeline Ranch",   location: "Taos, NM",       area: "12.7 ha", phase: "Analysis", thumb: "🏔️", progress: 34, accent: BLUE  },
+  { id: "3", name: "Fernwood Commons",  location: "Portland, OR",   area: "0.8 ha",  phase: "Intake",   thumb: "🌲", progress: 12, accent: AMBER },
 ];
 
 const LAYERS = [
-  { id: "workspace", icon: "🗺️", label: "Map Workspace", desc: "Draw boundaries · contours · zones", color: "#166534", bg: "#f0fdf4" },
-  { id: "analysis", icon: "📊", label: "AI Analysis", desc: "Water · sectors · site report", color: BLUE, bg: "#eff6ff" },
-  { id: "dossier", icon: "📁", label: "Site Dossier", desc: "Water budget · plants · phases", color: "#6d28d9", bg: "#f5f3ff" },
-  { id: "presentation", icon: "📑", label: "Presentation", desc: "Client-ready PDF output", color: "#b45309", bg: "#fffbeb" },
+  { id: "workspace", icon: "🗺️", label: "Map Workspace",  desc: "Boundaries · contours · zones",  accent: GREEN, bg: "#f0fdf4" },
+  { id: "analysis",  icon: "📊", label: "AI Analysis",    desc: "Water · sectors · site report", accent: BLUE,  bg: "#eff6ff" },
+  { id: "dossier",   icon: "📁", label: "Site Dossier",   desc: "Budget · plants · phases",      accent: "#6d28d9", bg: "#f5f3ff" },
+  { id: "present",   icon: "📑", label: "Presentation",   desc: "Client-ready PDF output",       accent: AMBER, bg: "#fffbeb" },
 ];
 
 const ACTIVITY = [
-  { time: "2 min ago", text: "Swale line added to Whitewater Hollow", icon: "✏️" },
-  { time: "1 hr ago", text: "AI analysis completed for Ridgeline Ranch", icon: "✅" },
-  { time: "Yesterday", text: "Client comment on zone 3 boundary", icon: "💬" },
-  { time: "2 days ago", text: "Water budget updated — 3,200 L/day", icon: "💧" },
+  { time: "2 min ago",  text: "Swale line added to Whitewater Hollow",      icon: "✏️" },
+  { time: "1 hr ago",   text: "AI analysis completed for Ridgeline Ranch",  icon: "✅" },
+  { time: "Yesterday",  text: "Client note on zone 3 boundary",             icon: "💬" },
+  { time: "2 days ago", text: "Water budget updated — 3,200 L/day",         icon: "💧" },
 ];
 
-function StatusPip({ status }: { status: string }) {
-  const map: Record<string, string> = { active: "#16a34a", review: BLUE, draft: "#9ca3af" };
-  return <span style={{ width: 8, height: 8, borderRadius: "50%", background: map[status] ?? "#ccc", display: "inline-block", marginRight: 6 }} />;
+function Tag({ label, accent }: { label: string; accent: string }) {
+  return (
+    <span style={{
+      fontSize: 9, fontWeight: 600, letterSpacing: "0.08em",
+      color: accent, background: accent + "18",
+      padding: "2px 7px", borderRadius: 20,
+      border: `1px solid ${accent}40`,
+    }}>
+      {label.toUpperCase()}
+    </span>
+  );
 }
 
-function ProgressBar({ value }: { value: number }) {
+function ProgressBar({ value, accent }: { value: number; accent: string }) {
   return (
-    <div style={{ height: 3, background: "#e5e7eb", borderRadius: 2, overflow: "hidden", marginTop: 6 }}>
-      <div style={{ height: "100%", width: `${value}%`, background: BLUE, borderRadius: 2 }} />
+    <div style={{ height: 4, background: "#ede8e0", borderRadius: 99, overflow: "hidden" }}>
+      <div style={{ height: "100%", width: `${value}%`, background: accent, borderRadius: 99, transition: "width 0.4s ease" }} />
     </div>
   );
 }
@@ -46,29 +63,27 @@ function PropertyCard({ p, onOpen }: { p: typeof PROPERTIES[0]; onOpen: () => vo
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       style={{
+        background: CARD,
+        borderRadius: 10,
         border: RULE,
-        borderRadius: 0,
-        background: hover ? "#fafafa" : "#fff",
+        padding: "18px 18px 14px",
         cursor: "pointer",
-        padding: "20px 20px 16px",
-        transition: "box-shadow 0.15s, transform 0.12s",
-        boxShadow: hover ? `4px 4px 0 ${INK}` : "2px 2px 0 #ccc",
-        transform: hover ? "translate(-1px,-1px)" : "none",
-        position: "relative",
+        boxShadow: hover ? shadow(14, 0.12) : shadow(6),
+        transform: hover ? "translateY(-2px)" : "none",
+        transition: "all 0.18s ease",
       }}
     >
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
-        <span style={{ fontSize: 28 }}>{p.thumb}</span>
-        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", color: BLUE, background: "#eff6ff", padding: "2px 7px", border: `1px solid ${BLUE}` }}>{p.phase}</span>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+        <span style={{ fontSize: 26 }}>{p.thumb}</span>
+        <Tag label={p.phase} accent={p.accent} />
       </div>
-      <div style={{ fontWeight: 800, fontSize: 14, color: INK, letterSpacing: "-0.01em", marginBottom: 3 }}>{p.name}</div>
-      <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 2 }}>{p.location}</div>
-      <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 8, marginBottom: 4 }}>
-        <StatusPip status={p.status} />
-        <span style={{ fontSize: 10, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.06em" }}>{p.area}</span>
+      <div style={{ fontFamily: "Georgia, serif", fontWeight: 700, fontSize: 14, color: INK, lineHeight: 1.35, marginBottom: 4 }}>{p.name}</div>
+      <div style={{ fontSize: 11, color: MID, marginBottom: 12 }}>{p.location} · {p.area}</div>
+      <ProgressBar value={p.progress} accent={p.accent} />
+      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6, fontSize: 10, color: DIM }}>
+        <span>{p.progress}% complete</span>
+        <span>Open →</span>
       </div>
-      <ProgressBar value={p.progress} />
-      <div style={{ fontSize: 9, color: "#9ca3af", textAlign: "right", marginTop: 3 }}>{p.progress}% complete</div>
     </div>
   );
 }
@@ -81,75 +96,75 @@ function LayerTile({ layer, onClick }: { layer: typeof LAYERS[0]; onClick: () =>
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       style={{
-        border: `2px solid ${hover ? layer.color : INK}`,
-        borderRadius: 0,
-        background: hover ? layer.bg : "#fff",
-        cursor: "pointer",
+        background: hover ? layer.bg : CARD,
+        borderRadius: 10,
+        border: `1px solid ${hover ? layer.accent + "60" : "#ddd6cc"}`,
         padding: "20px",
-        transition: "all 0.15s",
-        boxShadow: hover ? `4px 4px 0 ${layer.color}` : "2px 2px 0 #ccc",
-        transform: hover ? "translate(-1px,-1px)" : "none",
+        cursor: "pointer",
+        boxShadow: hover ? `0 6px 18px ${layer.accent}25` : shadow(4),
+        transition: "all 0.18s ease",
       }}
     >
-      <div style={{ fontSize: 26, marginBottom: 10 }}>{layer.icon}</div>
-      <div style={{ fontWeight: 800, fontSize: 13, color: hover ? layer.color : INK, letterSpacing: "-0.01em", marginBottom: 4 }}>{layer.label}</div>
-      <div style={{ fontSize: 11, color: "#6b7280", lineHeight: 1.5 }}>{layer.desc}</div>
-      <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 4 }}>
-        <span style={{ fontSize: 10, fontWeight: 700, color: layer.color, letterSpacing: "0.05em" }}>OPEN →</span>
-      </div>
+      <div style={{ fontSize: 24, marginBottom: 10 }}>{layer.icon}</div>
+      <div style={{ fontFamily: "Georgia, serif", fontWeight: 700, fontSize: 13, color: hover ? layer.accent : INK, marginBottom: 5, transition: "color 0.15s" }}>{layer.label}</div>
+      <div style={{ fontSize: 11, color: MID, lineHeight: 1.55 }}>{layer.desc}</div>
+      <div style={{ marginTop: 12, fontSize: 10, fontWeight: 600, color: layer.accent, letterSpacing: "0.04em" }}>Open layer →</div>
     </div>
   );
 }
 
 export function CommandCenterHub() {
-  const [view, setView] = useState<"home" | "project">("home");
-  const [activeProject, setActiveProject] = useState(PROPERTIES[0]);
+  const [view, setView]           = useState<"home" | "project">("home");
+  const [active, setActive]       = useState(PROPERTIES[0]);
 
+  // ── PROJECT HUB ──────────────────────────────────────────────────────────
   if (view === "project") {
     return (
-      <div style={{ fontFamily: "'IBM Plex Mono', monospace", background: "#fff", minHeight: "100vh", display: "flex", flexDirection: "column" }}>
+      <div style={{ fontFamily: "'Inter', system-ui, sans-serif", background: PAPER, minHeight: "100vh", display: "flex", flexDirection: "column" }}>
         {/* Top bar */}
-        <div style={{ borderBottom: RULE, padding: "0 28px", height: 52, display: "flex", alignItems: "center", gap: 20, background: INK }}>
-          <button onClick={() => setView("home")} style={{ background: "none", border: "none", color: "#9ca3af", cursor: "pointer", fontSize: 11, fontFamily: "inherit", letterSpacing: "0.05em" }}>
-            ← DASHBOARD
+        <div style={{ padding: "0 28px", height: 52, display: "flex", alignItems: "center", gap: 16, background: "#fff", borderBottom: RULE, boxShadow: shadow(4, 0.05) }}>
+          <button onClick={() => setView("home")} style={{ background: "none", border: "none", color: MID, cursor: "pointer", fontSize: 12, fontFamily: "inherit", padding: 0 }}>
+            ← Dashboard
           </button>
-          <div style={{ width: 1, height: 20, background: "#374151" }} />
-          <span style={{ color: "#fff", fontWeight: 700, fontSize: 13 }}>{activeProject.thumb} {activeProject.name}</span>
-          <span style={{ fontSize: 10, color: "#6b7280", marginLeft: 4, letterSpacing: "0.05em" }}>{activeProject.location} · {activeProject.area}</span>
+          <div style={{ width: 1, height: 16, background: "#ddd6cc" }} />
+          <span style={{ fontSize: 14, fontFamily: "Georgia, serif", fontWeight: 700, color: INK }}>{active.thumb} {active.name}</span>
+          <Tag label={active.phase} accent={active.accent} />
+          <div style={{ flex: 1 }} />
+          <span style={{ fontSize: 11, color: MID }}>{active.location} · {active.area}</span>
         </div>
 
-        {/* Project Hub */}
-        <div style={{ flex: 1, padding: "28px 28px 0", display: "flex", flexDirection: "column", gap: 0 }}>
-          {/* Phase indicator */}
-          <div style={{ display: "flex", gap: 0, marginBottom: 28 }}>
+        <div style={{ flex: 1, padding: "28px", overflowY: "auto" }}>
+          {/* Phase strip */}
+          <div style={{ background: CARD, borderRadius: 10, border: RULE, padding: "14px 20px", marginBottom: 24, display: "flex", alignItems: "center", gap: 6, boxShadow: shadow(4) }}>
+            <span style={{ fontSize: 11, color: MID, marginRight: 8 }}>Design phase:</span>
             {["Intake", "Workspace", "Analysis", "Dossier", "Present"].map((step, i) => {
-              const phases = ["Intake", "Workspace", "Analysis", "Dossier", "Present"];
-              const active = phases.indexOf(activeProject.phase) >= i;
+              const order = ["Intake","Workspace","Analysis","Dossier","Present"];
+              const done  = order.indexOf(active.phase) >= i;
               return (
-                <div key={step} style={{ flex: 1, display: "flex", alignItems: "center" }}>
-                  <div style={{ flex: 1, padding: "8px 10px", border: RULE, borderRight: i < 4 ? "none" : RULE, background: active ? INK : "#fff", textAlign: "center" }}>
-                    <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.08em", color: active ? "#fff" : "#9ca3af" }}>{step.toUpperCase()}</div>
-                  </div>
-                </div>
+                <span key={step} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <span style={{ fontSize: 10, fontWeight: done ? 700 : 400, color: done ? active.accent : DIM, padding: "3px 10px", background: done ? active.accent + "18" : "transparent", borderRadius: 20, border: `1px solid ${done ? active.accent + "40" : "transparent"}` }}>
+                    {step}
+                  </span>
+                  {i < 4 && <span style={{ color: "#ddd6cc", fontSize: 10 }}>›</span>}
+                </span>
               );
             })}
           </div>
 
           {/* Layer grid */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 28 }}>
-            {LAYERS.map(layer => (
-              <LayerTile key={layer.id} layer={layer} onClick={() => {}} />
-            ))}
+          <div style={{ marginBottom: 8, fontSize: 11, fontWeight: 600, color: MID, letterSpacing: "0.04em" }}>DESIGN LAYERS</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 24 }}>
+            {LAYERS.map(layer => <LayerTile key={layer.id} layer={layer} onClick={() => {}} />)}
           </div>
 
-          {/* Recent activity */}
-          <div style={{ border: RULE, padding: "16px 20px" }}>
-            <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", color: "#6b7280", marginBottom: 12 }}>RECENT ACTIVITY</div>
+          {/* Activity */}
+          <div style={{ background: CARD, borderRadius: 10, border: RULE, padding: "16px 20px", boxShadow: shadow(4) }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: MID, letterSpacing: "0.04em", marginBottom: 14 }}>RECENT ACTIVITY</div>
             {ACTIVITY.slice(0, 3).map((a, i) => (
-              <div key={i} style={{ display: "flex", gap: 12, alignItems: "flex-start", paddingBottom: 10, borderBottom: i < 2 ? "1px solid #f3f4f6" : "none", marginBottom: i < 2 ? 10 : 0 }}>
+              <div key={i} style={{ display: "flex", gap: 12, alignItems: "flex-start", paddingBottom: i < 2 ? 12 : 0, marginBottom: i < 2 ? 12 : 0, borderBottom: i < 2 ? RULE : "none" }}>
                 <span style={{ fontSize: 14 }}>{a.icon}</span>
-                <div style={{ flex: 1, fontSize: 11, color: INK, lineHeight: 1.5 }}>{a.text}</div>
-                <span style={{ fontSize: 10, color: "#9ca3af", whiteSpace: "nowrap" }}>{a.time}</span>
+                <span style={{ flex: 1, fontSize: 12, color: INK, lineHeight: 1.5 }}>{a.text}</span>
+                <span style={{ fontSize: 10, color: DIM, whiteSpace: "nowrap" }}>{a.time}</span>
               </div>
             ))}
           </div>
@@ -158,65 +173,70 @@ export function CommandCenterHub() {
     );
   }
 
+  // ── HOME DASHBOARD ───────────────────────────────────────────────────────
   return (
-    <div style={{ fontFamily: "'IBM Plex Mono', monospace", background: "#fff", minHeight: "100vh", display: "flex", flexDirection: "column" }}>
-      {/* Top nav */}
-      <div style={{ borderBottom: RULE, padding: "0 28px", height: 52, display: "flex", alignItems: "center", justifyContent: "space-between", background: INK }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <span style={{ fontSize: 14, fontWeight: 800, color: "#fff", letterSpacing: "0.05em" }}>TERRAGUARD OS</span>
-          <span style={{ fontSize: 9, color: "#6b7280", letterSpacing: "0.1em", borderLeft: "1px solid #374151", paddingLeft: 12 }}>COMMAND CENTER</span>
+    <div style={{ fontFamily: "'Inter', system-ui, sans-serif", background: PAPER, minHeight: "100vh", display: "flex", flexDirection: "column" }}>
+      {/* Nav */}
+      <div style={{ padding: "0 28px", height: 52, display: "flex", alignItems: "center", justifyContent: "space-between", background: "#fff", borderBottom: RULE, boxShadow: shadow(4, 0.05) }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ fontSize: 18 }}>🛡️</span>
+          <span style={{ fontFamily: "Georgia, serif", fontWeight: 700, fontSize: 15, color: INK }}>TerraGuard OS</span>
         </div>
-        <div style={{ display: "flex", gap: 20 }}>
+        <div style={{ display: "flex", gap: 24 }}>
           {["Properties", "Team", "Settings"].map(item => (
-            <span key={item} style={{ fontSize: 10, color: "#9ca3af", cursor: "pointer", letterSpacing: "0.05em" }}>{item.toUpperCase()}</span>
+            <span key={item} style={{ fontSize: 12, color: MID, cursor: "pointer" }}>{item}</span>
           ))}
         </div>
       </div>
 
       <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
-        {/* Main content */}
+        {/* Main */}
         <div style={{ flex: 1, padding: "28px", overflowY: "auto" }}>
-          {/* Summary strip */}
-          <div style={{ display: "flex", gap: 0, marginBottom: 28, border: RULE }}>
+          {/* Stats strip */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 28 }}>
             {[
-              { label: "ACTIVE PROJECTS", value: "3" },
-              { label: "TOTAL AREA", value: "16.7 ha" },
-              { label: "THIS WEEK", value: "12 edits" },
-              { label: "PENDING REVIEW", value: "1" },
-            ].map((stat, i) => (
-              <div key={stat.label} style={{ flex: 1, padding: "14px 16px", borderRight: i < 3 ? RULE : "none" }}>
-                <div style={{ fontSize: 9, color: "#9ca3af", letterSpacing: "0.1em", marginBottom: 4 }}>{stat.label}</div>
-                <div style={{ fontSize: 20, fontWeight: 800, color: INK }}>{stat.value}</div>
+              { label: "Active Projects", value: "3",        icon: "🌿" },
+              { label: "Total Area",      value: "16.7 ha",  icon: "📐" },
+              { label: "Edits This Week", value: "12",       icon: "✏️" },
+              { label: "Pending Review",  value: "1",        icon: "📋" },
+            ].map(s => (
+              <div key={s.label} style={{ background: CARD, borderRadius: 10, border: RULE, padding: "16px", boxShadow: shadow(4) }}>
+                <div style={{ fontSize: 20, marginBottom: 8 }}>{s.icon}</div>
+                <div style={{ fontFamily: "Georgia, serif", fontWeight: 700, fontSize: 22, color: INK }}>{s.value}</div>
+                <div style={{ fontSize: 11, color: MID, marginTop: 3 }}>{s.label}</div>
               </div>
             ))}
           </div>
 
-          {/* Section header */}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 16 }}>
-            <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: INK }}>YOUR PROPERTIES</span>
-            <button style={{ fontSize: 10, fontWeight: 700, color: "#fff", background: BLUE, border: "none", padding: "6px 14px", cursor: "pointer", fontFamily: "inherit", letterSpacing: "0.05em" }}>
-              + NEW PROPERTY
+          {/* Header */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+            <div>
+              <div style={{ fontFamily: "Georgia, serif", fontWeight: 700, fontSize: 18, color: INK }}>Your Properties</div>
+              <div style={{ fontSize: 12, color: MID, marginTop: 2 }}>Click any property to open its design hub</div>
+            </div>
+            <button style={{ background: GREEN, color: "#fff", border: "none", borderRadius: 8, padding: "9px 18px", fontSize: 12, fontWeight: 600, fontFamily: "inherit", cursor: "pointer" }}>
+              + New Property
             </button>
           </div>
 
-          {/* Property grid */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14 }}>
+          {/* Cards */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14 }}>
             {PROPERTIES.map(p => (
-              <PropertyCard key={p.id} p={p} onOpen={() => { setActiveProject(p); setView("project"); }} />
+              <PropertyCard key={p.id} p={p} onOpen={() => { setActive(p); setView("project"); }} />
             ))}
           </div>
         </div>
 
-        {/* Right activity sidebar */}
-        <div style={{ width: 240, borderLeft: RULE, padding: "20px 16px", display: "flex", flexDirection: "column", gap: 0 }}>
-          <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", color: "#6b7280", marginBottom: 14 }}>RECENT ACTIVITY</div>
+        {/* Activity panel */}
+        <div style={{ width: 240, borderLeft: RULE, background: "#fff", padding: "20px 16px", overflowY: "auto" }}>
+          <div style={{ fontSize: 11, fontWeight: 600, color: MID, letterSpacing: "0.04em", marginBottom: 16 }}>ACTIVITY</div>
           {ACTIVITY.map((a, i) => (
-            <div key={i} style={{ paddingBottom: 14, marginBottom: 14, borderBottom: "1px solid #f3f4f6" }}>
+            <div key={i} style={{ marginBottom: 16, paddingBottom: 16, borderBottom: i < ACTIVITY.length - 1 ? RULE : "none" }}>
               <div style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 4 }}>
                 <span style={{ fontSize: 12 }}>{a.icon}</span>
-                <span style={{ fontSize: 10, color: INK, lineHeight: 1.5, flex: 1 }}>{a.text}</span>
+                <span style={{ fontSize: 11, color: INK, lineHeight: 1.5, flex: 1 }}>{a.text}</span>
               </div>
-              <div style={{ fontSize: 9, color: "#9ca3af", paddingLeft: 20 }}>{a.time}</div>
+              <div style={{ fontSize: 10, color: DIM, paddingLeft: 20 }}>{a.time}</div>
             </div>
           ))}
         </div>
