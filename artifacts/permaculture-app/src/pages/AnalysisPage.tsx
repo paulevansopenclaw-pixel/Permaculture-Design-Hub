@@ -487,29 +487,31 @@ export default function AnalysisPage() {
   }, [setPendingMapElement, navigate]);
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden" style={{ background: "#fff" }}>
+    <div className="h-screen flex flex-col overflow-hidden" style={{ background: "#f8f5f0", fontFamily: "'Inter', system-ui, sans-serif" }}>
       {/* ── TOP BAR ── */}
       <header
-        className="shrink-0 flex items-center justify-between px-5 py-3 border-b"
-        style={{ background: "#fff", borderColor: "#111", borderBottomWidth: 2, zIndex: 10 }}
+        className="shrink-0 flex items-center justify-between px-5"
+        style={{ height: 54, background: "#fff", borderBottom: "1px solid #ddd6cc", boxShadow: "0 2px 6px rgba(44,36,22,0.06)", zIndex: 10 }}
       >
-        <div className="flex items-center gap-4 min-w-0">
+        <div className="flex items-center gap-3 min-w-0">
           <button
             onClick={() => navigate("/properties")}
-            className="flex items-center gap-2 shrink-0 transition-opacity hover:opacity-70"
-            style={{ color: "#111" }}
+            className="flex items-center gap-2 shrink-0"
+            style={{ color: "#2c2416", background: "none", border: "none", cursor: "pointer", padding: 0, fontFamily: "inherit" }}
           >
-            <span className="text-base">🛡</span>
-            <span className="text-[13px] font-bold tracking-tight hidden sm:inline">TerraGuard</span>
+            <div style={{ width: 28, height: 28, borderRadius: 7, background: "#2d6a4f", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            </div>
+            <span className="hidden sm:inline" style={{ fontFamily: "Georgia, serif", fontWeight: 700, fontSize: 14, color: "#2c2416" }}>TerraGuard</span>
           </button>
-          <div className="w-px h-4 shrink-0 hidden sm:block" style={{ background: "#ddd" }} />
-          <span className="text-[11px] font-semibold uppercase tracking-widest shrink-0" style={{ color: "#1d4ed8" }}>
-            The War Room
+          <div className="w-px h-4 shrink-0 hidden sm:block" style={{ background: "#ddd6cc" }} />
+          <span className="hidden sm:inline shrink-0" style={{ fontSize: 11, fontWeight: 600, color: "#6b5f4e" }}>
+            AI Analysis
           </span>
           {property?.name && (
             <>
-              <div className="w-px h-4 shrink-0" style={{ background: "#ddd" }} />
-              <span className="text-[12px] truncate" style={{ color: "#555" }}>{property.name}</span>
+              <div className="w-px h-4 shrink-0" style={{ background: "#ddd6cc" }} />
+              <span className="text-[12px] truncate" style={{ color: "#a89880" }}>{property.name}</span>
             </>
           )}
         </div>

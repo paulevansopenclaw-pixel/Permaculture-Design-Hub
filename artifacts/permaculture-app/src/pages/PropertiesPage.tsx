@@ -9,30 +9,42 @@ import {
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAppStore } from "@/store/useAppStore";
+import {
+  Shield, Map, BarChart3, FolderOpen, FileText,
+  PenLine, CheckCircle2, MessageSquare, Droplets,
+  Ruler, ClipboardList, Plus, Settings, Users,
+  ArrowUpRight, Trash2, ImagePlus, MapPin,
+} from "lucide-react";
 
-// ── Design tokens ─────────────────────────────────────────────────────────────
-const INK = "#111";
-const A = "#1d4ed8";   // modern cobalt blue — replaces terracotta
-const RULE = "2px solid #111";
-const LIGHT = "#f7f7f7";
+// ── Palette ───────────────────────────────────────────────────────────────────
+const PAPER  = "#f8f5f0";
+const CARD   = "#fffdf9";
+const INK    = "#2c2416";
+const MID    = "#6b5f4e";
+const DIM    = "#a89880";
+const RULE   = "1px solid #ddd6cc";
+const GREEN  = "#2d6a4f";
+const BLUE   = "#1d4ed8";
+const shadow = (px = 6, a = 0.07) =>
+  `0 ${px / 2}px ${px}px rgba(44,36,22,${a}), 0 1px 2px rgba(44,36,22,0.04)`;
 
-// ── Image resize helper ───────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────────
 async function resizeToDataUrl(file: File, maxPx = 600): Promise<string> {
   const rawDataUrl = await new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = (e) => resolve(e.target!.result as string);
+    reader.onload  = (e) => resolve(e.target!.result as string);
     reader.onerror = () => reject(new Error("FileReader failed"));
     reader.readAsDataURL(file);
   });
   return new Promise<string>((resolve) => {
     const img = new Image();
     img.onerror = () => resolve(rawDataUrl);
-    img.onload = () => {
+    img.onload  = () => {
       const w = img.naturalWidth || img.width;
       const h = img.naturalHeight || img.height;
       const scale = Math.min(1, maxPx / Math.max(w, h, 1));
       const canvas = document.createElement("canvas");
-      canvas.width = Math.round(w * scale);
+      canvas.width  = Math.round(w * scale);
       canvas.height = Math.round(h * scale);
       const ctx = canvas.getContext("2d");
       if (!ctx || canvas.width === 0 || canvas.height === 0) { resolve(rawDataUrl); return; }
@@ -49,17 +61,12 @@ function formatArea(ha: number | null | undefined, ac: number | null | undefined
 }
 
 function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString("en-US", {
-    year: "numeric", month: "short", day: "numeric",
-  });
+  return new Date(dateStr).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
 }
 
-// ── Property tile card ────────────────────────────────────────────────────────
+// ── Property card ─────────────────────────────────────────────────────────────
 function PropertyCard({
-  property,
-  onOpen,
-  onDelete,
-  onImageUpload,
+  property, onOpen, onDelete, onImageUpload,
 }: {
   property: { id: string; name: string; areaHectares?: number | null; areaAcres?: number | null; tileImage?: string | null; createdAt: string };
   onOpen: () => void;
@@ -68,7 +75,8 @@ function PropertyCard({
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
-  const [hovered, setHovered] = useState(false);
+  const [hovered,   setHovered]   = useState(false);
+  const hasBoundary = (property.areaHectares ?? 0) > 0;
 
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -89,130 +97,90 @@ function PropertyCard({
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        border: RULE,
-        background: "#fff",
+        background: CARD, borderRadius: 12, border: RULE, overflow: "hidden",
         cursor: "pointer",
-        position: "relative",
-        transition: "box-shadow 0.12s",
-        boxShadow: hovered ? "5px 5px 0 #111" : "none",
-        display: "flex",
-        flexDirection: "column",
+        boxShadow: hovered ? shadow(18, 0.13) : shadow(5),
+        transform: hovered ? "translateY(-2px)" : "none",
+        transition: "all 0.2s ease",
+        display: "flex", flexDirection: "column",
       }}
     >
-      {/* ── Tile image area ─────────────────────────────────────────────── */}
-      <div
-        style={{
-          height: 140,
-          background: property.tileImage ? "transparent" : LIGHT,
-          position: "relative",
-          overflow: "hidden",
-          borderBottom: "1px solid #e5e5e5",
-          flexShrink: 0,
-        }}
-      >
+      {/* Photo area */}
+      <div style={{ height: 130, position: "relative", overflow: "hidden", flexShrink: 0, background: "#e8e2d8" }}>
         {property.tileImage ? (
-          <img
-            src={property.tileImage}
-            alt={property.name}
-            style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-          />
+          <img src={property.tileImage} alt={property.name}
+            style={{ width: "100%", height: "100%", objectFit: "cover", display: "block",
+                     filter: hovered ? "brightness(1.05)" : "brightness(0.97)", transition: "filter 0.2s" }} />
         ) : (
-          <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6 }}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="1.5">
-              <rect x="3" y="3" width="18" height="18" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21,15 16,10 5,21" />
-            </svg>
-            <span style={{ fontFamily: "monospace", fontSize: 8, textTransform: "uppercase", letterSpacing: "0.12em", color: "#ccc" }}>No image</span>
+          <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, background: "linear-gradient(135deg, #e8e2d8 0%, #d4cdc4 100%)" }}>
+            <MapPin size={24} color="#b8b0a4" strokeWidth={1.2} />
+            <span style={{ fontSize: 10, color: "#b8b0a4", letterSpacing: "0.06em" }}>No photo yet</span>
           </div>
         )}
+        {/* Gradient overlay */}
+        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, transparent 45%, rgba(44,36,22,0.5))" }} />
 
-        {/* Upload overlay — shown on hover */}
+        {/* Property name on photo */}
+        <div style={{ position: "absolute", bottom: 10, left: 12, right: 36 }}>
+          <div style={{ fontFamily: "Georgia, serif", fontWeight: 700, fontSize: 14, color: "#fff", textShadow: "0 1px 4px rgba(0,0,0,0.5)", lineHeight: 1.25 }}>{property.name}</div>
+        </div>
+
+        {/* Upload overlay on hover */}
         {hovered && (
           <button
             onClick={(e) => { e.stopPropagation(); fileRef.current?.click(); }}
-            style={{
-              position: "absolute", inset: 0, width: "100%", height: "100%",
-              background: "rgba(0,0,0,0.45)", border: "none", cursor: "pointer",
-              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6,
-            }}
+            style={{ position: "absolute", top: 8, right: 8, width: 30, height: 30, borderRadius: 7, background: "rgba(0,0,0,0.55)", border: "1px solid rgba(255,255,255,0.25)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
           >
-            {uploading ? (
-              <span style={{ fontFamily: "monospace", fontSize: 9, color: "#fff", letterSpacing: "0.1em", textTransform: "uppercase" }}>Uploading…</span>
-            ) : (
-              <>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2">
-                  <polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/>
-                  <path d="M20.39 18.39A5 5 0 0018 9h-1.26A8 8 0 103 16.3"/>
-                </svg>
-                <span style={{ fontFamily: "monospace", fontSize: 8, color: "#fff", letterSpacing: "0.12em", textTransform: "uppercase" }}>
-                  {property.tileImage ? "Change photo" : "Upload photo"}
-                </span>
-              </>
-            )}
+            {uploading ? <span style={{ fontSize: 8, color: "#fff" }}>…</span> : <ImagePlus size={13} color="#fff" />}
           </button>
         )}
-
         <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleFile} />
       </div>
 
-      {/* ── Card header strip ────────────────────────────────────────────── */}
-      <div style={{ padding: "10px 14px 0", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={A} strokeWidth="2.5">
-            <polygon points="1,6 1,22 8,18 16,22 23,18 23,2 16,6 8,2"/>
-          </svg>
-          <span style={{ fontFamily: "monospace", fontSize: 8, textTransform: "uppercase", letterSpacing: "0.12em", color: A, fontWeight: 900 }}>Site</span>
+      {/* Card body */}
+      <div style={{ padding: "12px 14px 14px", flex: 1 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+          <span style={{ fontSize: 11, color: MID }}>{formatArea(property.areaHectares, property.areaAcres)}</span>
+          {hasBoundary && (
+            <span style={{ fontSize: 9, color: GREEN, background: GREEN + "18", padding: "2px 7px", borderRadius: 12, border: `1px solid ${GREEN}38`, fontWeight: 600 }}>Mapped</span>
+          )}
         </div>
-        <button
-          onClick={onDelete}
-          style={{ background: "none", border: "none", cursor: "pointer", color: "#ccc", padding: 4, lineHeight: 0 }}
-          onMouseEnter={e => ((e.currentTarget as HTMLButtonElement).style.color = "#ef4444")}
-          onMouseLeave={e => ((e.currentTarget as HTMLButtonElement).style.color = "#ccc")}
-          aria-label="Delete property"
-        >
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <polyline points="3,6 5,6 21,6"/>
-            <path d="M19,6l-1,14a2,2,0,0,1-2,2H8a2,2,0,0,1-2-2L5,6"/>
-            <path d="M10,11v6M14,11v6"/>
-          </svg>
-        </button>
-      </div>
-
-      {/* ── Card body ────────────────────────────────────────────────────── */}
-      <div style={{ padding: "8px 14px 14px", flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
-        <h3 style={{ margin: "0 0 4px", fontFamily: "monospace", fontSize: 13, fontWeight: 900, letterSpacing: "-0.02em", color: INK, textTransform: "uppercase" }}>
-          {property.name}
-        </h3>
-        <p style={{ margin: "0 0 12px", fontFamily: "monospace", fontSize: 9, color: "#bbb", letterSpacing: "0.06em" }}>
-          {formatArea(property.areaHectares, property.areaAcres)}
-        </p>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderTop: "1px solid #f0f0f0", paddingTop: 8 }}>
-          <span style={{ fontFamily: "monospace", fontSize: 8, color: "#ccc", letterSpacing: "0.08em" }}>{formatDate(property.createdAt)}</span>
-          <span style={{ fontFamily: "monospace", fontSize: 9, fontWeight: 900, color: A, letterSpacing: "0.08em" }}>OPEN →</span>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: 8, borderTop: RULE }}>
+          <span style={{ fontSize: 10, color: DIM }}>{formatDate(property.createdAt)}</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <button
+              onClick={onDelete}
+              style={{ background: "none", border: "none", cursor: "pointer", color: DIM, padding: 2, display: "flex", alignItems: "center" }}
+              onMouseEnter={e => (e.currentTarget.style.color = "#ef4444")}
+              onMouseLeave={e => (e.currentTarget.style.color = DIM)}
+              aria-label="Delete"
+            >
+              <Trash2 size={13} />
+            </button>
+            <span style={{ fontSize: 10, fontWeight: 600, color: hovered ? GREEN : MID, display: "flex", alignItems: "center", gap: 3, transition: "color 0.15s" }}>
+              Open <ArrowUpRight size={12} />
+            </span>
+          </div>
         </div>
       </div>
-
-      {/* Boundary dot */}
-      {(property.areaHectares ?? 0) > 0 && (
-        <div style={{ position: "absolute", top: 10, right: 40, width: 6, height: 6, background: A, borderRadius: "50%" }} />
-      )}
     </div>
   );
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function PropertiesPage() {
-  const [, navigate] = useLocation();
+  const [, navigate]     = useLocation();
   const { setActivePropertyId } = useAppStore();
-  const queryClient = useQueryClient();
+  const queryClient      = useQueryClient();
 
   const { data: properties = [], isLoading } = useListProperties();
-  const createProperty = useCreateProperty();
-  const deleteProperty = useDeleteProperty();
-  const updateProperty = useUpdateProperty();
+  const createProperty   = useCreateProperty();
+  const deleteProperty   = useDeleteProperty();
+  const updateProperty   = useUpdateProperty();
 
   const [showCreate, setShowCreate] = useState(false);
-  const [newName, setNewName] = useState("");
-  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [newName,    setNewName]    = useState("");
+  const [deleteId,   setDeleteId]   = useState<string | null>(null);
 
   function handleCreate() {
     if (!newName.trim()) return;
@@ -221,8 +189,7 @@ export default function PropertiesPage() {
       {
         onSuccess: (property) => {
           queryClient.invalidateQueries({ queryKey: getListPropertiesQueryKey() });
-          setShowCreate(false);
-          setNewName("");
+          setShowCreate(false); setNewName("");
           setActivePropertyId(property.id);
           navigate("/intake");
         },
@@ -239,12 +206,7 @@ export default function PropertiesPage() {
     if (!deleteId) return;
     deleteProperty.mutate(
       { id: deleteId },
-      {
-        onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: getListPropertiesQueryKey() });
-          setDeleteId(null);
-        },
-      },
+      { onSuccess: () => { queryClient.invalidateQueries({ queryKey: getListPropertiesQueryKey() }); setDeleteId(null); } },
     );
   }
 
@@ -255,132 +217,177 @@ export default function PropertiesPage() {
     );
   }
 
+  const totalArea   = properties.reduce((s, p) => s + (p.areaHectares ?? 0), 0);
+  const mapped      = properties.filter(p => (p.areaHectares ?? 0) > 0).length;
+
   return (
-    <div style={{ minHeight: "100vh", background: "#fff", color: INK }}>
+    <div style={{ fontFamily: "'Inter', system-ui, sans-serif", background: PAPER, minHeight: "100vh", display: "flex", flexDirection: "column" }}>
 
-      {/* ── Header ──────────────────────────────────────────────────────── */}
-      <header style={{ background: "#fff", borderBottom: RULE, position: "sticky", top: 0, zIndex: 10, padding: "0 40px", height: 52, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <span style={{ fontSize: 16 }}>🛡</span>
-          <div style={{ width: 1, height: 18, background: "#ddd" }} />
-          <div>
-            <span style={{ fontFamily: "monospace", fontSize: 12, fontWeight: 900, letterSpacing: "0.06em", textTransform: "uppercase", color: INK }}>TerraGuard OS</span>
-            <span style={{ fontFamily: "monospace", fontSize: 9, letterSpacing: "0.14em", textTransform: "uppercase", color: A, marginLeft: 12 }}>Site Registry</span>
+      {/* ── Top nav ── */}
+      <div style={{ height: 54, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 28px", background: "#fff", borderBottom: RULE, boxShadow: shadow(4, 0.05), flexShrink: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ width: 30, height: 30, borderRadius: 8, background: GREEN, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <Shield size={16} color="#fff" strokeWidth={2} />
           </div>
+          <span style={{ fontFamily: "Georgia, serif", fontWeight: 700, fontSize: 16, color: INK }}>TerraGuard OS</span>
         </div>
-        <button
-          onClick={() => setShowCreate(true)}
-          style={{ fontFamily: "monospace", fontSize: 10, fontWeight: 900, letterSpacing: "0.1em", textTransform: "uppercase", padding: "7px 16px", background: A, color: "#fff", border: `2px solid ${A}`, cursor: "pointer" }}
-        >
-          + New Site
-        </button>
-      </header>
+        <div style={{ display: "flex", gap: 18, alignItems: "center" }}>
+          {[{ Icon: Users, label: "Team" }, { Icon: Settings, label: "Settings" }].map(({ Icon, label }) => (
+            <button key={label} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", color: MID, cursor: "pointer", fontSize: 12, fontFamily: "inherit" }}>
+              <Icon size={14} strokeWidth={1.75} />{label}
+            </button>
+          ))}
+        </div>
+      </div>
 
-      {/* ── Content ─────────────────────────────────────────────────────── */}
-      <main style={{ maxWidth: 980, margin: "0 auto", padding: "40px 40px 60px" }}>
+      <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+        {/* ── Main ── */}
+        <div style={{ flex: 1, padding: "28px", overflowY: "auto" }}>
 
-        <div style={{ borderBottom: "4px solid #111", paddingBottom: 16, marginBottom: 32 }}>
-          <div style={{ fontFamily: "monospace", fontSize: 9, textTransform: "uppercase", letterSpacing: "0.18em", color: A, marginBottom: 6 }}>Property Management</div>
-          <h1 style={{ margin: 0, fontSize: 40, fontWeight: 900, letterSpacing: "-0.04em", color: INK, textTransform: "uppercase" }}>Site Registry</h1>
-          {!isLoading && (
-            <div style={{ fontFamily: "monospace", fontSize: 10, color: "#aaa", marginTop: 8, letterSpacing: "0.08em" }}>
-              {properties.length} {properties.length === 1 ? "site" : "sites"} registered
+          {/* Stats strip */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 28 }}>
+            {[
+              { Icon: Map,           label: "Properties",      value: String(properties.length) },
+              { Icon: Ruler,         label: "Total Area",       value: totalArea > 0 ? `${totalArea.toFixed(1)} ha` : "—" },
+              { Icon: MapPin,        label: "Boundary Mapped",  value: `${mapped}/${properties.length}` },
+              { Icon: ClipboardList, label: "In Progress",      value: String(properties.length) },
+            ].map(({ Icon, label, value }) => (
+              <div key={label} style={{ background: CARD, borderRadius: 10, border: RULE, padding: "16px", boxShadow: shadow(3) }}>
+                <Icon size={18} color={MID} strokeWidth={1.5} style={{ marginBottom: 10 }} />
+                <div style={{ fontFamily: "Georgia, serif", fontWeight: 700, fontSize: 22, color: INK }}>{value}</div>
+                <div style={{ fontSize: 11, color: MID, marginTop: 3 }}>{label}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Section header */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+            <div>
+              <div style={{ fontFamily: "Georgia, serif", fontWeight: 700, fontSize: 20, color: INK }}>Your Properties</div>
+              <div style={{ fontSize: 12, color: MID, marginTop: 2 }}>Click any property to open its design workspace</div>
+            </div>
+            <button
+              onClick={() => setShowCreate(true)}
+              style={{ display: "flex", alignItems: "center", gap: 7, background: GREEN, color: "#fff", border: "none", borderRadius: 8, padding: "10px 18px", fontSize: 12, fontWeight: 600, fontFamily: "inherit", cursor: "pointer", boxShadow: `0 2px 8px ${GREEN}44` }}
+            >
+              <Plus size={14} strokeWidth={2.5} /> New Property
+            </button>
+          </div>
+
+          {/* Property grid / empty state */}
+          {isLoading ? (
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "80px 0" }}>
+              <span style={{ fontSize: 12, color: DIM }}>Loading properties…</span>
+            </div>
+          ) : properties.length === 0 ? (
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "80px 0", gap: 18 }}>
+              <div style={{ width: 60, height: 60, borderRadius: 14, background: GREEN + "18", border: `1px solid ${GREEN}40`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <Map size={26} color={GREEN} strokeWidth={1.5} />
+              </div>
+              <div style={{ textAlign: "center" }}>
+                <div style={{ fontFamily: "Georgia, serif", fontWeight: 700, fontSize: 16, color: INK }}>No properties yet</div>
+                <div style={{ fontSize: 12, color: MID, marginTop: 5 }}>Add your first property to start designing</div>
+              </div>
+              <button onClick={() => setShowCreate(true)} style={{ display: "flex", alignItems: "center", gap: 7, background: GREEN, color: "#fff", border: "none", borderRadius: 8, padding: "11px 22px", fontSize: 13, fontWeight: 600, fontFamily: "inherit", cursor: "pointer" }}>
+                <Plus size={15} /> Create First Property
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 16 }}>
+              {properties.map((property) => (
+                <PropertyCard
+                  key={property.id}
+                  property={property}
+                  onOpen={() => handleOpen(property.id)}
+                  onDelete={(e) => { e.stopPropagation(); setDeleteId(property.id); }}
+                  onImageUpload={(dataUrl) => handleImageUpload(property.id, dataUrl)}
+                />
+              ))}
             </div>
           )}
         </div>
 
-        {isLoading ? (
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "80px 0" }}>
-            <span style={{ fontFamily: "monospace", fontSize: 10, letterSpacing: "0.15em", textTransform: "uppercase", color: "#bbb" }}>Loading registry…</span>
-          </div>
-        ) : properties.length === 0 ? (
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "80px 0", gap: 20 }}>
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="1.2">
-              <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/>
-            </svg>
-            <div style={{ textAlign: "center" }}>
-              <p style={{ margin: 0, fontFamily: "monospace", fontSize: 13, fontWeight: 900, color: INK, textTransform: "uppercase" }}>No sites registered</p>
-              <p style={{ margin: "6px 0 0", fontFamily: "monospace", fontSize: 10, color: "#bbb" }}>Add your first site to begin</p>
+        {/* ── Activity sidebar ── */}
+        <div style={{ width: 248, borderLeft: RULE, background: "#fff", padding: "20px 18px", flexShrink: 0, overflowY: "auto" }}>
+          <div style={{ fontSize: 11, fontWeight: 600, color: MID, letterSpacing: "0.05em", marginBottom: 16 }}>DESIGN LAYERS</div>
+          {[
+            { Icon: ClipboardList, label: "Intake",       desc: "Survey + vision board",   path: "/intake"    },
+            { Icon: Map,           label: "Map Workspace",desc: "Draw + annotate",          path: "/workspace" },
+            { Icon: BarChart3,     label: "AI Analysis",  desc: "Water + sectors + zones",  path: "/analysis"  },
+            { Icon: FolderOpen,    label: "Dossier",      desc: "Budget + plants",          path: "/dossier"   },
+            { Icon: FileText,      label: "Presentation", desc: "Client PDF",               path: null         },
+          ].map(({ Icon, label, desc, path }) => (
+            <div key={label} style={{ display: "flex", gap: 10, marginBottom: 14, paddingBottom: 14, borderBottom: RULE, cursor: path ? "pointer" : "default", opacity: path ? 1 : 0.5 }}>
+              <div style={{ width: 30, height: 30, borderRadius: 7, background: GREEN + "12", border: `1px solid ${GREEN}28`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <Icon size={14} color={GREEN} strokeWidth={1.75} />
+              </div>
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: INK }}>{label}</div>
+                <div style={{ fontSize: 10, color: MID, marginTop: 1 }}>{desc}</div>
+              </div>
             </div>
-            <button
-              onClick={() => setShowCreate(true)}
-              style={{ fontFamily: "monospace", fontSize: 10, fontWeight: 900, letterSpacing: "0.1em", textTransform: "uppercase", padding: "9px 22px", background: INK, color: "#fff", border: RULE, cursor: "pointer" }}
-            >
-              Register First Site
-            </button>
-          </div>
-        ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 16 }}>
-            {properties.map((property) => (
-              <PropertyCard
-                key={property.id}
-                property={property}
-                onOpen={() => handleOpen(property.id)}
-                onDelete={(e) => { e.stopPropagation(); setDeleteId(property.id); }}
-                onImageUpload={(dataUrl) => handleImageUpload(property.id, dataUrl)}
-              />
-            ))}
-          </div>
-        )}
-      </main>
+          ))}
 
-      {/* ── Create Modal ─────────────────────────────────────────────────── */}
+          <div style={{ fontSize: 11, fontWeight: 600, color: MID, letterSpacing: "0.05em", marginBottom: 14, marginTop: 8 }}>RECENT ACTIVITY</div>
+          {[
+            { Icon: PenLine,       time: "Just now",  text: "Property dashboard opened" },
+            { Icon: CheckCircle2,  time: "Today",     text: "System ready"              },
+            { Icon: MessageSquare, time: "—",         text: "No client notes yet"       },
+            { Icon: Droplets,      time: "—",         text: "No water data yet"         },
+          ].map(({ Icon, time, text }, i) => (
+            <div key={i} style={{ display: "flex", gap: 10, marginBottom: 14, opacity: time === "—" ? 0.45 : 1 }}>
+              <div style={{ width: 26, height: 26, borderRadius: 7, background: "#f0ece5", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <Icon size={12} color={MID} strokeWidth={1.75} />
+              </div>
+              <div>
+                <div style={{ fontSize: 11, color: INK, lineHeight: 1.5 }}>{text}</div>
+                <div style={{ fontSize: 10, color: DIM }}>{time}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Create modal ── */}
       {showCreate && (
         <div style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.35)" }} onClick={() => { setShowCreate(false); setNewName(""); }} />
-          <div style={{ position: "relative", background: "#fff", border: RULE, width: "100%", maxWidth: 420, margin: "0 16px", padding: 28 }}>
-            <h2 style={{ margin: "0 0 5px", fontFamily: "monospace", fontSize: 14, fontWeight: 900, textTransform: "uppercase", letterSpacing: "-0.01em", color: INK }}>Register New Site</h2>
-            <p style={{ margin: "0 0 20px", fontFamily: "monospace", fontSize: 9, color: "#bbb", textTransform: "uppercase", letterSpacing: "0.12em" }}>Enter a name for this property</p>
+          <div style={{ position: "absolute", inset: 0, background: "rgba(44,36,22,0.35)" }} onClick={() => { setShowCreate(false); setNewName(""); }} />
+          <div style={{ position: "relative", background: CARD, borderRadius: 14, border: RULE, width: "100%", maxWidth: 440, margin: "0 16px", padding: 28, boxShadow: shadow(24, 0.15) }}>
+            <div style={{ fontFamily: "Georgia, serif", fontWeight: 700, fontSize: 18, color: INK, marginBottom: 5 }}>New Property</div>
+            <div style={{ fontSize: 12, color: MID, marginBottom: 20 }}>Give your site a name to get started</div>
             <input
-              autoFocus
-              type="text"
-              placeholder="e.g. Hillside Farm, North Ridge Parcel"
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
+              autoFocus type="text" placeholder="e.g. Hillside Farm, North Ridge Parcel"
+              value={newName} onChange={(e) => setNewName(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleCreate()}
-              style={{ width: "100%", boxSizing: "border-box", fontFamily: "monospace", fontSize: 13, padding: "10px 12px", border: RULE, background: "#fff", color: INK, outline: "none" }}
+              style={{ width: "100%", boxSizing: "border-box", fontSize: 14, padding: "11px 14px", border: RULE, borderRadius: 8, background: "#fff", color: INK, outline: "none", fontFamily: "inherit" }}
             />
             <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
-              <button
-                onClick={() => { setShowCreate(false); setNewName(""); }}
-                style={{ flex: 1, padding: "9px 0", fontFamily: "monospace", fontSize: 10, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.08em", background: "#fff", color: "#888", border: "2px solid #ddd", cursor: "pointer" }}
-              >
+              <button onClick={() => { setShowCreate(false); setNewName(""); }}
+                style={{ flex: 1, padding: "10px 0", fontSize: 12, fontWeight: 600, background: "#fff", color: MID, border: RULE, borderRadius: 8, cursor: "pointer", fontFamily: "inherit" }}>
                 Cancel
               </button>
-              <button
-                onClick={handleCreate}
-                disabled={!newName.trim() || createProperty.isPending}
-                style={{ flex: 1, padding: "9px 0", fontFamily: "monospace", fontSize: 10, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.08em", background: A, color: "#fff", border: `2px solid ${A}`, cursor: "pointer", opacity: (!newName.trim() || createProperty.isPending) ? 0.4 : 1 }}
-              >
-                {createProperty.isPending ? "Registering…" : "Register Site"}
+              <button onClick={handleCreate} disabled={!newName.trim() || createProperty.isPending}
+                style={{ flex: 1, padding: "10px 0", fontSize: 12, fontWeight: 600, background: GREEN, color: "#fff", border: "none", borderRadius: 8, cursor: "pointer", fontFamily: "inherit", opacity: (!newName.trim() || createProperty.isPending) ? 0.5 : 1 }}>
+                {createProperty.isPending ? "Creating…" : "Create Property"}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ── Delete Modal ─────────────────────────────────────────────────── */}
+      {/* ── Delete modal ── */}
       {deleteId && (
         <div style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.35)" }} onClick={() => setDeleteId(null)} />
-          <div style={{ position: "relative", background: "#fff", border: RULE, width: "100%", maxWidth: 380, margin: "0 16px", padding: 28 }}>
-            <h2 style={{ margin: "0 0 8px", fontFamily: "monospace", fontSize: 13, fontWeight: 900, textTransform: "uppercase", color: INK }}>Confirm Deletion</h2>
-            <p style={{ margin: "0 0 20px", fontFamily: "monospace", fontSize: 10, color: "#666", lineHeight: 1.7 }}>
-              This will permanently delete the site and all associated data. This cannot be undone.
-            </p>
+          <div style={{ position: "absolute", inset: 0, background: "rgba(44,36,22,0.35)" }} onClick={() => setDeleteId(null)} />
+          <div style={{ position: "relative", background: CARD, borderRadius: 14, border: RULE, width: "100%", maxWidth: 400, margin: "0 16px", padding: 28, boxShadow: shadow(24, 0.15) }}>
+            <div style={{ fontFamily: "Georgia, serif", fontWeight: 700, fontSize: 17, color: INK, marginBottom: 8 }}>Delete Property?</div>
+            <p style={{ fontSize: 12, color: MID, lineHeight: 1.7, marginBottom: 20 }}>This will permanently delete the property and all its data. This cannot be undone.</p>
             <div style={{ display: "flex", gap: 10 }}>
-              <button
-                onClick={() => setDeleteId(null)}
-                style={{ flex: 1, padding: "9px 0", fontFamily: "monospace", fontSize: 10, fontWeight: 900, textTransform: "uppercase", background: "#fff", color: "#888", border: "2px solid #ddd", cursor: "pointer" }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDelete}
-                disabled={deleteProperty.isPending}
-                style={{ flex: 1, padding: "9px 0", fontFamily: "monospace", fontSize: 10, fontWeight: 900, textTransform: "uppercase", background: "#fff", color: "#ef4444", border: "2px solid #ef4444", cursor: "pointer", opacity: deleteProperty.isPending ? 0.4 : 1 }}
-              >
-                {deleteProperty.isPending ? "Deleting…" : "Delete Site"}
+              <button onClick={() => setDeleteId(null)}
+                style={{ flex: 1, padding: "10px 0", fontSize: 12, fontWeight: 600, background: "#fff", color: MID, border: RULE, borderRadius: 8, cursor: "pointer", fontFamily: "inherit" }}>Cancel</button>
+              <button onClick={handleDelete} disabled={deleteProperty.isPending}
+                style={{ flex: 1, padding: "10px 0", fontSize: 12, fontWeight: 600, background: "#fff", color: "#ef4444", border: "1px solid #fca5a5", borderRadius: 8, cursor: "pointer", fontFamily: "inherit", opacity: deleteProperty.isPending ? 0.5 : 1 }}>
+                {deleteProperty.isPending ? "Deleting…" : "Delete"}
               </button>
             </div>
           </div>

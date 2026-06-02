@@ -18,13 +18,10 @@ interface ImplPhase { phase: number; title: string; duration: string; elements: 
 interface DesignRecsType { plantingPrinciples: string; plants: PlantRec[]; designElements: DesignElementRec[]; implementationPhases: ImplPhase[]; }
 
 // ─── Design tokens ─────────────────────────────────────────────────────────────
-// RULE: No dark backgrounds anywhere. All surfaces are white or #f7f7f7.
-// Black (#111) is used only for text, borders, and rules.
-// Terracotta (#A0522D) is the single accent colour.
-const T = "#A0522D";
-const INK = "#111";
-const RULE = "2px solid #111";
-const LIGHT = "#f7f7f7";
+const T    = "#6b5f4e";
+const INK  = "#2c2416";
+const RULE = "1px solid #ddd6cc";
+const LIGHT = "#f8f5f0";
 
 // ─── Mapbox static map ────────────────────────────────────────────────────────
 function mapboxStaticUrl(geo: string | null | undefined, style: string, w = 800, h = 360, fill = T): string | null {
@@ -290,24 +287,26 @@ export default function DossierPage() {
   const siteLat = boundaryCentroid?.[1]??null;
   const today = new Date().toLocaleDateString("en-AU",{day:"numeric",month:"long",year:"numeric"});
 
-  // ── Entire page is white ────────────────────────────────────────────────────
   return (
-    <div style={{ minHeight:"100vh", background:"#fff", display:"flex", flexDirection:"column", color:INK }}>
+    <div style={{ minHeight:"100vh", background:"#f8f5f0", display:"flex", flexDirection:"column", color:INK, fontFamily:"'Inter', system-ui, sans-serif" }}>
 
-      {/* ── TOP NAV: white bg, black bottom border ────────────────────────── */}
+      {/* ── TOP NAV ────────────────────────────────────────────────────────── */}
       <header className="print:hidden" style={{
-        background:"#fff", borderBottom:"3px solid #111",
+        background:"#fff", borderBottom: RULE,
+        boxShadow: "0 2px 6px rgba(44,36,22,0.06)",
         position:"sticky", top:0, zIndex:20,
         display:"flex", alignItems:"center", justifyContent:"space-between",
-        padding:"0 32px", height:50, flexShrink:0,
+        padding:"0 28px", height:54, flexShrink:0,
       }}>
-        <div style={{ display:"flex", alignItems:"center", gap:18 }}>
-          <button onClick={()=>navigate("/properties")} style={{ background:"none", border:"none", cursor:"pointer", display:"flex", alignItems:"center", gap:8, color:INK, padding:0 }}>
-            <span style={{ fontSize:15 }}>🛡</span>
-            <span style={{ fontFamily:"monospace", fontSize:11, fontWeight:900, letterSpacing:"0.08em", textTransform:"uppercase" }}>TerraGuard</span>
+        <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+          <button onClick={()=>navigate("/properties")} style={{ background:"none", border:"none", cursor:"pointer", display:"flex", alignItems:"center", gap:8, color:INK, padding:0, fontFamily:"inherit" }}>
+            <div style={{ width:28, height:28, borderRadius:7, background:"#2d6a4f", display:"flex", alignItems:"center", justifyContent:"center" }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            </div>
+            <span style={{ fontFamily:"Georgia, serif", fontWeight:700, fontSize:14 }}>TerraGuard</span>
           </button>
-          <div style={{ width:1, height:18, background:"#ddd" }}/>
-          <span style={{ fontFamily:"monospace", fontSize:9, letterSpacing:"0.16em", textTransform:"uppercase", color:T }}>Export Studio</span>
+          <div style={{ width:1, height:16, background:"#ddd6cc" }}/>
+          <span style={{ fontSize:11, fontWeight:600, color:T }}>Dossier</span>
         </div>
         <div style={{ display:"flex", alignItems:"center", gap:10 }}>
           <StepNav />
@@ -315,14 +314,14 @@ export default function DossierPage() {
             onClick={handleGenerateLink}
             disabled={!activePropertyId}
             style={{
-              fontFamily:"monospace", fontSize:9, letterSpacing:"0.1em", textTransform:"uppercase", fontWeight:900,
-              padding:"6px 13px", cursor:"pointer",
-              background: linkCopied ? T : "#fff",
-              color: linkCopied ? "#fff" : "#888",
-              border: linkCopied ? `2px solid ${T}` : "2px solid #ddd",
+              fontFamily:"inherit", fontSize:11, fontWeight:600,
+              padding:"6px 13px", cursor:"pointer", borderRadius:7,
+              background: linkCopied ? "#2d6a4f" : "#fff",
+              color: linkCopied ? "#fff" : "#6b5f4e",
+              border: linkCopied ? "1px solid #2d6a4f" : RULE,
             }}
-          >{linkCopied ? "✓ Copied" : "Client Link"}</button>
-          <button onClick={()=>window.print()} style={{ fontFamily:"monospace", fontSize:9, letterSpacing:"0.1em", textTransform:"uppercase", fontWeight:900, padding:"6px 14px", background:"#fff", color:INK, border:RULE, cursor:"pointer" }}>
+          >{linkCopied ? "✓ Link copied" : "Client Link"}</button>
+          <button onClick={()=>window.print()} style={{ fontFamily:"inherit", fontSize:11, fontWeight:600, padding:"6px 14px", background:"#fff", color:INK, border:RULE, borderRadius:7, cursor:"pointer" }}>
             Export PDF
           </button>
         </div>
@@ -343,20 +342,20 @@ export default function DossierPage() {
         <main style={{ flex:1 }}>
 
           {/* MASTHEAD */}
-          <div style={{ borderBottom:"5px solid #111", padding:"36px 48px 28px", maxWidth:920, margin:"0 auto" }}>
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:6 }}>
-              <span style={{ fontFamily:"monospace", fontSize:9, letterSpacing:"0.18em", textTransform:"uppercase", color:T }}>TerraGuard OS · Property Resilience Dossier</span>
-              <span style={{ fontFamily:"monospace", fontSize:9, letterSpacing:"0.14em", textTransform:"uppercase", color:"#aaa" }}>{today}</span>
+          <div style={{ borderBottom: RULE, padding:"36px 48px 28px", maxWidth:920, margin:"0 auto", background:"#fff" }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:8 }}>
+              <span style={{ fontSize:10, letterSpacing:"0.12em", textTransform:"uppercase", color:T }}>TerraGuard OS · Property Resilience Dossier</span>
+              <span style={{ fontSize:10, color:"#a89880" }}>{today}</span>
             </div>
-            <h1 style={{ margin:"10px 0 0", fontSize:60, fontWeight:900, letterSpacing:"-0.05em", lineHeight:0.9, color:INK, textTransform:"uppercase" }}>
+            <h1 style={{ margin:"10px 0 0", fontSize:48, fontWeight:700, letterSpacing:"-0.03em", lineHeight:1.1, color:INK, fontFamily:"Georgia, serif" }}>
               {property?.name ?? "Property Dossier"}
             </h1>
-            <div style={{ display:"flex", gap:28, marginTop:14, alignItems:"flex-end" }}>
-              <span style={{ fontFamily:"monospace", fontSize:9, letterSpacing:"0.14em", textTransform:"uppercase", color:"#aaa" }}>Autonomous Site Report</span>
+            <div style={{ display:"flex", gap:28, marginTop:12, alignItems:"flex-end" }}>
+              <span style={{ fontSize:11, color:"#a89880" }}>Site Analysis Report</span>
               {(property?.areaHectares ?? 0) > 0 && (
                 <div style={{ display:"flex", alignItems:"baseline", gap:5 }}>
-                  <span style={{ fontFamily:"monospace", fontSize:26, fontWeight:900, letterSpacing:"-0.04em", color:T }}>{property?.areaHectares?.toFixed(2)}</span>
-                  <span style={{ fontFamily:"monospace", fontSize:9, textTransform:"uppercase", color:"#aaa" }}>ha</span>
+                  <span style={{ fontFamily:"Georgia, serif", fontSize:22, fontWeight:700, color:"#2d6a4f" }}>{property?.areaHectares?.toFixed(2)}</span>
+                  <span style={{ fontSize:10, textTransform:"uppercase", color:"#a89880" }}>ha</span>
                 </div>
               )}
             </div>

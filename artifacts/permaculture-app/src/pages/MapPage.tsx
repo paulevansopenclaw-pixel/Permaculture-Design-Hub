@@ -56,7 +56,6 @@ import {
 import { useAppStore, type Role } from "@/store/useAppStore";
 import { generateContours } from "@/lib/contourEngine";
 import { analyzeWaterPaths, type WaterAnalysisResult, type AnalyzedSwale } from "@/lib/keylineEngine";
-import { StepNav } from "@/components/StepNav";
 import { FreehandDrawer } from "@/lib/freehandDraw";
 
 async function fetchMapboxToken(): Promise<string> {
@@ -4261,7 +4260,33 @@ export default function MapPage() {
           <div className="text-[9px] uppercase tracking-widest mb-2 px-0.5" style={{ color: "hsl(42, 15%, 35%)" }}>
             Workflow
           </div>
-          <StepNav />
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            {[
+              { label: "Intake",    path: "/intake"    },
+              { label: "Map",       path: "/workspace" },
+              { label: "Analysis",  path: "/analysis"  },
+              { label: "Dossier",   path: "/dossier"   },
+            ].map(({ label, path }) => {
+              const isActive = path === "/workspace";
+              return (
+                <button
+                  key={path}
+                  onClick={() => navigate(path)}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 8,
+                    padding: "5px 8px", borderRadius: 7, border: "none", cursor: "pointer",
+                    background: isActive ? "hsl(103,35%,17%)" : "transparent",
+                    color: isActive ? "hsl(103,55%,72%)" : "hsl(42,20%,55%)",
+                    fontSize: 11, fontWeight: isActive ? 600 : 400, fontFamily: "inherit",
+                    textAlign: "left",
+                  }}
+                >
+                  <span style={{ opacity: isActive ? 1 : 0.6, fontSize: 9, fontWeight: 700, fontFamily: "monospace" }}>{isActive ? "●" : "○"}</span>
+                  {label}
+                </button>
+              );
+            })}
+          </div>
           <button
             onClick={() => navigate("/analysis")}
             className="mt-2 w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-[11px] font-semibold transition-all"
