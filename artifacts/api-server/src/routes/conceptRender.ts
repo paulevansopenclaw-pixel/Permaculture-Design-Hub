@@ -66,6 +66,7 @@ router.post(
     }
 
     const { layerKey, plateImage } = parsed.data;
+    const sourceHash = parsed.data.sourceHash?.trim() || null;
     const style = parsed.data.style?.trim() || "concept";
     const direction = LAYER_DIRECTION[layerKey] ?? LAYER_DIRECTION.composite;
     const extra = parsed.data.prompt?.trim();
@@ -97,10 +98,10 @@ router.post(
     const now = new Date();
     const [row] = await db
       .insert(planRendersTable)
-      .values({ propertyId, layerKey, style, objectPath, prompt })
+      .values({ propertyId, layerKey, style, objectPath, prompt, sourceHash })
       .onConflictDoUpdate({
         target: [planRendersTable.propertyId, planRendersTable.layerKey, planRendersTable.style],
-        set: { objectPath, prompt, updatedAt: now },
+        set: { objectPath, prompt, sourceHash, updatedAt: now },
       })
       .returning();
 
@@ -112,6 +113,7 @@ router.post(
       objectPath: row.objectPath,
       url: `/api/storage${row.objectPath}`,
       prompt: row.prompt,
+      sourceHash: row.sourceHash,
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
     });
@@ -146,6 +148,7 @@ router.get("/properties/:propertyId/plan-renders", async (req, res) => {
       objectPath: row.objectPath,
       url: `/api/storage${row.objectPath}`,
       prompt: row.prompt,
+      sourceHash: row.sourceHash,
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
     })),

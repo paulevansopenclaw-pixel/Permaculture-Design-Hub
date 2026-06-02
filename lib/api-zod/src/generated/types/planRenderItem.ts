@@ -15,6 +15,7 @@ export interface PlanRenderItem {
   /** Server path to fetch the rendered image. */
   url: string;
   prompt?: string | null;
+  sourceHash?: string | null;
   createdAt: string;
   updatedAt?: string;
 }

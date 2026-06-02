@@ -29,6 +29,7 @@ import { SoilPlate } from "@/components/plans/SoilPlate";
 import { generateContours } from "@/lib/contourEngine";
 import { analyzeWaterPaths, type WaterAnalysisResult } from "@/lib/keylineEngine";
 import { parseGeo, toFeature } from "@/lib/planProjection";
+import { layerSourceHash, type PlanSourceContext } from "@/lib/planSource";
 
 const INK = "#2c2416";
 const GREEN = "#2d6a4f";
@@ -140,9 +141,27 @@ export default function PlansPage() {
   const { data: sensoryVectors = [] } = useListSensoryVectors(pid, q(getListSensoryVectorsQueryKey(pid)));
   const { data: planRenders = [] } = useListPlanRenders(pid, q(getListPlanRendersQueryKey(pid)));
 
+  const srcCtx: PlanSourceContext = {
+    boundary: property?.boundaryGeojson,
+    zones,
+    sectors,
+    structures,
+    swales,
+    pathways,
+    sensoryVectors,
+    brief,
+  };
+
   const generateConcept = useGenerateConceptRender();
   const [conceptError, setConceptError] = useState<string | null>(null);
   const [rendering, setRendering] = useState<string | null>(null);
+
+  // A cached render is stale when its stored source hash no longer matches the
+  // current source data for that layer (design edits since it was generated).
+  function isStale(layerKey: string): boolean {
+    const r = planRenders.find((x) => x.layerKey === layerKey);
+    return !!(r && r.sourceHash && r.sourceHash !== layerSourceHash(layerKey, srcCtx));
+  }
 
   async function runConcept(layerKey: string, svg: SVGSVGElement | null) {
     if (!svg || !activePropertyId) return;
@@ -152,7 +171,7 @@ export default function PlansPage() {
       const plateImage = await svgToPngDataUrl(svg);
       await generateConcept.mutateAsync({
         propertyId: activePropertyId,
-        data: { layerKey, plateImage, style: "concept" },
+        data: { layerKey, plateImage, style: "concept", sourceHash: layerSourceHash(layerKey, srcCtx) },
       });
       await queryClient.invalidateQueries({
         queryKey: getListPlanRendersQueryKey(activePropertyId),
@@ -367,6 +386,21 @@ export default function PlansPage() {
                           waterAnalysis={waterAnalysis}
                         />
                       ))}
+                    {property && anyGeo && (
+                      <PlanPlate
+                        ref={setLayerRef("composite")}
+                        property={property}
+                        visible={geoVisible}
+                        zones={zones}
+                        sectors={sectors}
+                        structures={structures}
+                        swales={swales}
+                        pathways={pathways}
+                        sensoryVectors={sensoryVectors}
+                        contours={contours}
+                        waterAnalysis={waterAnalysis}
+                      />
+                    )}
                     {property && <SoilPlate ref={soilRef} property={property} brief={brief} />}
                   </div>
 
@@ -376,6 +410,16 @@ export default function PlansPage() {
                     </div>
                   )}
 
+                  {anyGeo && (
+                    <ConceptCard
+                      title="Composite masterplan — illustrated"
+                      subtitle="Watercolour restyle blending all enabled design layers"
+                      render={planRenders.find((r) => r.layerKey === "composite")}
+                      busy={rendering === "composite"}
+                      stale={isStale("composite")}
+                      onGenerate={() => runConcept("composite", layerRefs.current["composite"])}
+                    />
+                  )}
                   {enabledGeoLayers.map((l) => (
                     <ConceptCard
                       key={l.key}
@@ -383,6 +427,7 @@ export default function PlansPage() {
                       subtitle={`Watercolour restyle of the ${l.label.toLowerCase()} layer`}
                       render={planRenders.find((r) => r.layerKey === l.key)}
                       busy={rendering === l.key}
+                      stale={isStale(l.key)}
                       onGenerate={() => runConcept(l.key, layerRefs.current[l.key])}
                     />
                   ))}
@@ -392,6 +437,7 @@ export default function PlansPage() {
                       subtitle="Earthy geological restyle of the soil plate"
                       render={planRenders.find((r) => r.layerKey === "soil")}
                       busy={rendering === "soil"}
+                      stale={isStale("soil")}
                       onGenerate={() => runConcept("soil", soilRef.current)}
                     />
                   )}
@@ -420,12 +466,14 @@ function ConceptCard({
   subtitle,
   render,
   busy,
+  stale,
   onGenerate,
 }: {
   title: string;
   subtitle: string;
   render?: RenderItem;
   busy: boolean;
+  stale?: boolean;
   onGenerate: () => void;
 }) {
   return (
@@ -449,6 +497,11 @@ function ConceptCard({
           {busy ? "Rendering…" : render ? "🎨 Regenerate" : "🎨 Generate"}
         </button>
       </figcaption>
+      {render && stale && (
+        <div className="text-[11px] px-4 py-2" style={{ background: "#fdf3e3", borderBottom: "1px solid #ecd9b5", color: "#8a6d2f" }}>
+          ⚠ Design data has changed since this concept was generated — regenerate to refresh.
+        </div>
+      )}
       <div className="relative">
         {render ? (
           <img

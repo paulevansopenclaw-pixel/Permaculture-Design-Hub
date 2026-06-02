@@ -1933,6 +1933,9 @@ components:
         prompt:
           type: string
           description: Optional extra style direction appended to the base prompt.
+        sourceHash:
+          type: string
+          description: Content hash of the layer's source data at generation time, used to detect staleness.
     PlanRenderItem:
       type: object
       required: [id, propertyId, layerKey, style, objectPath, url, createdAt]
@@ -1951,6 +1954,9 @@ components:
           type: string
           description: Server path to fetch the rendered image.
         prompt:
+          type: string
+          nullable: true
+        sourceHash:
           type: string
           nullable: true
         createdAt:

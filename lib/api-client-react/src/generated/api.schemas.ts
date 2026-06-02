@@ -545,6 +545,8 @@ export interface ConceptRenderRequest {
   plateImage: string;
   /** Optional extra style direction appended to the base prompt. */
   prompt?: string;
+  /** Content hash of the layer's source data at generation time, used to detect staleness. */
+  sourceHash?: string;
 }
 
 export interface PlanRenderItem {
@@ -556,6 +558,7 @@ export interface PlanRenderItem {
   /** Server path to fetch the rendered image. */
   url: string;
   prompt?: string | null;
+  sourceHash?: string | null;
   createdAt: string;
   updatedAt?: string;
 }

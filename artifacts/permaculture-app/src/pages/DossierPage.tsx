@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Fingerprint } from "lucide-react";
 import { useLocation } from "wouter";
 import * as turf from "@turf/turf";
@@ -27,6 +27,10 @@ import { useAppStore } from "@/store/useAppStore";
 import { StepNav } from "@/components/StepNav";
 import { PlanPlate, type PlanLayerKey, type PlanPlateProps } from "@/components/plans/PlanPlate";
 import { SoilPlate, type SoilPlateProps } from "@/components/plans/SoilPlate";
+import { generateContours } from "@/lib/contourEngine";
+import { analyzeWaterPaths, type WaterAnalysisResult } from "@/lib/keylineEngine";
+import { parseGeo, toFeature } from "@/lib/planProjection";
+import { layerSourceHash, type PlanSourceContext } from "@/lib/planSource";
 
 interface PlantRec { name: string; latinName: string; layer: string; purpose: string; zones: string; notes: string; }
 interface DesignElementRec { type: string; name: string; description: string; rationale: string; placement: string; priority: string; }
@@ -632,49 +636,144 @@ function DesignPlansSection({
   const { data: sensoryVectors = [] } = useListSensoryVectors(propertyId, q(getListSensoryVectorsQueryKey(propertyId)));
   const { data: planRenders = [] } = useListPlanRenders(propertyId, q(getListPlanRendersQueryKey(propertyId)));
 
+  const boundaryGeo = property?.boundaryGeojson as unknown as string | undefined;
+
+  // Generate 1 m contours + water analysis client-side so the Water plate matches
+  // the Plans surface (source tables carry no terrain data).
+  const [contours, setContours] = useState<GeoJSON.FeatureCollection | null>(null);
+  const [waterAnalysis, setWaterAnalysis] = useState<WaterAnalysisResult | null>(null);
+  useEffect(() => {
+    if (!enabled || !boundaryGeo) return;
+    const token = import.meta.env.VITE_MAPBOX_TOKEN as string | undefined;
+    if (!token) return;
+    const feat = toFeature(parseGeo(boundaryGeo));
+    if (!feat) return;
+    let cancelled = false;
+    generateContours(feat as GeoJSON.Feature, token, 1)
+      .then((fc) => {
+        if (cancelled) return;
+        setContours(fc);
+        try {
+          if (feat.geometry?.type === "Polygon") {
+            setWaterAnalysis(analyzeWaterPaths(fc, feat as GeoJSON.Feature<GeoJSON.Polygon>));
+          }
+        } catch {
+          /* analysis is best-effort */
+        }
+      })
+      .catch(() => {
+        /* contours need elevation tiles; plate renders without them */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [enabled, boundaryGeo]);
+
   if (!enabled || !property) return null;
 
-  const allVisible: Record<PlanLayerKey, boolean> = {
-    boundary: true, water: true, zones: true, sectors: true, structures: true,
+  const srcCtx: PlanSourceContext = {
+    boundary: boundaryGeo,
+    zones,
+    sectors,
+    structures,
+    swales,
+    pathways,
+    sensoryVectors,
+    brief,
   };
-  const LAYER_LABELS: Record<string, string> = {
-    boundary: "Boundary", water: "Water & Contour", zones: "Zones",
-    sectors: "Sectors", structures: "Structures", soil: "Soil Profile",
+
+  // Single-layer visibility: boundary base context plus the one layer of interest.
+  const soloVisible = (key: PlanLayerKey): Record<PlanLayerKey, boolean> => ({
+    boundary: key === "boundary",
+    water: key === "water",
+    zones: key === "zones",
+    sectors: key === "sectors",
+    structures: key === "structures",
+    [key]: true,
+  });
+
+  const GEO_LAYERS: { key: PlanLayerKey; label: string }[] = [
+    { key: "boundary", label: "Boundary" },
+    { key: "water", label: "Water & Contour" },
+    { key: "zones", label: "Zones" },
+    { key: "sectors", label: "Sectors" },
+    { key: "structures", label: "Structures" },
+  ];
+
+  const CONCEPT_LABELS: Record<string, string> = {
+    composite: "Composite Masterplan",
+    boundary: "Boundary",
+    water: "Water & Contour",
+    zones: "Zones",
+    sectors: "Sectors",
+    structures: "Structures",
+    soil: "Soil Profile",
   };
-  const layerConcepts = planRenders.filter((r) => LAYER_LABELS[r.layerKey]);
+  const CONCEPT_ORDER = ["composite", "boundary", "water", "zones", "sectors", "structures", "soil"];
+  const concepts = CONCEPT_ORDER.map((k) => planRenders.find((r) => r.layerKey === k)).filter(
+    (r): r is NonNullable<typeof r> => !!r,
+  );
+
   const bust = (r: { url: string; updatedAt?: string }) =>
     r.updatedAt ? `${r.url}?v=${encodeURIComponent(r.updatedAt)}` : r.url;
+  const isStale = (layerKey: string) => {
+    const r = planRenders.find((x) => x.layerKey === layerKey);
+    return !!(r && r.sourceHash && r.sourceHash !== layerSourceHash(layerKey, srcCtx));
+  };
+
+  const subLabel = (text: string) => (
+    <div style={{ fontFamily:"monospace", fontSize:9, textTransform:"uppercase", letterSpacing:"0.1em", color:"#a89880", padding:"6px 10px", borderTop:RULE }}>
+      {text}
+    </div>
+  );
 
   return (
     <section>
       <SectionLabel n="08" title="Design Layer Plans"/>
       <p style={{ fontFamily:"monospace", fontSize:9, textTransform:"uppercase", letterSpacing:"0.1em", color:"#bbb", margin:"0 0 16px" }}>
-        Professional cartographic plates and AI concept restyles · generated in Design Plans
+        Six professional cartographic plates and their AI concept restyles · generated in Design Plans
       </p>
       <div style={{ display:"flex", flexDirection:"column", gap:24 }}>
-        <figure style={{ margin:0, border:RULE }}>
-          <PlanPlate
-            property={property}
-            visible={allVisible}
-            zones={zones}
-            sectors={sectors}
-            structures={structures}
-            swales={swales}
-            pathways={pathways}
-            sensoryVectors={sensoryVectors}
-          />
-        </figure>
-        <figure style={{ margin:0, border:RULE }}>
-          <SoilPlate property={property} brief={brief}/>
-        </figure>
-        {layerConcepts.map((r) => (
-          <figure key={r.layerKey} style={{ margin:0, border:RULE }}>
-            <img src={bust(r)} alt={`${LAYER_LABELS[r.layerKey]} concept`} style={{ display:"block", width:"100%" }}/>
-            <figcaption style={{ fontFamily:"monospace", fontSize:9, textTransform:"uppercase", letterSpacing:"0.1em", color:"#a89880", padding:"6px 10px", borderTop:RULE }}>
-              {LAYER_LABELS[r.layerKey]} — AI concept restyle
-            </figcaption>
+        {GEO_LAYERS.map((l) => (
+          <figure key={l.key} style={{ margin:0, border:RULE }}>
+            <PlanPlate
+              property={property}
+              visible={soloVisible(l.key)}
+              zones={zones}
+              sectors={sectors}
+              structures={structures}
+              swales={swales}
+              pathways={pathways}
+              sensoryVectors={sensoryVectors}
+              contours={l.key === "water" ? contours : undefined}
+              waterAnalysis={l.key === "water" ? waterAnalysis : undefined}
+            />
+            {subLabel(`${l.label} — cartographic plate`)}
           </figure>
         ))}
+        <figure style={{ margin:0, border:RULE }}>
+          <SoilPlate property={property} brief={brief}/>
+          {subLabel("Soil Profile — cartographic plate")}
+        </figure>
+
+        {concepts.length > 0 && (
+          <>
+            <p style={{ fontFamily:"monospace", fontSize:9, textTransform:"uppercase", letterSpacing:"0.1em", color:"#bbb", margin:"8px 0 0" }}>
+              AI concept restyles
+            </p>
+            {concepts.map((r) => (
+              <figure key={r.layerKey} style={{ margin:0, border:RULE }}>
+                <img src={bust(r)} alt={`${CONCEPT_LABELS[r.layerKey] ?? r.layerKey} concept`} style={{ display:"block", width:"100%" }}/>
+                {isStale(r.layerKey) && (
+                  <div style={{ fontFamily:"monospace", fontSize:8.5, textTransform:"uppercase", letterSpacing:"0.08em", color:"#8a6d2f", background:"#fdf3e3", padding:"5px 10px", borderTop:RULE }}>
+                    ⚠ Outdated — design data changed since this concept was generated
+                  </div>
+                )}
+                {subLabel(`${CONCEPT_LABELS[r.layerKey] ?? r.layerKey} — AI concept restyle`)}
+              </figure>
+            ))}
+          </>
+        )}
       </div>
     </section>
   );

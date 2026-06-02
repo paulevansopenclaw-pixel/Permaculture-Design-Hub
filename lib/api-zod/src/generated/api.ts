@@ -856,7 +856,8 @@ export const GenerateConceptRenderBody = zod.object({
   "layerKey": zod.string().describe('Which design layer this render represents (e.g. boundary, water, zones, sectors, structures, soil, composite).'),
   "style": zod.string().optional().describe('Concept style preset key.'),
   "plateImage": zod.string().describe('Base64 PNG (data URL or raw base64) of the accurate plan plate to restyle.'),
-  "prompt": zod.string().optional().describe('Optional extra style direction appended to the base prompt.')
+  "prompt": zod.string().optional().describe('Optional extra style direction appended to the base prompt.'),
+  "sourceHash": zod.string().optional().describe('Content hash of the layer\'s source data at generation time, used to detect staleness.')
 })
 
 export const GenerateConceptRenderResponse = zod.object({
@@ -867,6 +868,7 @@ export const GenerateConceptRenderResponse = zod.object({
   "objectPath": zod.string(),
   "url": zod.string().describe('Server path to fetch the rendered image.'),
   "prompt": zod.string().nullish(),
+  "sourceHash": zod.string().nullish(),
   "createdAt": zod.string(),
   "updatedAt": zod.string().optional()
 })
@@ -887,6 +889,7 @@ export const ListPlanRendersResponseItem = zod.object({
   "objectPath": zod.string(),
   "url": zod.string().describe('Server path to fetch the rendered image.'),
   "prompt": zod.string().nullish(),
+  "sourceHash": zod.string().nullish(),
   "createdAt": zod.string(),
   "updatedAt": zod.string().optional()
 })

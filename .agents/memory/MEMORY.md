@@ -2,5 +2,6 @@
 - [Vision board image upload](vision-board-images.md) — Use FileReader.readAsDataURL first, then canvas-resize from the data URL; blob URLs fail silently in sandboxed iframes.
 - [Property boundaryGeojson type](boundary-geojson-type.md) — API schema types `boundaryGeojson` as `{ [key: string]: unknown }`, not `string`; cast with `as unknown as string` at every use site.
 - [Freehand + reshape draw architecture](freehand-reshape-draw.md) — global freehandMode state gates all draw effects; reshape uses L.EditToolbar.Edit on dedicated feature groups per shape type.
-- [Route auth & owner scoping](route-auth-pattern.md) — authMiddleware only populates req.user; every protected route must call req.isAuthenticated() + scope by ownerId (restart workflow before curl-testing).
+- [Route auth & owner scoping](route-auth-pattern.md) — authMiddleware only populates req.user; every protected route must enforce isAuthenticated() + owner scoping itself.
+- [Plan-render staleness](plan-render-staleness.md) — concept renders detect staleness via per-layer content hash (no updatedAt on source tables); hash must be order-independent for record lists.
 - [express-rate-limit behind Replit proxy](route-auth-pattern.md) — set keyGenerator + `validate:{xForwardedForHeader:false}` (key per user) to avoid ERR_ERL_UNEXPECTED_X_FORWARDED_FOR (trust proxy is false).

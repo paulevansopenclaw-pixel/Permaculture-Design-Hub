@@ -11,6 +11,7 @@ export const planRendersTable = pgTable(
     style: text("style").notNull().default("concept"),
     objectPath: text("object_path").notNull(),
     prompt: text("prompt"),
+    sourceHash: text("source_hash"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
