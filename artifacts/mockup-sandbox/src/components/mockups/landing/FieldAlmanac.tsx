@@ -33,59 +33,74 @@ export default function FieldAlmanac() {
       {/* Collage / Grid */}
       <section className="border-y border-[#2c3525]/15 py-12 px-6">
         <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
-            
-            <div className="md:col-span-5 flex flex-col gap-6">
-              <figure className="relative group">
-                <div className="overflow-hidden bg-[#e8e4da] aspect-[4/3] border border-[#2c3525]/10 p-1">
-                  <img src="/__mockup/images/food-forest.png" alt="Food forest" className="w-full h-full object-cover grayscale-[20%] sepia-[15%] mix-blend-multiply opacity-90 transition-transform duration-700 group-hover:scale-105" />
-                </div>
-                <figcaption className="mt-3 font-mono text-[10px] uppercase tracking-wider text-[#4a5d3f] flex justify-between border-b border-[#2c3525]/15 pb-2">
-                  <span>Fig 1. Multi-strata food forest</span>
-                  <span>01</span>
-                </figcaption>
-              </figure>
-              
-              <div className="grid grid-cols-2 gap-6 pt-4">
-                <figure className="relative group">
-                  <div className="overflow-hidden bg-[#e8e4da] aspect-square border border-[#2c3525]/10 p-1">
-                    <img src="/__mockup/images/hands-soil.png" alt="Hands in soil" className="w-full h-full object-cover grayscale-[20%] sepia-[15%] mix-blend-multiply opacity-90 transition-transform duration-700 group-hover:scale-105" />
-                  </div>
-                  <figcaption className="mt-3 font-mono text-[10px] uppercase tracking-wider text-[#4a5d3f] border-b border-[#2c3525]/15 pb-2">
-                    <span>Fig 2. Soil health</span>
-                  </figcaption>
-                </figure>
-                <figure className="relative group">
-                  <div className="overflow-hidden bg-[#e8e4da] aspect-square border border-[#2c3525]/10 p-1">
-                    <img src="/__mockup/images/herbs-closeup.png" alt="Herbs" className="w-full h-full object-cover grayscale-[20%] sepia-[15%] mix-blend-multiply opacity-90 transition-transform duration-700 group-hover:scale-105" />
-                  </div>
-                  <figcaption className="mt-3 font-mono text-[10px] uppercase tracking-wider text-[#4a5d3f] border-b border-[#2c3525]/15 pb-2">
-                    <span>Fig 3. Culinary herbs</span>
-                  </figcaption>
-                </figure>
+          <div className="grid grid-cols-2 md:grid-cols-12 auto-rows-[180px] gap-4">
+
+            <figure className="relative group col-span-2 md:col-span-7 row-span-2">
+              <div className="overflow-hidden bg-[#e8e4da] h-full border border-[#2c3525]/10 p-1">
+                <img src="/__mockup/images/food-forest.png" alt="Food forest" className="w-full h-full object-cover grayscale-[20%] sepia-[15%] mix-blend-multiply opacity-90 transition-transform duration-700 group-hover:scale-105" />
               </div>
-            </div>
+              <figcaption className="absolute bottom-2 left-2 right-2 bg-[#fcf9f2]/85 backdrop-blur-sm px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider text-[#4a5d3f] flex justify-between">
+                <span>Fig 1. Multi-strata food forest</span>
+                <span>01</span>
+              </figcaption>
+            </figure>
 
-            <div className="md:col-span-7 flex flex-col gap-6 pt-12 md:pt-24 md:pl-12">
-              <figure className="relative group">
-                <div className="overflow-hidden bg-[#e8e4da] aspect-[16/9] border border-[#2c3525]/10 p-1">
-                  <img src="/__mockup/images/swale-contour.png" alt="Swales on contour" className="w-full h-full object-cover grayscale-[20%] sepia-[15%] mix-blend-multiply opacity-90 transition-transform duration-700 group-hover:scale-105" />
-                </div>
-                <figcaption className="mt-3 font-mono text-[10px] uppercase tracking-wider text-[#4a5d3f] flex justify-between border-b border-[#2c3525]/15 pb-2">
-                  <span>Fig 4. Hydrology & Earthworks</span>
-                  <span>02</span>
-                </figcaption>
-              </figure>
+            <figure className="relative group col-span-1 md:col-span-5 row-span-1">
+              <div className="overflow-hidden bg-[#e8e4da] h-full border border-[#2c3525]/10 p-1">
+                <img src="/__mockup/images/swale-contour.png" alt="Swales on contour" className="w-full h-full object-cover grayscale-[20%] sepia-[15%] mix-blend-multiply opacity-90 transition-transform duration-700 group-hover:scale-105" />
+              </div>
+              <figcaption className="absolute bottom-2 left-2 right-2 bg-[#fcf9f2]/85 backdrop-blur-sm px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider text-[#4a5d3f] flex justify-between">
+                <span>Fig 2. Hydrology & earthworks</span>
+                <span>02</span>
+              </figcaption>
+            </figure>
 
-              <figure className="relative group w-3/4 ml-auto pt-8">
-                <div className="overflow-hidden bg-[#e8e4da] aspect-[4/3] border border-[#2c3525]/10 p-1">
-                  <img src="/__mockup/images/meadow-pollinators.png" alt="Meadow" className="w-full h-full object-cover grayscale-[20%] sepia-[15%] mix-blend-multiply opacity-90 transition-transform duration-700 group-hover:scale-105" />
-                </div>
-                <figcaption className="mt-3 font-mono text-[10px] uppercase tracking-wider text-[#4a5d3f] border-b border-[#2c3525]/15 pb-2">
-                  <span>Fig 5. Pollinator ecology</span>
-                </figcaption>
-              </figure>
-            </div>
+            <figure className="relative group col-span-1 md:col-span-3 row-span-1">
+              <div className="overflow-hidden bg-[#e8e4da] h-full border border-[#2c3525]/10 p-1">
+                <img src="/__mockup/images/hands-soil.png" alt="Hands in soil" className="w-full h-full object-cover grayscale-[20%] sepia-[15%] mix-blend-multiply opacity-90 transition-transform duration-700 group-hover:scale-105" />
+              </div>
+              <figcaption className="absolute bottom-2 left-2 right-2 bg-[#fcf9f2]/85 backdrop-blur-sm px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider text-[#4a5d3f]">
+                <span>Fig 3. Soil health</span>
+              </figcaption>
+            </figure>
+
+            <figure className="relative group col-span-1 md:col-span-2 row-span-1">
+              <div className="overflow-hidden bg-[#e8e4da] h-full border border-[#2c3525]/10 p-1">
+                <img src="/__mockup/images/herbs-closeup.png" alt="Herbs" className="w-full h-full object-cover grayscale-[20%] sepia-[15%] mix-blend-multiply opacity-90 transition-transform duration-700 group-hover:scale-105" />
+              </div>
+              <figcaption className="absolute bottom-2 left-2 right-2 bg-[#fcf9f2]/85 backdrop-blur-sm px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider text-[#4a5d3f]">
+                <span>Fig 4. Herbs</span>
+              </figcaption>
+            </figure>
+
+            <figure className="relative group col-span-1 md:col-span-4 row-span-1">
+              <div className="overflow-hidden bg-[#e8e4da] h-full border border-[#2c3525]/10 p-1">
+                <img src="/__mockup/images/meadow-pollinators.png" alt="Meadow" className="w-full h-full object-cover grayscale-[20%] sepia-[15%] mix-blend-multiply opacity-90 transition-transform duration-700 group-hover:scale-105" />
+              </div>
+              <figcaption className="absolute bottom-2 left-2 right-2 bg-[#fcf9f2]/85 backdrop-blur-sm px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider text-[#4a5d3f] flex justify-between">
+                <span>Fig 5. Pollinator ecology</span>
+                <span>03</span>
+              </figcaption>
+            </figure>
+
+            <figure className="relative group col-span-1 md:col-span-4 row-span-1">
+              <div className="overflow-hidden bg-[#e8e4da] h-full border border-[#2c3525]/10 p-1">
+                <img src="/__mockup/images/harvest-basket.png" alt="Harvest basket" className="w-full h-full object-cover grayscale-[20%] sepia-[15%] mix-blend-multiply opacity-90 transition-transform duration-700 group-hover:scale-105" />
+              </div>
+              <figcaption className="absolute bottom-2 left-2 right-2 bg-[#fcf9f2]/85 backdrop-blur-sm px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider text-[#4a5d3f]">
+                <span>Fig 6. Seasonal yield</span>
+              </figcaption>
+            </figure>
+
+            <figure className="relative group col-span-2 md:col-span-8 row-span-1">
+              <div className="overflow-hidden bg-[#e8e4da] h-full border border-[#2c3525]/10 p-1">
+                <img src="/__mockup/images/property-aerial.png" alt="Aerial homestead" className="w-full h-full object-cover grayscale-[20%] sepia-[15%] mix-blend-multiply opacity-90 transition-transform duration-700 group-hover:scale-105" />
+              </div>
+              <figcaption className="absolute bottom-2 left-2 right-2 bg-[#fcf9f2]/85 backdrop-blur-sm px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider text-[#4a5d3f] flex justify-between">
+                <span>Fig 7. Whole-site zonation</span>
+                <span>04</span>
+              </figcaption>
+            </figure>
 
           </div>
         </div>
