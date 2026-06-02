@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { useLocation } from "wouter";
+import patternMark from "@assets/pattern-mark.png";
 import {
   useListProperties,
   useCreateProperty,
@@ -226,10 +227,8 @@ export default function PropertiesPage() {
       {/* ── Top nav ── */}
       <div style={{ height: 54, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 28px", background: "#fff", borderBottom: RULE, boxShadow: shadow(4, 0.05), flexShrink: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ width: 30, height: 30, borderRadius: 8, background: GREEN, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <Shield size={16} color="#fff" strokeWidth={2} />
-          </div>
-          <span style={{ fontFamily: "Georgia, serif", fontWeight: 700, fontSize: 16, color: INK }}>TerraGuard OS</span>
+          <img src={patternMark} alt="Pattern" style={{ height: 30, width: "auto" }} />
+          <span style={{ fontFamily: "Georgia, serif", fontWeight: 700, fontSize: 16, color: INK }}>Pattern</span>
         </div>
         <div style={{ display: "flex", gap: 18, alignItems: "center" }}>
           {[{ Icon: Users, label: "Team" }, { Icon: Settings, label: "Settings" }].map(({ Icon, label }) => (

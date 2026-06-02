@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Fingerprint } from "lucide-react";
 import { useLocation } from "wouter";
 import * as turf from "@turf/turf";
+import patternMark from "@assets/pattern-mark.png";
 import {
   useGetProperty,
   useGetClientBrief,
@@ -320,10 +321,8 @@ export default function DossierPage() {
       }}>
         <div style={{ display:"flex", alignItems:"center", gap:12 }}>
           <button onClick={()=>navigate("/properties")} style={{ background:"none", border:"none", cursor:"pointer", display:"flex", alignItems:"center", gap:8, color:INK, padding:0, fontFamily:"inherit" }}>
-            <div style={{ width:28, height:28, borderRadius:7, background:"#2d6a4f", display:"flex", alignItems:"center", justifyContent:"center" }}>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-            </div>
-            <span style={{ fontFamily:"Georgia, serif", fontWeight:700, fontSize:14 }}>TerraGuard</span>
+            <img src={patternMark} alt="Pattern" style={{ height: 26, width: "auto" }} />
+            <span style={{ fontFamily:"Georgia, serif", fontWeight:700, fontSize:14 }}>Pattern</span>
           </button>
           <div style={{ width:1, height:16, background:"#ddd6cc" }}/>
           <span style={{ fontSize:11, fontWeight:600, color:T }}>Dossier</span>
@@ -364,7 +363,7 @@ export default function DossierPage() {
           {/* MASTHEAD */}
           <div style={{ borderBottom: RULE, padding:"36px 48px 28px", maxWidth:920, margin:"0 auto", background:"#fff" }}>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:8 }}>
-              <span style={{ fontSize:10, letterSpacing:"0.12em", textTransform:"uppercase", color:T }}>TerraGuard OS · Property Resilience Dossier</span>
+              <span style={{ fontSize:10, letterSpacing:"0.12em", textTransform:"uppercase", color:T }}>Pattern · Property Resilience Dossier</span>
               <span style={{ fontSize:10, color:"#a89880" }}>{today}</span>
             </div>
             <h1 style={{ margin:"10px 0 0", fontSize:48, fontWeight:700, letterSpacing:"-0.03em", lineHeight:1.1, color:INK, fontFamily:"Georgia, serif" }}>
@@ -598,7 +597,7 @@ export default function DossierPage() {
 
             {/* Footer */}
             <div style={{ borderTop:"3px solid #111", paddingTop:14, display:"flex", justifyContent:"space-between" }}>
-              <span style={{ fontFamily:"monospace", fontSize:9, textTransform:"uppercase", letterSpacing:"0.1em", color:"#bbb" }}>TerraGuard OS · Autonomous Property Resilience Platform</span>
+              <span style={{ fontFamily:"monospace", fontSize:9, textTransform:"uppercase", letterSpacing:"0.1em", color:"#bbb" }}>Pattern · Natural Systems Design</span>
               <span style={{ fontFamily:"monospace", fontSize:9, textTransform:"uppercase", letterSpacing:"0.1em", color:"#bbb" }}>{today}</span>
             </div>
           </div>

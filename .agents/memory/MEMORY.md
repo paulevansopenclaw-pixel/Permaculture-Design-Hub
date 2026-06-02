@@ -5,3 +5,4 @@
 - [Route auth & owner scoping](route-auth-pattern.md) — authMiddleware only populates req.user; every protected route must enforce isAuthenticated() + owner scoping itself.
 - [Plan-render staleness](plan-render-staleness.md) — concept renders detect staleness via per-layer content hash (no updatedAt on source tables); hash must be order-independent for record lists.
 - [express-rate-limit behind Replit proxy](route-auth-pattern.md) — set keyGenerator + `validate:{xForwardedForHeader:false}` (key per user) to avoid ERR_ERL_UNEXPECTED_X_FORWARDED_FOR (trust proxy is false).
+- [@assets alias needs tsconfig path](assets-alias.md) — vite alias alone isn't enough; tsconfig paths must also map @assets/* or tsc fails.

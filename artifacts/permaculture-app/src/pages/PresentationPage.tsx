@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams, useLocation } from "wouter";
 import L from "leaflet";
+import patternMark from "@assets/pattern-mark.png";
 import "leaflet/dist/leaflet.css";
 import {
   useGetProperty,
@@ -172,10 +173,8 @@ export default function PresentationPage() {
       {/* ── TOP BAR ──────────────────────────────────────────────── */}
       <header style={{ flexShrink: 0, height: 44, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 20px", borderBottom: "2px solid #111", background: "#fff", zIndex: 20 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style={{ color: "#1d4ed8" }}>
-            <path d="M12 2L3 7v5c0 5.25 3.75 10.15 9 11.25C17.25 22.15 21 17.25 21 12V7L12 2z"/>
-          </svg>
-          <span style={{ fontFamily: "monospace", fontSize: 12, fontWeight: 900, letterSpacing: "-0.01em", color: "#111" }}>TerraGuard</span>
+          <img src={patternMark} alt="Pattern" style={{ height: 18, width: "auto" }} />
+          <span style={{ fontFamily: "monospace", fontSize: 12, fontWeight: 900, letterSpacing: "-0.01em", color: "#111" }}>Pattern</span>
           <div style={{ width: 1, height: 14, background: "#ddd" }} />
           <span style={{ fontFamily: "monospace", fontSize: 9, textTransform: "uppercase", letterSpacing: "0.14em", color: "#1d4ed8" }}>Client View</span>
           {property && (
@@ -369,7 +368,7 @@ export default function PresentationPage() {
 
           {/* Sidebar footer */}
           <div className="shrink-0 px-5 py-3 flex items-center justify-between" style={{ borderTop: "1px solid #e5e5e5" }}>
-            <span className="text-[9px] font-mono uppercase tracking-widest" style={{ color: "#bbb" }}>TerraGuard OS</span>
+            <span className="text-[9px] font-mono uppercase tracking-widest" style={{ color: "#bbb" }}>Pattern</span>
             <span className="text-[9px] font-mono" style={{ color: "#bbb" }}>Read-only · Client access</span>
           </div>
         </aside>

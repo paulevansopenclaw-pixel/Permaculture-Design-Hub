@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, type ReactNode } from "react";
 import { useLocation } from "wouter";
 import * as turf from "@turf/turf";
 import { useQueryClient } from "@tanstack/react-query";
+import patternMark from "@assets/pattern-mark.png";
 import {
   useListProperties,
   useGetProperty,
@@ -231,10 +232,8 @@ export default function IntakePage() {
             className="flex items-center gap-2"
             style={{ color: "#2c2416", background: "none", border: "none", cursor: "pointer", padding: 0, fontFamily: "inherit" }}
           >
-            <div style={{ width: 28, height: 28, borderRadius: 7, background: "#2d6a4f", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-            </div>
-            <span style={{ fontFamily: "Georgia, serif", fontWeight: 700, fontSize: 14, color: "#2c2416" }} className="hidden sm:inline">TerraGuard</span>
+            <img src={patternMark} alt="Pattern" style={{ height: 26, width: "auto" }} />
+            <span style={{ fontFamily: "Georgia, serif", fontWeight: 700, fontSize: 14, color: "#2c2416" }} className="hidden sm:inline">Pattern</span>
           </button>
           <div className="hidden sm:block" style={{ width: 1, height: 16, background: "#ddd6cc" }} />
           <span style={{ fontSize: 11, fontWeight: 600, color: "#6b5f4e" }} className="hidden sm:inline">

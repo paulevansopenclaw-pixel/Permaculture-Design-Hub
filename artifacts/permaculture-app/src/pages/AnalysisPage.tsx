@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import * as turf from "@turf/turf";
+import patternMark from "@assets/pattern-mark.png";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useGetProperty,
@@ -499,10 +500,8 @@ export default function AnalysisPage() {
             className="flex items-center gap-2 shrink-0"
             style={{ color: "#2c2416", background: "none", border: "none", cursor: "pointer", padding: 0, fontFamily: "inherit" }}
           >
-            <div style={{ width: 28, height: 28, borderRadius: 7, background: "#2d6a4f", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-            </div>
-            <span className="hidden sm:inline" style={{ fontFamily: "Georgia, serif", fontWeight: 700, fontSize: 14, color: "#2c2416" }}>TerraGuard</span>
+            <img src={patternMark} alt="Pattern" style={{ height: 26, width: "auto", flexShrink: 0 }} />
+            <span className="hidden sm:inline" style={{ fontFamily: "Georgia, serif", fontWeight: 700, fontSize: 14, color: "#2c2416" }}>Pattern</span>
           </button>
           <div className="w-px h-4 shrink-0 hidden sm:block" style={{ background: "#ddd6cc" }} />
           <span className="hidden sm:inline shrink-0" style={{ fontSize: 11, fontWeight: 600, color: "#6b5f4e" }}>

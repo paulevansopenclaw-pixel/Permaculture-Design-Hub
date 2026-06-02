@@ -13,6 +13,7 @@ import DossierPage from "@/pages/DossierPage";
 import PresentationPage from "@/pages/PresentationPage";
 import { useAuth } from "@workspace/replit-auth-web";
 import { useAppStore } from "@/store/useAppStore";
+import patternLogo from "@assets/pattern-logo.png";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -94,15 +95,11 @@ function AuthGate({ children }: { children: React.ReactNode }) {
       <div style={{ height: "100vh", width: "100vw", display: "flex", alignItems: "center", justifyContent: "center", background: "#f8f5f0", fontFamily: "'Inter', system-ui, sans-serif" }}>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 0, maxWidth: 380, width: "100%", padding: "0 24px" }}>
           <div style={{ background: "#fffdf9", border: "1px solid #ddd6cc", borderRadius: 16, padding: "44px 40px", width: "100%", boxSizing: "border-box", textAlign: "center", boxShadow: "0 8px 32px rgba(44,36,22,0.1)" }}>
-            <div style={{ width: 52, height: 52, borderRadius: 14, background: "#2d6a4f", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 22px" }}>
-              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-              </svg>
-            </div>
-            <h1 style={{ margin: "0 0 6px", fontFamily: "Georgia, serif", fontSize: 24, fontWeight: 700, color: "#2c2416" }}>TerraGuard OS</h1>
-            <p style={{ margin: "0 0 30px", fontSize: 13, color: "#6b5f4e", letterSpacing: "0.02em" }}>
-              Permaculture Design Studio
-            </p>
+            <img
+              src={patternLogo}
+              alt="Pattern — Natural Systems Design by Wattle Seed Permaculture"
+              style={{ display: "block", width: "100%", maxWidth: 270, height: "auto", margin: "0 auto 30px" }}
+            />
             <button
               onClick={login}
               style={{ width: "100%", padding: "13px 0", fontSize: 13, fontWeight: 600, background: "#2d6a4f", color: "#fff", border: "none", borderRadius: 9, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 2px 10px rgba(45,106,79,0.35)" }}

@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import mapboxgl from "mapbox-gl";
+import patternMark from "@assets/pattern-mark.png";
 import "mapbox-gl/dist/mapbox-gl.css";
 // @ts-ignore
 import "leaflet-draw/dist/leaflet.draw.css";
@@ -2708,9 +2709,12 @@ export default function MapPage() {
         {/* Header */}
         <div className="px-4 py-3 border-b" style={{ borderColor: "hsl(103, 35%, 18%)" }}>
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-sm font-semibold tracking-tight" style={{ color: "hsl(42, 28%, 90%)" }}>TerraGuard</h1>
-              <p className="text-[10px] mt-0.5" style={{ color: "hsl(42, 15%, 55%)" }}>Land Security Platform</p>
+            <div className="flex items-center gap-2">
+              <img src={patternMark} alt="Pattern" style={{ height: 26, width: "auto" }} />
+              <div>
+                <h1 className="text-sm font-semibold tracking-tight" style={{ color: "hsl(42, 28%, 90%)" }}>Pattern</h1>
+                <p className="text-[10px] mt-0.5" style={{ color: "hsl(42, 15%, 55%)" }}>Natural Systems Design</p>
+              </div>
             </div>
             <div className="flex items-center gap-1">
               <button
