@@ -24,6 +24,54 @@ uri = "file://attached_assets/layer_samples/contour_concept.png"
 type = "image"
 title = "contour concept art"
 
+[[generated]]
+id = "56zeUYMf2HwJ0Zl-DDSWY"
+uri = "file://artifacts/mockup-sandbox/public/images/food-forest.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "mrnJBdShhXOfOOk_iRcBG"
+uri = "file://artifacts/mockup-sandbox/public/images/hands-soil.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "2TTVkhswSU4L5RPhWr71J"
+uri = "file://artifacts/mockup-sandbox/public/images/swale-contour.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "50EDopIXzRCAhK-Qmqe38"
+uri = "file://artifacts/mockup-sandbox/public/images/harvest-basket.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "Ahkof37UrLhJsaggpbH2E"
+uri = "file://artifacts/mockup-sandbox/public/images/property-aerial.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "7FCAmr096EPJ4L4JwDiwY"
+uri = "file://artifacts/mockup-sandbox/public/images/meadow-pollinators.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "zBlAu-xTph3pKP9Q6mBuc"
+uri = "file://artifacts/mockup-sandbox/public/images/garden-people.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "SeYzojahsB-gNVMBQWeqS"
+uri = "file://artifacts/mockup-sandbox/public/images/herbs-closeup.png"
+type = "image"
+title = "generated_image"
+
 [[outputs]]
 id = "WVjhbPJq-XPhqhAH-HRZq"
 uri = "file://attached_assets/layer_samples/boundary_professional.png"
