@@ -283,7 +283,7 @@ export default function IntakePage() {
                 className="px-4 py-1.5 text-[12px] font-semibold transition-all"
                 style={wizardStep === idx ? {
                   background: "#fff",
-                  color: "#1d4ed8",
+                  color: "#1f6b7a",
                   boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
                   border: "1px solid #e5e5e5",
                 } : {
@@ -320,7 +320,7 @@ export default function IntakePage() {
                   <button
                     onClick={() => navigate("/workspace")}
                     className="mt-4 px-5 py-2.5 rounded-xl text-[13px] font-semibold"
-                    style={{ background: "#1d4ed8", color: "#fff", border: "2px solid #1d4ed8" }}
+                    style={{ background: "#1f6b7a", color: "#fff", border: "2px solid #1f6b7a" }}
                   >
                     Go to Sandbox →
                   </button>
@@ -346,7 +346,7 @@ export default function IntakePage() {
                     <button
                       onClick={() => setShowOnboarding(true)}
                       className="px-6 py-3 text-[13px] font-semibold"
-                      style={{ background: "#1d4ed8", color: "#fff", border: "2px solid #1d4ed8" }}
+                      style={{ background: "#1f6b7a", color: "#fff", border: "2px solid #1f6b7a" }}
                     >
                       🌿 Start Site Survey
                     </button>
@@ -385,8 +385,8 @@ export default function IntakePage() {
                       className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium transition-all"
                       style={{
                         background: "#fff",
-                        color: syncStatus === "ok" ? "#16a34a" : syncStatus === "error" ? "#ef4444" : "#555",
-                        border: `1px solid ${syncStatus === "ok" ? "#16a34a" : syncStatus === "error" ? "#ef4444" : "#ddd"}`,
+                        color: syncStatus === "ok" ? "#4a6b2e" : syncStatus === "error" ? "#ef4444" : "#555",
+                        border: `1px solid ${syncStatus === "ok" ? "#4a6b2e" : syncStatus === "error" ? "#ef4444" : "#ddd"}`,
                         opacity: isSyncing ? 0.7 : 1,
                       }}
                     >
@@ -397,7 +397,7 @@ export default function IntakePage() {
                     <button
                       onClick={() => setShowOnboarding(true)}
                       className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium transition-all"
-                      style={{ background: "#fff", color: "#1d4ed8", border: "1px solid #1d4ed8" }}
+                      style={{ background: "#fff", color: "#1f6b7a", border: "1px solid #1f6b7a" }}
                     >
                       ✎ Edit Survey
                     </button>
@@ -482,14 +482,14 @@ export default function IntakePage() {
                   <button
                     onClick={() => setWizardStep(1)}
                     className="flex items-center gap-2 px-4 py-2 text-[12px] font-medium"
-                    style={{ background: "#fff", color: "#1d4ed8", border: "1px solid #1d4ed8" }}
+                    style={{ background: "#fff", color: "#1f6b7a", border: "1px solid #1f6b7a" }}
                   >
                     🖼 Add Vision Board →
                   </button>
                   <button
                     onClick={() => navigate("/workspace")}
                     className="flex items-center gap-2 px-5 py-2.5 text-[13px] font-semibold"
-                    style={{ background: "#1d4ed8", color: "#fff", border: "2px solid #1d4ed8" }}
+                    style={{ background: "#1f6b7a", color: "#fff", border: "2px solid #1f6b7a" }}
                   >
                     Next: The Sandbox →
                   </button>
@@ -515,7 +515,7 @@ export default function IntakePage() {
                   <button
                     onClick={() => fileInputRef.current?.click()}
                     className="flex items-center gap-1.5 px-3 py-2 text-[12px] font-semibold"
-                    style={{ background: "#fff", color: "#1d4ed8", border: "1px solid #1d4ed8" }}
+                    style={{ background: "#fff", color: "#1f6b7a", border: "1px solid #1f6b7a" }}
                   >
                     <span className="text-sm">＋</span> Add Photo
                     <span className="text-[10px] ml-1 opacity-60">({photos.length}/5)</span>
@@ -526,11 +526,11 @@ export default function IntakePage() {
                   disabled={isSavingPhotos}
                   className="flex items-center gap-1.5 px-4 py-2 text-[12px] font-semibold transition-all"
                   style={photosSaveStatus === "ok" ? {
-                    background: "#fff", color: "#16a34a", border: "1px solid #16a34a",
+                    background: "#fff", color: "#4a6b2e", border: "1px solid #4a6b2e",
                   } : photosSaveStatus === "error" ? {
                     background: "#fff", color: "#ef4444", border: "1px solid #ef4444",
                   } : {
-                    background: "#1d4ed8", color: "#fff", border: "2px solid #1d4ed8",
+                    background: "#1f6b7a", color: "#fff", border: "2px solid #1f6b7a",
                     opacity: isSavingPhotos ? 0.7 : 1,
                   }}
                 >
@@ -596,7 +596,7 @@ export default function IntakePage() {
                     className="flex flex-col items-center justify-center gap-2 transition-all"
                     style={{ background: "#f7f7f7", border: "2px dashed #ddd", aspectRatio: "4/3", color: "#bbb" }}
                   >
-                    <span className="text-2xl" style={{ color: "#1d4ed8" }}>＋</span>
+                    <span className="text-2xl" style={{ color: "#1f6b7a" }}>＋</span>
                     <span className="text-[10px]">{photos.length}/5</span>
                   </button>
                 )}
@@ -615,7 +615,7 @@ export default function IntakePage() {
               <button
                 onClick={() => navigate("/workspace")}
                 className="flex items-center gap-2 px-5 py-2.5 text-[13px] font-semibold"
-                style={{ background: "#1d4ed8", color: "#fff", border: "2px solid #1d4ed8" }}
+                style={{ background: "#1f6b7a", color: "#fff", border: "2px solid #1f6b7a" }}
               >
                 Next: The Sandbox →
               </button>

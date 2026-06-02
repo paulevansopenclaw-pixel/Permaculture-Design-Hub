@@ -33,7 +33,7 @@ import { parseGeo, toFeature } from "@/lib/planProjection";
 import { layerSourceHash, type PlanSourceContext } from "@/lib/planSource";
 
 const INK = "#2c2416";
-const GREEN = "#2d6a4f";
+const GREEN = "#4a6b2e";
 const LIGHT = "#f8f5f0";
 const RULE = "1px solid #ddd6cc";
 

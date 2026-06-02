@@ -97,9 +97,9 @@ function PresentationMap({
       { type: "Feature", geometry: geo, properties: {} } as GeoJSON.Feature,
       {
         style: {
-          color: "#10b981",
+          color: "#4a8a64",
           weight: 2.5,
-          fillColor: "#10b981",
+          fillColor: "#4a8a64",
           fillOpacity: 0.08,
           dashArray: "6 4",
         },
@@ -160,7 +160,7 @@ export default function PresentationPage() {
     return (
       <div style={{ height: "100vh", width: "100vw", display: "flex", alignItems: "center", justifyContent: "center", background: "#fff" }}>
         <div style={{ textAlign: "center" }}>
-          <div style={{ fontFamily: "monospace", fontSize: 9, textTransform: "uppercase", letterSpacing: "0.18em", color: "#1d4ed8", marginBottom: 12 }}>Error</div>
+          <div style={{ fontFamily: "monospace", fontSize: 9, textTransform: "uppercase", letterSpacing: "0.18em", color: "#1f6b7a", marginBottom: 12 }}>Error</div>
           <p style={{ fontFamily: "monospace", fontSize: 12, color: "#888" }}>No site ID in this link.</p>
         </div>
       </div>
@@ -176,7 +176,7 @@ export default function PresentationPage() {
           <img src={patternMark} alt="Pattern" style={{ height: 18, width: "auto" }} />
           <span style={{ fontFamily: "monospace", fontSize: 12, fontWeight: 900, letterSpacing: "-0.01em", color: "#111" }}>Pattern</span>
           <div style={{ width: 1, height: 14, background: "#ddd" }} />
-          <span style={{ fontFamily: "monospace", fontSize: 9, textTransform: "uppercase", letterSpacing: "0.14em", color: "#1d4ed8" }}>Client View</span>
+          <span style={{ fontFamily: "monospace", fontSize: 9, textTransform: "uppercase", letterSpacing: "0.14em", color: "#1f6b7a" }}>Client View</span>
           {property && (
             <>
               <div style={{ width: 1, height: 14, background: "#ddd" }} />
@@ -186,7 +186,7 @@ export default function PresentationPage() {
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           {(property?.areaHectares ?? 0) > 0 && (
-            <span style={{ fontFamily: "monospace", fontSize: 9, color: "#1d4ed8", border: "1px solid #1d4ed8", padding: "2px 8px", letterSpacing: "0.06em" }}>
+            <span style={{ fontFamily: "monospace", fontSize: 9, color: "#1f6b7a", border: "1px solid #1f6b7a", padding: "2px 8px", letterSpacing: "0.06em" }}>
               {property?.areaHectares?.toFixed(2)} ha
             </span>
           )}
@@ -204,7 +204,7 @@ export default function PresentationPage() {
           {isLoading ? (
             <div className="absolute inset-0 flex items-center justify-center" style={{ background: "#f7f7f7" }}>
               <div className="flex flex-col items-center gap-3">
-                <div className="w-6 h-6 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: "#1d4ed8" }} />
+                <div className="w-6 h-6 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: "#1f6b7a" }} />
                 <p className="text-[11px] font-mono uppercase tracking-widest" style={{ color: "#bbb" }}>Loading terrain...</p>
               </div>
             </div>
@@ -246,7 +246,7 @@ export default function PresentationPage() {
 
           {/* Sidebar header */}
           <div className="shrink-0 px-5 py-4" style={{ borderBottom: "2px solid #111" }}>
-            <h2 className="text-[11px] font-bold uppercase tracking-[0.15em] mb-0.5" style={{ color: "#1d4ed8" }}>
+            <h2 className="text-[11px] font-bold uppercase tracking-[0.15em] mb-0.5" style={{ color: "#1f6b7a" }}>
               Property Resilience Dossier
             </h2>
             <p className="text-[10px] font-mono" style={{ color: "#bbb" }}>
@@ -261,7 +261,7 @@ export default function PresentationPage() {
 
             {isLoading && (
               <div className="flex items-center justify-center py-12">
-                <div className="w-5 h-5 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: "#1d4ed8" }} />
+                <div className="w-5 h-5 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: "#1f6b7a" }} />
               </div>
             )}
 
@@ -318,7 +318,7 @@ export default function PresentationPage() {
                       {[
                         { key: "WaterStrategy",          title: "Water Strategy",         accent: "#3b82f6" },
                         { key: "SunAndEnergy",           title: "Sun & Energy",            accent: "#ca8a04" },
-                        { key: "LandAndBiodiversity",    title: "Land & Biodiversity",     accent: "#16a34a" },
+                        { key: "LandAndBiodiversity",    title: "Land & Biodiversity",     accent: "#4a6b2e" },
                         { key: "ClimateResilience",      title: "Climate Resilience",      accent: "#6366f1" },
                         { key: "InfrastructureCritique", title: "Infrastructure Critique", accent: "#ea580c" },
                       ].map(({ key, title, accent }) => {

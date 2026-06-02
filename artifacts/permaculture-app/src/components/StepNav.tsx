@@ -2,7 +2,7 @@ import { useLocation } from "wouter";
 import { useAppStore } from "@/store/useAppStore";
 import { ClipboardList, Map, BarChart3, Layers, FolderOpen } from "lucide-react";
 
-const GREEN = "#2d6a4f";
+const GREEN = "#4a6b2e";
 const MID   = "#6b5f4e";
 const DIM   = "#a89880";
 

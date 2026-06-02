@@ -39,7 +39,7 @@ function ProgressBar({ step }: { step: number }) {
           <div
             className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 transition-all duration-300"
             style={{
-              background: i < step ? "#2D6A1A" : i === step ? "#4a9a28" : "hsl(103, 20%, 16%)",
+              background: i < step ? "#2D6A1A" : i === step ? "#4a9a28" : "hsl(94, 20%, 16%)",
               border: i === step ? "2px solid #6cc040" : "2px solid transparent",
               color: i <= step ? "#fff" : "hsl(42, 15%, 45%)",
             }}
@@ -49,7 +49,7 @@ function ProgressBar({ step }: { step: number }) {
           {i < TOTAL_STEPS - 1 && (
             <div
               className="flex-1 h-0.5 rounded transition-all duration-500"
-              style={{ background: i < step ? "#2D6A1A" : "hsl(103, 20%, 20%)" }}
+              style={{ background: i < step ? "#2D6A1A" : "hsl(94, 20%, 20%)" }}
             />
           )}
         </div>
@@ -68,7 +68,7 @@ const STEP_LABELS = [
 function StepLabel({ step }: { step: number }) {
   return (
     <div className="text-center mb-5">
-      <div className="text-[10px] uppercase tracking-widest mb-0.5" style={{ color: "hsl(103, 30%, 50%)" }}>
+      <div className="text-[10px] uppercase tracking-widest mb-0.5" style={{ color: "hsl(94, 30%, 50%)" }}>
         Step {step + 1} of {TOTAL_STEPS}
       </div>
       <div className="text-base font-semibold" style={{ color: "hsl(42, 28%, 88%)" }}>
@@ -85,14 +85,14 @@ function CheckboxField({
     <label
       className="flex items-center gap-2.5 py-2 px-3 rounded cursor-pointer transition-colors"
       style={{
-        background: checked ? "hsl(103, 30%, 14%)" : "hsl(103, 20%, 10%)",
-        border: `1px solid ${checked ? "#4a9a28" : "hsl(103, 20%, 18%)"}`,
+        background: checked ? "hsl(94, 30%, 14%)" : "hsl(94, 20%, 10%)",
+        border: `1px solid ${checked ? "#4a9a28" : "hsl(94, 20%, 18%)"}`,
       }}
       onClick={() => onChange(!checked)}
     >
       <div
         className="w-4 h-4 rounded flex items-center justify-center shrink-0 transition-all"
-        style={{ background: checked ? "#4a9a28" : "hsl(103, 20%, 16%)", border: checked ? "none" : "1px solid hsl(103, 20%, 30%)" }}
+        style={{ background: checked ? "#4a9a28" : "hsl(94, 20%, 16%)", border: checked ? "none" : "1px solid hsl(94, 20%, 30%)" }}
       >
         {checked && <span className="text-white text-[10px] font-bold">✓</span>}
       </div>
@@ -112,8 +112,8 @@ function SelectField({
         onChange={(e) => onChange(e.target.value)}
         className="w-full rounded px-3 py-2.5 text-[13px] appearance-none"
         style={{
-          background: "hsl(103, 20%, 12%)",
-          border: "1px solid hsl(103, 20%, 22%)",
+          background: "hsl(94, 20%, 12%)",
+          border: "1px solid hsl(94, 20%, 22%)",
           color: "hsl(42, 28%, 88%)",
           outline: "none",
         }}
@@ -363,8 +363,8 @@ export function OnboardingModal({ propertyId, propertyName, boundaryGeojson, onC
                   onChange={(e) => setHouseholdSize(Math.max(1, parseInt(e.target.value) || 1))}
                   className="flex-1 rounded px-3 py-2.5 text-[13px]"
                   style={{
-                    background: "hsl(103, 20%, 12%)",
-                    border: "1px solid hsl(103, 20%, 22%)",
+                    background: "hsl(94, 20%, 12%)",
+                    border: "1px solid hsl(94, 20%, 22%)",
                     color: "hsl(42, 28%, 88%)",
                     outline: "none",
                   }}
@@ -390,8 +390,8 @@ export function OnboardingModal({ propertyId, propertyName, boundaryGeojson, onC
                   onChange={(e) => setMachineryWidthM(parseFloat(e.target.value))}
                   className="flex-1 rounded px-3 py-2.5 text-[13px]"
                   style={{
-                    background: "hsl(103, 20%, 12%)",
-                    border: "1px solid hsl(103, 20%, 22%)",
+                    background: "hsl(94, 20%, 12%)",
+                    border: "1px solid hsl(94, 20%, 22%)",
                     color: "hsl(42, 28%, 88%)",
                     outline: "none",
                   }}
@@ -447,7 +447,7 @@ export function OnboardingModal({ propertyId, propertyName, boundaryGeojson, onC
               options={MAINTENANCE_OPTS}
               onChange={setMaintenanceCapacity}
             />
-            <div className="rounded p-3 text-[11px]" style={{ background: "hsl(103, 20%, 10%)", border: "1px solid hsl(103, 20%, 18%)", color: "hsl(42, 15%, 55%)" }}>
+            <div className="rounded p-3 text-[11px]" style={{ background: "hsl(94, 20%, 10%)", border: "1px solid hsl(94, 20%, 18%)", color: "hsl(42, 15%, 55%)" }}>
               After submitting, your design workspace will open with terrain contours, sector analysis tools, and the keyline water automation layer — all pre-configured for this property.
             </div>
           </div>
@@ -469,9 +469,9 @@ export function OnboardingModal({ propertyId, propertyName, boundaryGeojson, onC
       <div
         className="relative w-full max-w-md mx-4 rounded-2xl shadow-2xl flex flex-col"
         style={{
-          background: "hsl(103, 25%, 8%)",
-          border: "1px solid hsl(103, 25%, 16%)",
-          boxShadow: "0 25px 80px rgba(0,0,0,0.7), 0 0 0 1px hsl(103, 30%, 12%)",
+          background: "hsl(94, 25%, 8%)",
+          border: "1px solid hsl(94, 25%, 16%)",
+          boxShadow: "0 25px 80px rgba(0,0,0,0.7), 0 0 0 1px hsl(94, 30%, 12%)",
           maxHeight: "90vh",
         }}
       >
@@ -479,7 +479,7 @@ export function OnboardingModal({ propertyId, propertyName, boundaryGeojson, onC
         <div className="px-6 pt-6 pb-0">
           <div className="flex items-start justify-between mb-1">
             <div>
-              <div className="text-[10px] uppercase tracking-widest mb-0.5" style={{ color: "hsl(103, 40%, 45%)" }}>
+              <div className="text-[10px] uppercase tracking-widest mb-0.5" style={{ color: "hsl(94, 40%, 45%)" }}>
                 Site Survey — {propertyName}
               </div>
               <div className="text-lg font-bold" style={{ color: "hsl(42, 28%, 90%)" }}>
@@ -489,7 +489,7 @@ export function OnboardingModal({ propertyId, propertyName, boundaryGeojson, onC
             <button
               onClick={onClose}
               className="mt-0.5 w-7 h-7 rounded-full flex items-center justify-center transition-colors"
-              style={{ color: "hsl(42, 15%, 45%)", background: "hsl(103, 20%, 13%)" }}
+              style={{ color: "hsl(42, 15%, 45%)", background: "hsl(94, 20%, 13%)" }}
             >
               ✕
             </button>
@@ -513,14 +513,14 @@ export function OnboardingModal({ propertyId, propertyName, boundaryGeojson, onC
             ✗ {saveError}
           </div>
         )}
-        <div className="px-6 py-5 flex items-center justify-between gap-3" style={{ borderTop: "1px solid hsl(103, 20%, 14%)" }}>
+        <div className="px-6 py-5 flex items-center justify-between gap-3" style={{ borderTop: "1px solid hsl(94, 20%, 14%)" }}>
           <button
             onClick={handleBack}
             disabled={step === 0}
             className="px-5 py-2.5 rounded-lg text-[13px] font-medium transition-all"
             style={{
-              background: step === 0 ? "transparent" : "hsl(103, 20%, 14%)",
-              border: `1px solid ${step === 0 ? "transparent" : "hsl(103, 20%, 22%)"}`,
+              background: step === 0 ? "transparent" : "hsl(94, 20%, 14%)",
+              border: `1px solid ${step === 0 ? "transparent" : "hsl(94, 20%, 22%)"}`,
               color: step === 0 ? "hsl(42, 15%, 35%)" : "hsl(42, 20%, 70%)",
               cursor: step === 0 ? "default" : "pointer",
             }}
@@ -536,7 +536,7 @@ export function OnboardingModal({ propertyId, propertyName, boundaryGeojson, onC
                 style={{
                   width: i === step ? 16 : 5,
                   height: 5,
-                  background: i === step ? "#4a9a28" : i < step ? "#2D6A1A" : "hsl(103, 20%, 22%)",
+                  background: i === step ? "#4a9a28" : i < step ? "#2D6A1A" : "hsl(94, 20%, 22%)",
                 }}
               />
             ))}
@@ -548,7 +548,7 @@ export function OnboardingModal({ propertyId, propertyName, boundaryGeojson, onC
               disabled={saving}
               className="px-5 py-2.5 rounded-lg text-[13px] font-semibold transition-all flex items-center gap-2"
               style={{
-                background: saving ? "hsl(103, 30%, 15%)" : "linear-gradient(135deg, #2D6A1A, #4a9a28)",
+                background: saving ? "hsl(94, 30%, 15%)" : "linear-gradient(135deg, #2D6A1A, #4a9a28)",
                 color: saving ? "hsl(42, 15%, 50%)" : "#fff",
                 border: "1px solid #4a9a28",
                 boxShadow: saving ? "none" : "0 4px 15px rgba(45, 106, 26, 0.4)",
@@ -570,10 +570,10 @@ export function OnboardingModal({ propertyId, propertyName, boundaryGeojson, onC
               className="px-5 py-2.5 rounded-lg text-[13px] font-semibold transition-all"
               style={{
                 background: step === 0 && baselineLoading
-                  ? "hsl(103, 20%, 14%)"
+                  ? "hsl(94, 20%, 14%)"
                   : "linear-gradient(135deg, #2D6A1A, #4a9a28)",
                 color: step === 0 && baselineLoading ? "hsl(42, 15%, 45%)" : "#fff",
-                border: "1px solid hsl(103, 30%, 25%)",
+                border: "1px solid hsl(94, 30%, 25%)",
                 boxShadow: step === 0 && baselineLoading ? "none" : "0 4px 15px rgba(45, 106, 26, 0.3)",
               }}
             >
@@ -591,7 +591,7 @@ export function OnboardingModal({ propertyId, propertyName, boundaryGeojson, onC
 function BaselineSection({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <div className="text-[9px] uppercase tracking-widest font-semibold mb-1.5 px-0.5" style={{ color: "hsl(103, 35%, 40%)" }}>
+      <div className="text-[9px] uppercase tracking-widest font-semibold mb-1.5 px-0.5" style={{ color: "hsl(94, 35%, 40%)" }}>
         {label}
       </div>
       <div className="space-y-1.5">{children}</div>
@@ -605,11 +605,11 @@ function BaselineCard({ icon, label, value, sublabel }: { icon: string; label: s
   return (
     <div
       className="rounded-xl p-3.5 flex items-start gap-3"
-      style={{ background: "hsl(103, 22%, 11%)", border: "1px solid hsl(103, 22%, 18%)" }}
+      style={{ background: "hsl(94, 22%, 11%)", border: "1px solid hsl(94, 22%, 18%)" }}
     >
       <div className="text-2xl leading-none mt-0.5">{icon}</div>
       <div className="flex-1 min-w-0">
-        <div className="text-[10px] uppercase tracking-wider mb-0.5" style={{ color: "hsl(103, 30%, 45%)" }}>{label}</div>
+        <div className="text-[10px] uppercase tracking-wider mb-0.5" style={{ color: "hsl(94, 30%, 45%)" }}>{label}</div>
         <div className="text-[13px] font-semibold truncate" style={{ color: "hsl(42, 28%, 88%)" }}>{value}</div>
         <div className="text-[10px] mt-0.5" style={{ color: "hsl(42, 15%, 45%)" }}>{sublabel}</div>
       </div>

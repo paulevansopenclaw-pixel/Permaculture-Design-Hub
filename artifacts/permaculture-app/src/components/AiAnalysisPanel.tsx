@@ -59,7 +59,7 @@ export function AiAnalysisPanel({ propertyId, hasBrief, savedReport, savedAt, on
 
   if (!hasBrief) {
     return (
-      <div className="rounded-xl p-4 text-[12px] text-center space-y-1" style={{ background: "hsl(103, 22%, 10%)", border: "1px solid hsl(103, 22%, 18%)", color: "hsl(42, 15%, 50%)" }}>
+      <div className="rounded-xl p-4 text-[12px] text-center space-y-1" style={{ background: "hsl(94, 22%, 10%)", border: "1px solid hsl(94, 22%, 18%)", color: "hsl(42, 15%, 50%)" }}>
         <div className="text-2xl mb-2">🛡</div>
         <div className="font-semibold" style={{ color: "hsl(42, 28%, 75%)" }}>Site survey required</div>
         <div>The AI needs climate, soil, and infrastructure data from your survey before it can generate an autonomy report.</div>
@@ -76,9 +76,9 @@ export function AiAnalysisPanel({ propertyId, hasBrief, savedReport, savedAt, on
           disabled={isLoading}
           className="w-full py-2.5 rounded-lg text-[13px] font-semibold transition-all flex items-center justify-center gap-2"
           style={{
-            background: isLoading ? "hsl(103, 25%, 13%)" : "linear-gradient(135deg, #1a4a0d, #3a8220)",
-            color: isLoading ? "hsl(103, 25%, 45%)" : "#e8f5e2",
-            border: `1px solid ${isLoading ? "hsl(103, 22%, 22%)" : "#4a9a28"}`,
+            background: isLoading ? "hsl(94, 25%, 13%)" : "linear-gradient(135deg, #1a4a0d, #3a8220)",
+            color: isLoading ? "hsl(94, 25%, 45%)" : "#e8f5e2",
+            border: `1px solid ${isLoading ? "hsl(94, 22%, 22%)" : "#4a9a28"}`,
             boxShadow: isLoading ? "none" : "0 4px 18px rgba(45,106,26,0.45)",
           }}
         >
@@ -93,7 +93,7 @@ export function AiAnalysisPanel({ propertyId, hasBrief, savedReport, savedAt, on
         </button>
 
         {isLoading && (
-          <p className="text-center text-[10px] animate-pulse" style={{ color: "hsl(103, 30%, 45%)" }}>
+          <p className="text-center text-[10px] animate-pulse" style={{ color: "hsl(94, 30%, 45%)" }}>
             {LOADING_MESSAGES[loadingMsgIdx]}
           </p>
         )}
@@ -136,8 +136,8 @@ export function AiAnalysisPanel({ propertyId, hasBrief, savedReport, savedAt, on
           />
           <ReportCard
             icon="🌾"
-            accent="hsl(103, 35%, 20%)"
-            accentBorder="hsl(103, 35%, 16%)"
+            accent="hsl(94, 35%, 20%)"
+            accentBorder="hsl(94, 35%, 16%)"
             title="Land & Biodiversity"
             value={report.LandAndBiodiversity}
             matrix
@@ -188,7 +188,7 @@ function ReportCard({
   matrix?: boolean;
 }) {
   return (
-    <div className="rounded-xl overflow-hidden" style={{ border: "1px solid hsl(103, 22%, 19%)" }}>
+    <div className="rounded-xl overflow-hidden" style={{ border: "1px solid hsl(94, 22%, 19%)" }}>
       {/* Header */}
       <div
         className="flex items-center gap-2 px-3 py-2"
@@ -200,7 +200,7 @@ function ReportCard({
         </span>
       </div>
       {/* Body */}
-      <div className="px-3 py-2.5" style={{ background: "hsl(103, 18%, 9%)" }}>
+      <div className="px-3 py-2.5" style={{ background: "hsl(94, 18%, 9%)" }}>
         {matrix && Array.isArray(value) ? (
           <MatrixTable rows={value} />
         ) : typeof value === "object" && value !== null ? (
@@ -243,7 +243,7 @@ function MatrixTable({ rows }: { rows: unknown[] }) {
               <th
                 key={k}
                 className="px-2 py-1 text-left font-bold uppercase tracking-wide"
-                style={{ color: "hsl(103, 40%, 55%)", borderBottom: "1px solid hsl(103, 22%, 20%)" }}
+                style={{ color: "hsl(94, 40%, 55%)", borderBottom: "1px solid hsl(94, 22%, 20%)" }}
               >
                 {k}
               </th>
@@ -252,7 +252,7 @@ function MatrixTable({ rows }: { rows: unknown[] }) {
         </thead>
         <tbody>
           {rows.map((row, i) => (
-            <tr key={i} style={{ borderBottom: "1px solid hsl(103, 18%, 14%)" }}>
+            <tr key={i} style={{ borderBottom: "1px solid hsl(94, 18%, 14%)" }}>
               {keys.map((k) => (
                 <td
                   key={k}
@@ -301,7 +301,7 @@ function PatternStrategyCard({ pattern }: { pattern: { recommendedPattern?: stri
       {/* Body */}
       <div
         className="px-3 py-3 space-y-3"
-        style={{ background: "linear-gradient(180deg, hsl(270, 30%, 10%), hsl(103, 18%, 9%))" }}
+        style={{ background: "linear-gradient(180deg, hsl(270, 30%, 10%), hsl(94, 18%, 9%))" }}
       >
         {pattern.rationale && (
           <div>
@@ -339,7 +339,7 @@ function ObjectDisplay({ obj }: { obj: Record<string, unknown> }) {
     <div className="space-y-2">
       {Object.entries(obj).map(([key, val]) => (
         <div key={key}>
-          <div className="text-[9px] font-bold uppercase tracking-widest mb-0.5" style={{ color: "hsl(103, 40%, 50%)" }}>
+          <div className="text-[9px] font-bold uppercase tracking-widest mb-0.5" style={{ color: "hsl(94, 40%, 50%)" }}>
             {key}
           </div>
           {Array.isArray(val) ? (

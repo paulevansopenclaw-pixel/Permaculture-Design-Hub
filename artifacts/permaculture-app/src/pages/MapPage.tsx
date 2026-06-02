@@ -2691,8 +2691,8 @@ export default function MapPage() {
         className="flex flex-col overflow-y-auto flex-shrink-0"
         style={{
           width: "18rem",
-          background: "hsl(103, 48%, 11%)",
-          borderRight: "1px solid hsl(103, 35%, 18%)",
+          background: "hsl(94, 40%, 10%)",
+          borderRight: "1px solid hsl(94, 35%, 18%)",
           ...(sidebarIsOverlay
             ? {
                 position: "fixed",
@@ -2707,12 +2707,12 @@ export default function MapPage() {
         }}
       >
         {/* Header */}
-        <div className="px-4 py-3 border-b" style={{ borderColor: "hsl(103, 35%, 18%)" }}>
+        <div className="px-4 py-3 border-b" style={{ borderColor: "hsl(94, 35%, 18%)" }}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <img src={patternMark} alt="Pattern" style={{ height: 26, width: "auto" }} />
               <div>
-                <h1 className="text-sm font-semibold tracking-tight" style={{ color: "hsl(42, 28%, 90%)" }}>Pattern</h1>
+                <h1 className="text-sm font-semibold tracking-tight" style={{ color: "hsl(44, 58%, 62%)" }}>Pattern</h1>
                 <p className="text-[10px] mt-0.5" style={{ color: "hsl(42, 15%, 55%)" }}>Natural Systems Design</p>
               </div>
             </div>
@@ -2743,7 +2743,7 @@ export default function MapPage() {
             </div>
           </div>
 
-          <div className="mt-3 flex rounded-md overflow-hidden border" style={{ borderColor: "hsl(103, 35%, 20%)" }}>
+          <div className="mt-3 flex rounded-md overflow-hidden border" style={{ borderColor: "hsl(94, 35%, 20%)" }}>
             {(["designer", "client"] as Role[]).map((r) => (
               <button
                 key={r}
@@ -2761,18 +2761,18 @@ export default function MapPage() {
         </div>
 
         {/* ── INPUT MODE TOGGLE ── */}
-        <div className="px-4 py-3 border-b" style={{ borderColor: "hsl(103, 35%, 18%)" }}>
+        <div className="px-4 py-3 border-b" style={{ borderColor: "hsl(94, 35%, 18%)" }}>
           <div className="text-[10px] font-semibold uppercase tracking-widest mb-2" style={{ color: "hsl(42, 15%, 50%)" }}>
             Input Mode
           </div>
-          <div className="flex rounded-md overflow-hidden border" style={{ borderColor: "hsl(103, 35%, 20%)" }}>
+          <div className="flex rounded-md overflow-hidden border" style={{ borderColor: "hsl(94, 35%, 20%)" }}>
             {(["native", "upload"] as const).map((mode) => (
               <button
                 key={mode}
                 onClick={() => setInputMode(mode)}
                 className="flex-1 py-1.5 text-[11px] font-medium transition-colors"
                 style={{
-                  background: inputMode === mode ? "#1d4ed8" : "transparent",
+                  background: inputMode === mode ? "#1f6b7a" : "transparent",
                   color: inputMode === mode ? "#fff" : "hsl(42, 15%, 55%)",
                 }}
               >
@@ -2788,7 +2788,7 @@ export default function MapPage() {
         </div>
 
         {/* Property selector */}
-        <div className="px-4 py-3 border-b" style={{ borderColor: "hsl(103, 35%, 18%)" }}>
+        <div className="px-4 py-3 border-b" style={{ borderColor: "hsl(94, 35%, 18%)" }}>
           <label className="text-[10px] font-semibold uppercase tracking-widest mb-1.5 block" style={{ color: "hsl(42, 15%, 50%)" }}>
             Active Property
           </label>
@@ -2796,7 +2796,7 @@ export default function MapPage() {
             <div className="flex gap-1.5">
               <input
                 className="flex-1 text-xs px-2 py-1.5 rounded border outline-none"
-                style={{ background: "hsl(103, 35%, 17%)", borderColor: "hsl(103, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
+                style={{ background: "hsl(94, 35%, 17%)", borderColor: "hsl(94, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
                 placeholder="Property name..."
                 value={newPropName}
                 onChange={(e) => setNewPropName(e.target.value)}
@@ -2810,7 +2810,7 @@ export default function MapPage() {
             <div className="flex gap-1.5">
               <select
                 className="flex-1 text-xs px-2 py-1.5 rounded border outline-none"
-                style={{ background: "hsl(103, 35%, 17%)", borderColor: "hsl(103, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
+                style={{ background: "hsl(94, 35%, 17%)", borderColor: "hsl(94, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
                 value={activePropertyId ?? ""}
                 onChange={(e) => setActivePropertyId(e.target.value || null)}
               >
@@ -2823,21 +2823,21 @@ export default function MapPage() {
                 onClick={() => setShowNewPropForm(true)}
                 title="New property"
                 className="px-2 py-1 rounded text-xs font-medium"
-                style={{ background: "hsl(103, 35%, 17%)", border: "1px solid hsl(103, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
+                style={{ background: "hsl(94, 35%, 17%)", border: "1px solid hsl(94, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
               >+</button>
             </div>
           )}
         </div>
 
         {/* Address search */}
-        <div className="px-4 py-3 border-b relative" style={{ borderColor: "hsl(103, 35%, 18%)" }}>
+        <div className="px-4 py-3 border-b relative" style={{ borderColor: "hsl(94, 35%, 18%)" }}>
           <label className="text-[10px] font-semibold uppercase tracking-widest mb-1.5 block" style={{ color: "hsl(42, 15%, 50%)" }}>
             Address Search
           </label>
           <input
             type="search"
             className="w-full text-xs px-2.5 py-1.5 rounded border outline-none"
-            style={{ background: "hsl(103, 35%, 17%)", borderColor: "hsl(103, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
+            style={{ background: "hsl(94, 35%, 17%)", borderColor: "hsl(94, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
             placeholder="Find a location..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -2847,13 +2847,13 @@ export default function MapPage() {
           {showDropdown && (
             <div
               className="absolute left-4 right-4 z-50 rounded border shadow-lg mt-1 overflow-hidden"
-              style={{ background: "hsl(103, 40%, 10%)", borderColor: "hsl(103, 30%, 22%)", top: "100%" }}
+              style={{ background: "hsl(94, 40%, 10%)", borderColor: "hsl(94, 30%, 22%)", top: "100%" }}
             >
               {searchResults.map((r, i) => (
                 <button
                   key={i}
                   className="w-full text-left px-3 py-2 text-xs transition-colors"
-                  style={{ color: "hsl(42, 28%, 85%)", borderBottom: i < searchResults.length - 1 ? "1px solid hsl(103, 25%, 16%)" : "none" }}
+                  style={{ color: "hsl(42, 28%, 85%)", borderBottom: i < searchResults.length - 1 ? "1px solid hsl(94, 25%, 16%)" : "none" }}
                   onMouseDown={() => flyToResult(r)}
                 >
                   <div className="font-medium truncate">{r.text}</div>
@@ -2954,7 +2954,7 @@ export default function MapPage() {
         {/* ── LAYER SECTIONS — native mode only ── */}
         {inputMode === "upload" ? (
           <div className="px-4 py-5 space-y-3">
-            <div className="rounded-xl p-3 text-center" style={{ background: "hsl(220,35%,10%)", border: "1px solid #1d4ed855" }}>
+            <div className="rounded-xl p-3 text-center" style={{ background: "hsl(192,35%,10%)", border: "1px solid #1f6b7a55" }}>
               <div className="text-2xl mb-2">📷</div>
               <div className="text-[11px] font-bold mb-1" style={{ color: "#60a5fa" }}>Image Upload Mode Active</div>
               <div className="text-[10px] leading-relaxed" style={{ color: "hsl(42,15%,45%)" }}>
@@ -2970,10 +2970,10 @@ export default function MapPage() {
               ].map(({ key, label, color, icon }) => {
                 const uploaded = !!uploadedMaps[key as keyof typeof uploadedMaps];
                 return (
-                  <div key={key} className="flex items-center gap-2.5 rounded-lg px-3 py-2" style={{ background: "hsl(103,35%,12%)", border: `1px solid ${uploaded ? color + "55" : "hsl(103,28%,18%)"}` }}>
+                  <div key={key} className="flex items-center gap-2.5 rounded-lg px-3 py-2" style={{ background: "hsl(94,35%,12%)", border: `1px solid ${uploaded ? color + "55" : "hsl(94,28%,18%)"}` }}>
                     <span className="text-base">{icon}</span>
                     <span className="text-[11px] flex-1" style={{ color: uploaded ? color : "hsl(42,15%,50%)" }}>{label}</span>
-                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ background: uploaded ? color + "22" : "hsl(103,25%,16%)", color: uploaded ? color : "hsl(42,15%,40%)" }}>
+                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ background: uploaded ? color + "22" : "hsl(94,25%,16%)", color: uploaded ? color : "hsl(42,15%,40%)" }}>
                       {uploaded ? "✓ Loaded" : "Empty"}
                     </span>
                   </div>
@@ -3021,14 +3021,14 @@ export default function MapPage() {
                   <button
                     onClick={handleImportOverpassBoundary}
                     className="w-full text-xs px-3 py-2 rounded font-semibold transition-colors"
-                    style={{ background: "#1d4ed8", color: "#fff", border: "1px solid #3b82f6" }}
+                    style={{ background: "#1f6b7a", color: "#fff", border: "1px solid #3b82f6" }}
                   >
                     Import {overpassCandidates.length > 1 ? "Selected" : "This"} Boundary
                   </button>
                   <button
                     onClick={() => { setOverpassCandidates([]); setOverpassSelectedIdx(0); }}
                     className="w-full text-xs px-3 py-1.5 rounded transition-colors"
-                    style={{ background: "transparent", color: "hsl(42, 15%, 50%)", border: "1px solid hsl(103, 30%, 22%)" }}
+                    style={{ background: "transparent", color: "hsl(42, 15%, 50%)", border: "1px solid hsl(94, 30%, 22%)" }}
                   >
                     Dismiss — use file upload or draw
                   </button>
@@ -3039,7 +3039,7 @@ export default function MapPage() {
               <div>
                 <label
                   className="w-full text-xs px-3 py-2 rounded font-medium text-left transition-colors cursor-pointer flex items-center gap-2"
-                  style={{ background: "hsl(103, 35%, 17%)", border: "1px solid hsl(103, 30%, 22%)", color: "hsl(42, 28%, 88%)", display: "flex" }}
+                  style={{ background: "hsl(94, 35%, 17%)", border: "1px solid hsl(94, 30%, 22%)", color: "hsl(42, 28%, 88%)", display: "flex" }}
                 >
                   <span>⬆</span> Import Boundary from GeoJSON File
                   <input type="file" accept=".geojson,.json" className="hidden" onChange={handleGeoJsonFileImport} />
@@ -3058,14 +3058,14 @@ export default function MapPage() {
                 <button
                   onClick={() => setFreehandMode(false)}
                   className="text-[10px] px-2 py-0.5 rounded-l"
-                  style={{ background: freehandMode ? "hsl(103,35%,14%)" : "hsl(84,38%,30%)", border: "1px solid hsl(84,38%,25%)", color: freehandMode ? "hsl(42,15%,50%)" : "hsl(84,55%,80%)" }}
+                  style={{ background: freehandMode ? "hsl(94,35%,14%)" : "hsl(84,38%,30%)", border: "1px solid hsl(84,38%,25%)", color: freehandMode ? "hsl(42,15%,50%)" : "hsl(84,55%,80%)" }}
                 >
                   ✦ Precise
                 </button>
                 <button
                   onClick={() => setFreehandMode(true)}
                   className="text-[10px] px-2 py-0.5 rounded-r -ml-px"
-                  style={{ background: freehandMode ? "hsl(200,50%,22%)" : "hsl(103,35%,14%)", border: "1px solid hsl(200,50%,30%)", color: freehandMode ? "#7dd3fc" : "hsl(42,15%,50%)" }}
+                  style={{ background: freehandMode ? "hsl(192,45%,24%)" : "hsl(94,35%,14%)", border: "1px solid hsl(200,50%,30%)", color: freehandMode ? "#7dd3fc" : "hsl(42,15%,50%)" }}
                 >
                   ✏ Freehand
                 </button>
@@ -3073,7 +3073,7 @@ export default function MapPage() {
 
               {isBoundaryDrawing ? (
                 <div className="space-y-2">
-                  <div className="rounded p-2.5" style={{ background: "hsl(103, 40%, 12%)", border: "1px solid hsl(84, 50%, 35%)" }}>
+                  <div className="rounded p-2.5" style={{ background: "hsl(94, 40%, 12%)", border: "1px solid hsl(84, 50%, 35%)" }}>
                     <p className="text-[10px] font-semibold mb-1" style={{ color: "hsl(84, 60%, 65%)" }}>
                       {freehandMode ? "✏ Freehand active" : "✏ Drawing active"}
                     </p>
@@ -3103,7 +3103,7 @@ export default function MapPage() {
                       setIsBoundaryDrawing(true);
                     }}
                     className="w-full text-xs px-3 py-2 rounded font-medium text-left transition-colors"
-                    style={{ background: "hsl(103, 35%, 17%)", border: "1px solid hsl(103, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
+                    style={{ background: "hsl(94, 35%, 17%)", border: "1px solid hsl(94, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
                   >
                     {freehandMode ? "✏ Freehand Boundary" : "✏ Draw Property Boundary"}
                   </button>
@@ -3133,7 +3133,7 @@ export default function MapPage() {
                         <button
                           onClick={() => { boundaryEditHandlerRef.current?.revertLayers(); setEditBoundaryMode(false); }}
                           className="px-3 text-[11px] py-1.5 rounded"
-                          style={{ color: "hsl(42,15%,55%)", border: "1px solid hsl(103,30%,22%)" }}
+                          style={{ color: "hsl(42,15%,55%)", border: "1px solid hsl(94,30%,22%)" }}
                         >
                           Cancel
                         </button>
@@ -3144,7 +3144,7 @@ export default function MapPage() {
               )}
 
               {(displayAreaHa || displayAreaAc) && (
-                <div className="rounded p-2.5" style={{ background: "hsl(103, 35%, 14%)", border: "1px solid hsl(84, 35%, 28%)" }}>
+                <div className="rounded p-2.5" style={{ background: "hsl(94, 35%, 14%)", border: "1px solid hsl(84, 35%, 28%)" }}>
                   <div className="text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: "hsl(84, 35%, 55%)" }}>Area</div>
                   <div className="text-sm font-bold" style={{ color: "hsl(42, 28%, 90%)" }}>{displayAreaHa?.toFixed(2)} ha</div>
                   <div className="text-xs mt-0.5" style={{ color: "hsl(42, 15%, 55%)" }}>{displayAreaAc?.toFixed(2)} acres</div>
@@ -3206,7 +3206,7 @@ export default function MapPage() {
                   {sectors.map((s) => {
                     const st = SECTOR_TYPES.find((t) => t.value === s.sectorType) ?? SECTOR_TYPES[0];
                     return (
-                      <div key={s.id} className="flex items-center gap-2 px-2 py-1.5 rounded" style={{ background: "hsl(103, 35%, 14%)" }}>
+                      <div key={s.id} className="flex items-center gap-2 px-2 py-1.5 rounded" style={{ background: "hsl(94, 35%, 14%)" }}>
                         <span className="text-sm">{st.emoji}</span>
                         <div className="flex-1 min-w-0">
                           <div className="text-[11px] font-medium truncate" style={{ color: "hsl(42, 28%, 85%)" }}>{s.label || st.label}</div>
@@ -3220,14 +3220,14 @@ export default function MapPage() {
             </div>
           ) : sectorCenter ? (
             <div className="space-y-2.5">
-              <div className="flex items-center justify-between px-2 py-1.5 rounded" style={{ background: "hsl(103, 35%, 14%)", border: "1px solid hsl(103, 30%, 22%)" }}>
+              <div className="flex items-center justify-between px-2 py-1.5 rounded" style={{ background: "hsl(94, 35%, 14%)", border: "1px solid hsl(94, 30%, 22%)" }}>
                 <span className="text-[11px]" style={{ color: "hsl(42, 28%, 80%)" }}>
                   Zone 0 fixed · {sectorCenter.lat.toFixed(4)}, {sectorCenter.lng.toFixed(4)}
                 </span>
                 <button
                   onClick={() => setDropSectorCenterMode(true)}
                   className="text-[10px] px-1.5 py-0.5 rounded ml-2 flex-shrink-0"
-                  style={{ color: "hsl(42, 28%, 70%)", border: "1px solid hsl(103, 30%, 28%)" }}
+                  style={{ color: "hsl(42, 28%, 70%)", border: "1px solid hsl(94, 30%, 28%)" }}
                 >
                   Move
                 </button>
@@ -3237,7 +3237,7 @@ export default function MapPage() {
                 <label className="text-[10px] font-medium mb-1 block" style={{ color: "hsl(42, 15%, 55%)" }}>Sector Type</label>
                 <select
                   className="w-full text-xs px-2 py-1.5 rounded border outline-none"
-                  style={{ background: "hsl(103, 35%, 17%)", borderColor: "hsl(103, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
+                  style={{ background: "hsl(94, 35%, 17%)", borderColor: "hsl(94, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
                   value={sectorDraft.sectorType}
                   onChange={(e) => setSectorDraft((d) => ({ ...d, sectorType: e.target.value }))}
                 >
@@ -3249,7 +3249,7 @@ export default function MapPage() {
                 <label className="text-[10px] font-medium mb-1 block" style={{ color: "hsl(42, 15%, 55%)" }}>Label (optional)</label>
                 <input
                   className="w-full text-xs px-2.5 py-1.5 rounded border outline-none"
-                  style={{ background: "hsl(103, 35%, 17%)", borderColor: "hsl(103, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
+                  style={{ background: "hsl(94, 35%, 17%)", borderColor: "hsl(94, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
                   placeholder="e.g. NW Prevailing Wind"
                   value={sectorDraft.label}
                   onChange={(e) => setSectorDraft((d) => ({ ...d, label: e.target.value }))}
@@ -3273,11 +3273,11 @@ export default function MapPage() {
                   Drag the handles on the map to set angles
                 </p>
                 <div className="grid grid-cols-2 gap-2 text-center">
-                  <div className="rounded px-2 py-1.5" style={{ background: "hsl(103,35%,14%)", border: "1.5px solid #84cc16" }}>
+                  <div className="rounded px-2 py-1.5" style={{ background: "hsl(94,35%,14%)", border: "1.5px solid #84cc16" }}>
                     <div className="text-[9px] mb-0.5" style={{ color: "hsl(42,15%,55%)" }}>Start</div>
                     <div className="text-xs font-medium" style={{ color: "#84cc16" }}>{sectorDraft.startAngle}°</div>
                   </div>
-                  <div className="rounded px-2 py-1.5" style={{ background: "hsl(103,35%,14%)", border: "1.5px solid #f97316" }}>
+                  <div className="rounded px-2 py-1.5" style={{ background: "hsl(94,35%,14%)", border: "1.5px solid #f97316" }}>
                     <div className="text-[9px] mb-0.5" style={{ color: "hsl(42,15%,55%)" }}>End</div>
                     <div className="text-xs font-medium" style={{ color: "#f97316" }}>{sectorDraft.endAngle}°</div>
                   </div>
@@ -3304,8 +3304,8 @@ export default function MapPage() {
                 onClick={() => setDropSectorCenterMode(true)}
                 className="w-full text-xs px-3 py-2 rounded font-medium transition-colors"
                 style={{
-                  background: dropSectorCenterMode ? "hsl(220, 60%, 30%)" : "hsl(103, 35%, 17%)",
-                  border: "1px solid hsl(103, 30%, 22%)",
+                  background: dropSectorCenterMode ? "hsl(220, 60%, 30%)" : "hsl(94, 35%, 17%)",
+                  border: "1px solid hsl(94, 30%, 22%)",
                   color: dropSectorCenterMode ? "#fff" : "hsl(42, 28%, 88%)",
                 }}
               >
@@ -3321,7 +3321,7 @@ export default function MapPage() {
                     {sectors.map((s) => {
                       const st = SECTOR_TYPES.find((t) => t.value === s.sectorType) ?? SECTOR_TYPES[0];
                       return (
-                        <div key={s.id} className="flex items-center gap-2 px-2 py-1.5 rounded" style={{ background: "hsl(103, 35%, 14%)" }}>
+                        <div key={s.id} className="flex items-center gap-2 px-2 py-1.5 rounded" style={{ background: "hsl(94, 35%, 14%)" }}>
                           <span className="text-sm">{st.emoji}</span>
                           <div className="flex-1 min-w-0">
                             <div className="text-[11px] font-medium truncate" style={{ color: "hsl(42, 28%, 85%)" }}>{s.label || st.label}</div>
@@ -3339,7 +3339,7 @@ export default function MapPage() {
 
           {/* ── Solar Arcs legend + radius — shown whenever sector center is placed ── */}
           {sectorCenter && activePropertyId && (
-            <div className="mt-2.5 pt-2.5 space-y-2" style={{ borderTop: "1px solid hsl(103, 30%, 20%)" }}>
+            <div className="mt-2.5 pt-2.5 space-y-2" style={{ borderTop: "1px solid hsl(94, 30%, 20%)" }}>
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "hsl(42, 28%, 65%)" }}>
                   Solar Arcs
@@ -3348,8 +3348,8 @@ export default function MapPage() {
                   onClick={() => setShowSolarArcs((v) => !v)}
                   className="text-[10px] px-2 py-0.5 rounded"
                   style={{
-                    background: showSolarArcs ? "hsl(43, 75%, 30%)" : "hsl(103, 35%, 17%)",
-                    border: "1px solid hsl(103, 30%, 26%)",
+                    background: showSolarArcs ? "hsl(43, 75%, 30%)" : "hsl(94, 35%, 17%)",
+                    border: "1px solid hsl(94, 30%, 26%)",
                     color: showSolarArcs ? "#FBBF24" : "hsl(42, 15%, 55%)",
                   }}
                 >
@@ -3392,8 +3392,8 @@ export default function MapPage() {
               style={{
                 background: waterAnalysis
                   ? "linear-gradient(135deg, hsl(198,45%,10%), hsl(198,48%,13%))"
-                  : "hsl(103, 20%, 10%)",
-                border: `1px solid ${waterAnalysis ? "hsl(198, 45%, 22%)" : "hsl(103, 20%, 18%)"}`,
+                  : "hsl(94, 20%, 10%)",
+                border: `1px solid ${waterAnalysis ? "hsl(198, 45%, 22%)" : "hsl(94, 20%, 18%)"}`,
                 color: waterAnalysis ? "hsl(198, 70%, 72%)" : "hsl(42, 15%, 38%)",
                 boxShadow: waterAnalysis ? "0 2px 12px rgba(6,182,212,0.15)" : "none",
                 opacity: !activePropertyId || !activeProperty?.boundaryGeojson ? 0.4 : 1,
@@ -3431,8 +3431,8 @@ export default function MapPage() {
                 }}
                 className="w-full text-[11px] px-3 py-1.5 rounded-lg font-medium transition-colors"
                 style={{
-                  background: waterHighlightsActive ? "hsl(142, 50%, 14%)" : "hsl(103, 22%, 12%)",
-                  border: `1px solid ${waterHighlightsActive ? "#15803d" : "hsl(103, 22%, 20%)"}`,
+                  background: waterHighlightsActive ? "hsl(142, 50%, 14%)" : "hsl(94, 22%, 12%)",
+                  border: `1px solid ${waterHighlightsActive ? "#15803d" : "hsl(94, 22%, 20%)"}`,
                   color: waterHighlightsActive ? "#4ade80" : "hsl(42, 15%, 50%)",
                 }}
               >
@@ -3480,7 +3480,7 @@ export default function MapPage() {
                   <p className="text-[11px]" style={{ color: "hsl(42, 28%, 80%)" }}>Pin placed. Add your feedback:</p>
                   <textarea
                     className="w-full text-xs px-2.5 py-2 rounded border outline-none resize-none"
-                    style={{ background: "hsl(103, 35%, 17%)", borderColor: "hsl(103, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
+                    style={{ background: "hsl(94, 35%, 17%)", borderColor: "hsl(94, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
                     rows={3}
                     placeholder="Describe what you observed or want to change..."
                     value={pinText}
@@ -3510,8 +3510,8 @@ export default function MapPage() {
                   onClick={() => setDropPinMode(true)}
                   className="w-full text-xs px-3 py-2 rounded font-medium transition-colors"
                   style={{
-                    background: dropPinMode ? "hsl(0, 60%, 38%)" : "hsl(103, 35%, 17%)",
-                    border: "1px solid hsl(103, 30%, 22%)",
+                    background: dropPinMode ? "hsl(0, 60%, 38%)" : "hsl(94, 35%, 17%)",
+                    border: "1px solid hsl(94, 30%, 22%)",
                     color: dropPinMode ? "#fff" : "hsl(42, 28%, 88%)",
                   }}
                 >
@@ -3525,7 +3525,7 @@ export default function MapPage() {
                   </div>
                   <div className="space-y-1.5 max-h-40 overflow-y-auto">
                     {comments.filter((c) => c.authorRole === "client").map((c) => (
-                      <div key={c.id} className="text-[11px] px-2 py-1.5 rounded" style={{ background: "hsl(103, 35%, 14%)", color: "hsl(42, 25%, 78%)" }}>
+                      <div key={c.id} className="text-[11px] px-2 py-1.5 rounded" style={{ background: "hsl(94, 35%, 14%)", color: "hsl(42, 25%, 78%)" }}>
                         {c.text}
                       </div>
                     ))}
@@ -3544,7 +3544,7 @@ export default function MapPage() {
                   </div>
                   <div className="space-y-1.5 max-h-48 overflow-y-auto">
                     {comments.map((c) => (
-                      <div key={c.id} className="flex items-start gap-2 px-2 py-2 rounded" style={{ background: "hsl(103, 35%, 14%)" }}>
+                      <div key={c.id} className="flex items-start gap-2 px-2 py-2 rounded" style={{ background: "hsl(94, 35%, 14%)" }}>
                         <div className="w-2 h-2 rounded-full mt-0.5 flex-shrink-0" style={{ background: "#d97706" }} />
                         <div className="flex-1 min-w-0">
                           <div className="text-[10px] mb-0.5" style={{ color: "hsl(42, 15%, 50%)" }}>{c.authorRole}</div>
@@ -3570,7 +3570,7 @@ export default function MapPage() {
             <div className="space-y-2.5">
               {pendingStructure ? (
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2 px-2 py-1.5 rounded" style={{ background: "hsl(103, 35%, 14%)", border: "1px solid hsl(103, 30%, 22%)" }}>
+                  <div className="flex items-center gap-2 px-2 py-1.5 rounded" style={{ background: "hsl(94, 35%, 14%)", border: "1px solid hsl(94, 30%, 22%)" }}>
                     {pendingFootprint ? (
                       <>
                         <span className="text-sm">⬛</span>
@@ -3585,7 +3585,7 @@ export default function MapPage() {
                   </div>
                   <select
                     className="w-full text-xs px-2 py-1.5 rounded border outline-none"
-                    style={{ background: "hsl(103, 35%, 17%)", borderColor: "hsl(103, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
+                    style={{ background: "hsl(94, 35%, 17%)", borderColor: "hsl(94, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
                     value={structureType}
                     onChange={(e) => setStructureType(e.target.value)}
                   >
@@ -3595,7 +3595,7 @@ export default function MapPage() {
                   </select>
                   <input
                     className="w-full text-xs px-2.5 py-1.5 rounded border outline-none"
-                    style={{ background: "hsl(103, 35%, 17%)", borderColor: "hsl(103, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
+                    style={{ background: "hsl(94, 35%, 17%)", borderColor: "hsl(94, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
                     placeholder="Label (e.g. Main House, Old Shed...)"
                     value={structureLabel}
                     onChange={(e) => setStructureLabel(e.target.value)}
@@ -3648,8 +3648,8 @@ export default function MapPage() {
                     disabled={drawBuildingOutlineMode}
                     className="w-full text-xs px-3 py-2 rounded font-medium transition-colors"
                     style={{
-                      background: drawBuildingOutlineMode ? "hsl(220, 60%, 30%)" : "hsl(103, 35%, 17%)",
-                      border: "1px solid hsl(103, 30%, 22%)",
+                      background: drawBuildingOutlineMode ? "hsl(220, 60%, 30%)" : "hsl(94, 35%, 17%)",
+                      border: "1px solid hsl(94, 30%, 22%)",
                       color: drawBuildingOutlineMode ? "#fff" : "hsl(42, 28%, 88%)",
                     }}
                   >
@@ -3662,8 +3662,8 @@ export default function MapPage() {
                     disabled={dropStructureMode}
                     className="w-full text-xs px-3 py-2 rounded font-medium transition-colors"
                     style={{
-                      background: dropStructureMode ? "hsl(220, 60%, 30%)" : "hsl(103, 35%, 17%)",
-                      border: "1px solid hsl(103, 30%, 22%)",
+                      background: dropStructureMode ? "hsl(220, 60%, 30%)" : "hsl(94, 35%, 17%)",
+                      border: "1px solid hsl(94, 30%, 22%)",
                       color: dropStructureMode ? "#fff" : "hsl(42, 28%, 88%)",
                     }}
                   >
@@ -3677,16 +3677,16 @@ export default function MapPage() {
                   <div className="text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: "hsl(42, 15%, 45%)" }}>
                     Label Style
                   </div>
-                  <div className="flex rounded-lg overflow-hidden" style={{ border: "1px solid hsl(103, 22%, 20%)" }}>
+                  <div className="flex rounded-lg overflow-hidden" style={{ border: "1px solid hsl(94, 22%, 20%)" }}>
                     {(["icon+label", "icon-only", "text-inside", "dot"] as const).map((mode, i, arr) => (
                       <button
                         key={mode}
                         onClick={() => setStructureLabelMode(mode)}
                         className="flex-1 py-1.5 text-[10px] font-medium transition-colors"
                         style={{
-                          background: structureLabelMode === mode ? "hsl(103, 35%, 20%)" : "hsl(103, 20%, 10%)",
-                          color: structureLabelMode === mode ? "hsl(103, 50%, 70%)" : "hsl(42, 15%, 45%)",
-                          borderRight: i < arr.length - 1 ? "1px solid hsl(103, 22%, 20%)" : "none",
+                          background: structureLabelMode === mode ? "hsl(94, 35%, 20%)" : "hsl(94, 20%, 10%)",
+                          color: structureLabelMode === mode ? "hsl(94, 50%, 70%)" : "hsl(42, 15%, 45%)",
+                          borderRight: i < arr.length - 1 ? "1px solid hsl(94, 22%, 20%)" : "none",
                         }}
                       >
                         {mode === "icon+label" ? "🏷 Icon+Label" : mode === "icon-only" ? "🔲 Icon" : mode === "text-inside" ? "Aa Text" : "· Dot"}
@@ -3706,7 +3706,7 @@ export default function MapPage() {
                       const entry = STRUCTURE_TYPES.find((t) => t.value === s.structureType);
                       const isTankItem = s.structureType === "tank";
                       return (
-                        <div key={s.id} className="flex items-center gap-2 px-2 py-1.5 rounded" style={{ background: "hsl(103, 35%, 14%)" }}>
+                        <div key={s.id} className="flex items-center gap-2 px-2 py-1.5 rounded" style={{ background: "hsl(94, 35%, 14%)" }}>
                           <span className="text-sm">{entry?.emoji ?? "📍"}</span>
                           <div className="flex-1 min-w-0">
                             <div className="text-[11px] font-medium truncate" style={{ color: "hsl(42, 28%, 85%)" }}>{s.label}</div>
@@ -3752,7 +3752,7 @@ export default function MapPage() {
                         <button
                           onClick={() => { footprintEditHandlerRef.current?.revertLayers(); setEditFootprintMode(false); }}
                           className="px-3 text-[11px] py-1.5 rounded"
-                          style={{ color: "hsl(42,15%,55%)", border: "1px solid hsl(103,30%,22%)" }}
+                          style={{ color: "hsl(42,15%,55%)", border: "1px solid hsl(94,30%,22%)" }}
                         >
                           Cancel
                         </button>
@@ -3776,7 +3776,7 @@ export default function MapPage() {
                       const entry = STRUCTURE_TYPES.find((t) => t.value === s.structureType);
                       const isTankItem = s.structureType === "tank";
                       return (
-                        <div key={s.id} className="flex items-center gap-2 px-2 py-1.5 rounded" style={{ background: "hsl(103, 35%, 14%)" }}>
+                        <div key={s.id} className="flex items-center gap-2 px-2 py-1.5 rounded" style={{ background: "hsl(94, 35%, 14%)" }}>
                           <span className="text-sm">{entry?.emoji ?? "📍"}</span>
                           <div className="flex-1 min-w-0">
                             <div className="text-[11px] font-medium truncate" style={{ color: "hsl(42, 28%, 85%)" }}>{s.label}</div>
@@ -3808,13 +3808,13 @@ export default function MapPage() {
             <div className="space-y-2.5">
               {pendingPathway ? (
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2 px-2 py-1.5 rounded" style={{ background: "hsl(103, 35%, 14%)", border: "1px solid hsl(103, 30%, 22%)" }}>
+                  <div className="flex items-center gap-2 px-2 py-1.5 rounded" style={{ background: "hsl(94, 35%, 14%)", border: "1px solid hsl(94, 30%, 22%)" }}>
                     <span style={{ display: "inline-block", width: 16, height: 3, background: PATHWAY_TYPES.find((t) => t.value === pathwayType)?.color ?? "#8B6914", borderRadius: 2, flexShrink: 0 }} />
                     <span className="text-[11px]" style={{ color: "hsl(42, 28%, 80%)" }}>Path drawn. Add details:</span>
                   </div>
                   <select
                     className="w-full text-xs px-2 py-1.5 rounded border outline-none"
-                    style={{ background: "hsl(103, 35%, 17%)", borderColor: "hsl(103, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
+                    style={{ background: "hsl(94, 35%, 17%)", borderColor: "hsl(94, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
                     value={pathwayType}
                     onChange={(e) => setPathwayType(e.target.value)}
                   >
@@ -3822,7 +3822,7 @@ export default function MapPage() {
                   </select>
                   <input
                     className="w-full text-xs px-2.5 py-1.5 rounded border outline-none"
-                    style={{ background: "hsl(103, 35%, 17%)", borderColor: "hsl(103, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
+                    style={{ background: "hsl(94, 35%, 17%)", borderColor: "hsl(94, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
                     placeholder="Label (e.g. Main Driveway, North Path...)"
                     value={pathwayLabel}
                     onChange={(e) => setPathwayLabel(e.target.value)}
@@ -3849,8 +3849,8 @@ export default function MapPage() {
                   disabled={drawPathwayMode}
                   className="w-full text-xs px-3 py-2 rounded font-medium transition-colors"
                   style={{
-                    background: drawPathwayMode ? "hsl(220, 60%, 30%)" : "hsl(103, 35%, 17%)",
-                    border: "1px solid hsl(103, 30%, 22%)",
+                    background: drawPathwayMode ? "hsl(220, 60%, 30%)" : "hsl(94, 35%, 17%)",
+                    border: "1px solid hsl(94, 30%, 22%)",
                     color: drawPathwayMode ? "#fff" : "hsl(42, 28%, 88%)",
                   }}
                 >
@@ -3868,7 +3868,7 @@ export default function MapPage() {
                     {pathways.map((p) => {
                       const pt = PATHWAY_TYPES.find((t) => t.value === p.pathwayType);
                       return (
-                        <div key={p.id} className="flex items-center gap-2 px-2 py-1.5 rounded" style={{ background: "hsl(103, 35%, 14%)" }}>
+                        <div key={p.id} className="flex items-center gap-2 px-2 py-1.5 rounded" style={{ background: "hsl(94, 35%, 14%)" }}>
                           <span style={{ display: "inline-block", width: 16, height: 3, background: pt?.color ?? "#8B6914", borderRadius: 2, flexShrink: 0 }} />
                           <div className="flex-1 min-w-0">
                             <div className="text-[11px] font-medium truncate" style={{ color: "hsl(42, 28%, 85%)" }}>{p.label}</div>
@@ -3904,7 +3904,7 @@ export default function MapPage() {
                         <button
                           onClick={() => { pathwayEditHandlerRef.current?.revertLayers(); setEditPathwayMode(false); }}
                           className="px-3 text-[11px] py-1.5 rounded"
-                          style={{ color: "hsl(42,15%,55%)", border: "1px solid hsl(103,30%,22%)" }}
+                          style={{ color: "hsl(42,15%,55%)", border: "1px solid hsl(94,30%,22%)" }}
                         >
                           Cancel
                         </button>
@@ -3927,7 +3927,7 @@ export default function MapPage() {
                     {pathways.map((p) => {
                       const pt = PATHWAY_TYPES.find((t) => t.value === p.pathwayType);
                       return (
-                        <div key={p.id} className="flex items-center gap-2 px-2 py-1.5 rounded" style={{ background: "hsl(103, 35%, 14%)" }}>
+                        <div key={p.id} className="flex items-center gap-2 px-2 py-1.5 rounded" style={{ background: "hsl(94, 35%, 14%)" }}>
                           <span style={{ display: "inline-block", width: 16, height: 3, background: pt?.color ?? "#8B6914", borderRadius: 2, flexShrink: 0 }} />
                           <div className="flex-1 min-w-0">
                             <div className="text-[11px] font-medium truncate" style={{ color: "hsl(42, 28%, 85%)" }}>{p.label}</div>
@@ -3964,8 +3964,8 @@ export default function MapPage() {
                           }}
                           className="w-full text-left text-[11px] px-2.5 py-2 rounded flex items-center gap-2.5"
                           style={{
-                            background: isActive ? "hsl(103,35%,22%)" : "hsl(103,35%,15%)",
-                            border: `1.5px solid ${isActive ? s.color : "hsl(103,30%,22%)"}`,
+                            background: isActive ? "hsl(94,35%,22%)" : "hsl(94,35%,15%)",
+                            border: `1.5px solid ${isActive ? s.color : "hsl(94,30%,22%)"}`,
                             color: isActive ? s.fillColor : "hsl(42,20%,70%)",
                             cursor: "pointer",
                           }}
@@ -4021,7 +4021,7 @@ export default function MapPage() {
                             setEditZoneMode(false);
                           }}
                           className="px-3 text-[11px] py-1.5 rounded"
-                          style={{ color: "hsl(42,15%,55%)", border: "1px solid hsl(103,30%,22%)" }}
+                          style={{ color: "hsl(42,15%,55%)", border: "1px solid hsl(94,30%,22%)" }}
                         >
                           Cancel
                         </button>
@@ -4039,7 +4039,7 @@ export default function MapPage() {
                         {[...zones].sort((a, b) => a.zoneNumber - b.zoneNumber).map((z) => {
                           const s = ZONE_STYLES.find((st) => st.zone === z.zoneNumber);
                           return (
-                            <div key={z.id} className="flex items-center gap-2 px-2 py-1.5 rounded" style={{ background: "hsl(103, 35%, 14%)" }}>
+                            <div key={z.id} className="flex items-center gap-2 px-2 py-1.5 rounded" style={{ background: "hsl(94, 35%, 14%)" }}>
                               <span style={{ display: "inline-block", width: 10, height: 10, background: s?.fillColor ?? "#ccc", border: `1.5px solid ${s?.color ?? "#888"}`, borderRadius: 2, flexShrink: 0 }} />
                               <div className="flex-1 min-w-0">
                                 <div className="text-[11px] font-medium truncate" style={{ color: "hsl(42, 28%, 85%)" }}>{s?.label ?? `Zone ${z.zoneNumber}`}</div>
@@ -4104,8 +4104,8 @@ export default function MapPage() {
                         onClick={() => setSensoryVectorType(t)}
                         className="w-full text-left text-[11px] px-2.5 py-1.5 rounded-lg font-medium transition-colors"
                         style={{
-                          background: active ? `${colors[t]}22` : "hsl(103, 22%, 11%)",
-                          border: `1px solid ${active ? colors[t] : "hsl(103, 22%, 20%)"}`,
+                          background: active ? `${colors[t]}22` : "hsl(94, 22%, 11%)",
+                          border: `1px solid ${active ? colors[t] : "hsl(94, 22%, 20%)"}`,
                           color: active ? colors[t] : "hsl(42, 15%, 55%)",
                         }}
                       >
@@ -4119,7 +4119,7 @@ export default function MapPage() {
               {/* Label */}
               <input
                 className="w-full text-[11px] px-2.5 py-1.5 rounded border outline-none"
-                style={{ background: "hsl(103, 35%, 14%)", borderColor: "hsl(103, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
+                style={{ background: "hsl(94, 35%, 14%)", borderColor: "hsl(94, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
                 placeholder="Label (optional)"
                 value={sensoryVectorLabel}
                 onChange={(e) => setSensoryVectorLabel(e.target.value)}
@@ -4132,8 +4132,8 @@ export default function MapPage() {
                     onClick={() => { setDropSensoryPointMode(true); setDrawSensoryLineMode(false); }}
                     className="flex-1 text-[11px] py-1.5 rounded font-medium transition-colors"
                     style={{
-                      background: dropSensoryPointMode ? "hsl(270, 40%, 18%)" : "hsl(103, 22%, 12%)",
-                      border: `1px solid ${dropSensoryPointMode ? "#a855f7" : "hsl(103, 22%, 22%)"}`,
+                      background: dropSensoryPointMode ? "hsl(270, 40%, 18%)" : "hsl(94, 22%, 12%)",
+                      border: `1px solid ${dropSensoryPointMode ? "#a855f7" : "hsl(94, 22%, 22%)"}`,
                       color: dropSensoryPointMode ? "#c084fc" : "hsl(42, 15%, 55%)",
                     }}
                   >
@@ -4143,8 +4143,8 @@ export default function MapPage() {
                     onClick={() => { setDrawSensoryLineMode(true); setDropSensoryPointMode(false); }}
                     className="flex-1 text-[11px] py-1.5 rounded font-medium transition-colors"
                     style={{
-                      background: drawSensoryLineMode ? "hsl(270, 40%, 18%)" : "hsl(103, 22%, 12%)",
-                      border: `1px solid ${drawSensoryLineMode ? "#a855f7" : "hsl(103, 22%, 22%)"}`,
+                      background: drawSensoryLineMode ? "hsl(270, 40%, 18%)" : "hsl(94, 22%, 12%)",
+                      border: `1px solid ${drawSensoryLineMode ? "#a855f7" : "hsl(94, 22%, 22%)"}`,
                       color: drawSensoryLineMode ? "#c084fc" : "hsl(42, 15%, 55%)",
                     }}
                   >
@@ -4260,7 +4260,7 @@ export default function MapPage() {
         <div className="flex-1" />
 
         {/* ── WORKFLOW NAVIGATION ── */}
-        <div className="shrink-0 px-3 py-3 border-t" style={{ borderColor: "hsl(103, 35%, 18%)" }}>
+        <div className="shrink-0 px-3 py-3 border-t" style={{ borderColor: "hsl(94, 35%, 18%)" }}>
           <div className="text-[9px] uppercase tracking-widest mb-2 px-0.5" style={{ color: "hsl(42, 15%, 35%)" }}>
             Workflow
           </div>
@@ -4279,8 +4279,8 @@ export default function MapPage() {
                   style={{
                     display: "flex", alignItems: "center", gap: 8,
                     padding: "5px 8px", borderRadius: 7, border: "none", cursor: "pointer",
-                    background: isActive ? "hsl(103,35%,17%)" : "transparent",
-                    color: isActive ? "hsl(103,55%,72%)" : "hsl(42,20%,55%)",
+                    background: isActive ? "hsl(94,35%,17%)" : "transparent",
+                    color: isActive ? "hsl(94,55%,72%)" : "hsl(42,20%,55%)",
                     fontSize: 11, fontWeight: isActive ? 600 : 400, fontFamily: "inherit",
                     textAlign: "left",
                   }}
@@ -4294,7 +4294,7 @@ export default function MapPage() {
           <button
             onClick={() => navigate("/analysis")}
             className="mt-2 w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-[11px] font-semibold transition-all"
-            style={{ background: "linear-gradient(135deg, hsl(103,25%,11%), hsl(103,28%,14%))", color: "hsl(103, 40%, 70%)", border: "1px solid hsl(103, 28%, 22%)" }}
+            style={{ background: "linear-gradient(135deg, hsl(94,25%,11%), hsl(94,28%,14%))", color: "hsl(94, 40%, 70%)", border: "1px solid hsl(94, 28%, 22%)" }}
           >
             <span>⚡</span> Next: Run AI Analysis →
           </button>
@@ -4307,7 +4307,7 @@ export default function MapPage() {
           className="absolute left-0 right-0 flex items-center gap-3 px-4 py-2.5 z-50"
           style={{
             top: 0,
-            background: "linear-gradient(90deg, #1e3a8a, #1d4ed8)",
+            background: "linear-gradient(90deg, #14524a, #1f6b7a)",
             borderBottom: "2px solid #3b82f6",
             boxShadow: "0 4px 20px rgba(29,78,216,0.5)",
           }}
@@ -4334,7 +4334,7 @@ export default function MapPage() {
       {/* ── MAP ── */}
       <div
         className="flex-1 relative"
-        style={{ background: "hsl(103, 18%, 5%)", marginTop: pendingMapElement ? "48px" : 0, transition: "margin-top 0.2s ease" }}
+        style={{ background: "hsl(94, 18%, 5%)", marginTop: pendingMapElement ? "48px" : 0, transition: "margin-top 0.2s ease" }}
       >
 
         {/* ── 16:9 CANVAS HOST — full-bleed in native mode, centred+locked in upload mode ── */}
@@ -4349,7 +4349,7 @@ export default function MapPage() {
             border: "1px solid rgba(255,255,255,0.12)",
             borderRadius: "6px",
             overflow: "hidden",
-            boxShadow: "0 0 0 9999px hsl(103,18%,5%)",
+            boxShadow: "0 0 0 9999px hsl(94,18%,5%)",
           } : {
             position: "absolute", inset: 0,
           }}
@@ -4444,8 +4444,8 @@ export default function MapPage() {
             className="absolute top-3 left-3 flex items-center gap-2 px-3 py-2.5 rounded-xl text-[12px] font-semibold shadow-lg"
             style={{
               zIndex: 30,
-              background: "hsl(103, 48%, 11%)",
-              border: "1px solid hsl(103, 35%, 25%)",
+              background: "hsl(94, 40%, 10%)",
+              border: "1px solid hsl(94, 35%, 25%)",
               color: "hsl(42, 28%, 85%)",
               boxShadow: "0 4px 16px rgba(0,0,0,0.5)",
             }}
@@ -4478,7 +4478,7 @@ export default function MapPage() {
         )}
 
         {!mapLoaded && (
-          <div className="absolute inset-0 flex items-center justify-center" style={{ background: "hsl(103, 18%, 8%)" }}>
+          <div className="absolute inset-0 flex items-center justify-center" style={{ background: "hsl(94, 18%, 8%)" }}>
             <div className="flex flex-col items-center gap-3">
               <div className="w-7 h-7 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: "hsl(84, 38%, 42%)" }} />
               <span className="text-sm" style={{ color: "hsl(42, 20%, 55%)" }}>Loading map...</span>
@@ -5009,7 +5009,7 @@ export default function MapPage() {
 function SidebarSection({ label, children, defaultOpen = false }: { label: string; children: ReactNode; defaultOpen?: boolean }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="border-b" style={{ borderColor: "hsl(103, 35%, 18%)" }}>
+    <div className="border-b" style={{ borderColor: "hsl(94, 35%, 18%)" }}>
       <button
         onClick={() => setOpen((v) => !v)}
         className="w-full px-4 py-3.5 flex items-center justify-between text-left"
@@ -5060,7 +5060,7 @@ function ClientBoundaryRequest({
   return (
     <div className="space-y-2.5">
       {hasExistingBoundary && (areaHa || areaAc) && (
-        <div className="rounded p-2.5" style={{ background: "hsl(103, 35%, 14%)", border: "1px solid hsl(103, 28%, 20%)" }}>
+        <div className="rounded p-2.5" style={{ background: "hsl(94, 35%, 14%)", border: "1px solid hsl(94, 28%, 20%)" }}>
           <div className="text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: "hsl(84, 35%, 55%)" }}>Property Area</div>
           <div className="text-sm font-bold" style={{ color: "hsl(42, 28%, 90%)" }}>{areaHa?.toFixed(2)} ha</div>
           <div className="text-xs mt-0.5" style={{ color: "hsl(42, 15%, 55%)" }}>{areaAc?.toFixed(2)} acres</div>
@@ -5073,7 +5073,7 @@ function ClientBoundaryRequest({
         <div className="text-[10px] mb-1" style={{ color: "hsl(42, 15%, 55%)" }}>Request Boundary Change</div>
         <textarea
           className="w-full text-xs px-2.5 py-2 rounded border outline-none resize-none"
-          style={{ background: "hsl(103, 35%, 17%)", borderColor: "hsl(103, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
+          style={{ background: "hsl(94, 35%, 17%)", borderColor: "hsl(94, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
           rows={2}
           placeholder="Describe the boundary change you need..."
           value={text}
@@ -5124,7 +5124,7 @@ function LayerToggle({
       </div>
       <div
         className="relative w-9 h-5 rounded-full transition-colors flex-shrink-0"
-        style={{ background: active ? "hsl(84, 38%, 42%)" : "hsl(103, 30%, 20%)" }}
+        style={{ background: active ? "hsl(84, 38%, 42%)" : "hsl(94, 30%, 20%)" }}
       >
         <span className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all" style={{ left: active ? "18px" : "2px" }} />
       </div>

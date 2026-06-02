@@ -94,7 +94,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
             />
             <button
               onClick={login}
-              style={{ width: "100%", padding: "13px 0", fontSize: 13, fontWeight: 600, background: "#2d6a4f", color: "#fff", border: "none", borderRadius: 9, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 2px 10px rgba(45,106,79,0.35)" }}
+              style={{ width: "100%", padding: "13px 0", fontSize: 13, fontWeight: 600, background: "#4a6b2e", color: "#fff", border: "none", borderRadius: 9, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 2px 10px rgba(74,107,46,0.35)" }}
             >
               Sign In to Access
             </button>

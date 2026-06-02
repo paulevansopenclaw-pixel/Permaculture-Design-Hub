@@ -192,7 +192,7 @@ function MiniMap({ mode, boundaryGeojson, token, zones = [], structures = [], se
       style: (f) => {
         const elev = (f?.properties?.elevation ?? 0) as number;
         const isMajor = elev % 10 === 0;
-        return { color: "#1d4ed8", weight: isMajor ? 1.5 : 0.7, opacity: isMajor ? 0.75 : 0.45, fill: false };
+        return { color: "#1f6b7a", weight: isMajor ? 1.5 : 0.7, opacity: isMajor ? 0.75 : 0.45, fill: false };
       },
     }).addTo(map);
     return () => { map.removeLayer(layer); };
@@ -325,8 +325,8 @@ function MiniMap({ mode, boundaryGeojson, token, zones = [], structures = [], se
 // ── map card wrapper ──────────────────────────────────────────────────────────
 
 const MAP_CONFIGS: { mode: MiniMapMode; label: string; icon: string; accent: string }[] = [
-  { mode: "boundary",   label: "Boundary",   icon: "⬡", accent: "#16a34a" },
-  { mode: "contour",    label: "Terrain",    icon: "⛰", accent: "#1d4ed8" },
+  { mode: "boundary",   label: "Boundary",   icon: "⬡", accent: "#4a6b2e" },
+  { mode: "contour",    label: "Terrain",    icon: "⛰", accent: "#1f6b7a" },
   { mode: "zones",      label: "Zones",      icon: "🗺", accent: "#ca8a04" },
   { mode: "swales",     label: "Swales",     icon: "💧", accent: "#0ea5e9" },
   { mode: "sectors",    label: "Sectors",    icon: "🧭", accent: "#f97316" },
@@ -408,7 +408,7 @@ function DesignElementCard({
         <button
           onClick={onAddToMap}
           className="shrink-0 flex items-center gap-1 text-[10px] font-bold px-2.5 py-1.5 transition-all"
-          style={{ background: "#1d4ed8", color: "#fff", border: "2px solid #1d4ed8", whiteSpace: "nowrap" }}
+          style={{ background: "#1f6b7a", color: "#fff", border: "2px solid #1f6b7a", whiteSpace: "nowrap" }}
         >
           + Map →
         </button>
@@ -418,7 +418,7 @@ function DesignElementCard({
       )}
       {el.placement && (
         <div className="flex items-start gap-1.5">
-          <span className="text-[10px] font-bold uppercase tracking-widest shrink-0 mt-px" style={{ color: "#1d4ed8" }}>Placement</span>
+          <span className="text-[10px] font-bold uppercase tracking-widest shrink-0 mt-px" style={{ color: "#1f6b7a" }}>Placement</span>
           <span className="text-[11px] leading-relaxed" style={{ color: "#666" }}>{el.placement}</span>
         </div>
       )}
@@ -527,7 +527,7 @@ export default function AnalysisPage() {
             <button
               onClick={() => navigate("/intake")}
               className="mt-2 px-5 py-2.5 text-[13px] font-semibold"
-              style={{ background: "#1d4ed8", color: "#fff", border: "2px solid #1d4ed8" }}
+              style={{ background: "#1f6b7a", color: "#fff", border: "2px solid #1f6b7a" }}
             >
               ← Go to Intake
             </button>
@@ -550,8 +550,8 @@ export default function AnalysisPage() {
                 onClick={() => setReportTab(tab.id)}
                 className="px-5 py-3 text-[12px] font-semibold border-b-2 transition-colors"
                 style={{
-                  borderColor: reportTab === tab.id ? "#1d4ed8" : "transparent",
-                  color: reportTab === tab.id ? "#1d4ed8" : "#888",
+                  borderColor: reportTab === tab.id ? "#1f6b7a" : "transparent",
+                  color: reportTab === tab.id ? "#1f6b7a" : "#888",
                   background: "transparent",
                 }}
               >
@@ -639,7 +639,7 @@ export default function AnalysisPage() {
                   <button
                     onClick={() => navigate("/dossier")}
                     className="flex items-center gap-2 px-5 py-2 text-[12px] font-semibold"
-                    style={{ background: "#1d4ed8", color: "#fff", border: "2px solid #1d4ed8" }}
+                    style={{ background: "#1f6b7a", color: "#fff", border: "2px solid #1f6b7a" }}
                   >
                     Next: Export Studio →
                   </button>
@@ -740,7 +740,7 @@ export default function AnalysisPage() {
                   <button
                     onClick={() => setReportTab("analysis")}
                     className="px-4 py-2 text-[12px] font-semibold"
-                    style={{ background: "#1d4ed8", color: "#fff", border: "2px solid #1d4ed8" }}
+                    style={{ background: "#1f6b7a", color: "#fff", border: "2px solid #1f6b7a" }}
                   >
                     Run Analysis →
                   </button>
@@ -797,7 +797,7 @@ export default function AnalysisPage() {
                                 </td>
                                 <td className="px-3 py-2" style={{ color: "#555" }}>{p.layer}</td>
                                 <td className="px-3 py-2" style={{ color: "#555" }}>{p.purpose}</td>
-                                <td className="px-3 py-2" style={{ color: "#1d4ed8", fontWeight: 600 }}>{p.zones}</td>
+                                <td className="px-3 py-2" style={{ color: "#1f6b7a", fontWeight: 600 }}>{p.zones}</td>
                                 <td className="px-3 py-2 text-[10px]" style={{ color: "#888", maxWidth: 200 }}>{p.notes}</td>
                               </tr>
                             ))}
@@ -818,7 +818,7 @@ export default function AnalysisPage() {
                         {implementationPhases.map((ph, i) => (
                           <div key={i} style={{ border: "2px solid #e5e5e5", background: "#fff" }}>
                             <div className="flex items-center gap-3 px-4 py-2.5" style={{ borderBottom: "1px solid #e5e5e5", background: "#f7f7f7" }}>
-                              <div className="w-7 h-7 flex items-center justify-center text-[12px] font-black" style={{ background: "#1d4ed8", color: "#fff" }}>
+                              <div className="w-7 h-7 flex items-center justify-center text-[12px] font-black" style={{ background: "#1f6b7a", color: "#fff" }}>
                                 {ph.phase}
                               </div>
                               <div className="flex-1">
@@ -831,7 +831,7 @@ export default function AnalysisPage() {
                               {(ph.elements ?? []).length > 0 && (
                                 <div className="flex flex-wrap gap-1.5">
                                   {ph.elements!.map((el, j) => (
-                                    <span key={j} className="text-[10px] px-2 py-0.5 font-medium" style={{ background: "#eff6ff", color: "#1d4ed8", border: "1px solid #bfdbfe" }}>
+                                    <span key={j} className="text-[10px] px-2 py-0.5 font-medium" style={{ background: "#eff6ff", color: "#1f6b7a", border: "1px solid #bfdbfe" }}>
                                       {el}
                                     </span>
                                   ))}

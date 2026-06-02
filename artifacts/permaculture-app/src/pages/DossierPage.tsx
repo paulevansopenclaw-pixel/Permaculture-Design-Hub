@@ -336,9 +336,9 @@ export default function DossierPage() {
             style={{
               fontFamily:"inherit", fontSize:11, fontWeight:600,
               padding:"6px 13px", cursor:"pointer", borderRadius:7,
-              background: linkCopied ? "#2d6a4f" : "#fff",
+              background: linkCopied ? "#4a6b2e" : "#fff",
               color: linkCopied ? "#fff" : "#6b5f4e",
-              border: linkCopied ? "1px solid #2d6a4f" : RULE,
+              border: linkCopied ? "1px solid #4a6b2e" : RULE,
             }}
           >{linkCopied ? "✓ Link copied" : "Client Link"}</button>
           <button onClick={()=>window.print()} style={{ fontFamily:"inherit", fontSize:11, fontWeight:600, padding:"6px 14px", background:"#fff", color:INK, border:RULE, borderRadius:7, cursor:"pointer" }}>
@@ -374,7 +374,7 @@ export default function DossierPage() {
               <span style={{ fontSize:11, color:"#a89880" }}>Site Analysis Report</span>
               {(property?.areaHectares ?? 0) > 0 && (
                 <div style={{ display:"flex", alignItems:"baseline", gap:5 }}>
-                  <span style={{ fontFamily:"Georgia, serif", fontSize:22, fontWeight:700, color:"#2d6a4f" }}>{property?.areaHectares?.toFixed(2)}</span>
+                  <span style={{ fontFamily:"Georgia, serif", fontSize:22, fontWeight:700, color:"#4a6b2e" }}>{property?.areaHectares?.toFixed(2)}</span>
                   <span style={{ fontSize:10, textTransform:"uppercase", color:"#a89880" }}>ha</span>
                 </div>
               )}

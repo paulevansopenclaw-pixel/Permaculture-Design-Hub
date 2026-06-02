@@ -26,8 +26,8 @@ const INK    = "#2c2416";
 const MID    = "#6b5f4e";
 const DIM    = "#a89880";
 const RULE   = "1px solid #ddd6cc";
-const GREEN  = "#2d6a4f";
-const BLUE   = "#1d4ed8";
+const GREEN  = "#4a6b2e";
+const BLUE   = "#2b7a8c";
 const shadow = (px = 6, a = 0.07) =>
   `0 ${px / 2}px ${px}px rgba(44,36,22,${a}), 0 1px 2px rgba(44,36,22,0.04)`;
 
