@@ -9,6 +9,10 @@ import { authMiddleware } from "./middlewares/authMiddleware";
 
 const app: Express = express();
 
+// Behind Replit's reverse proxy — trust the first hop so express-rate-limit
+// and req.ip can correctly identify clients from X-Forwarded-For.
+app.set("trust proxy", 1);
+
 app.use(
   pinoHttp({
     logger,

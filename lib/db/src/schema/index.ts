@@ -9,3 +9,4 @@ export * from "./pathways";
 export * from "./zones";
 export * from "./sensoryVectors";
 export * from "./planRenders";
+export * from "./enquiries";

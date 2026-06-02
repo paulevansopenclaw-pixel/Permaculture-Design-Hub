@@ -6,8 +6,10 @@ import {
   useCreateProperty,
   useDeleteProperty,
   useUpdateProperty,
+  useClaimProperty,
   getListPropertiesQueryKey,
 } from "@workspace/api-client-react";
+import { resolveObjectUrl } from "@/lib/objectUrl";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAppStore } from "@/store/useAppStore";
 import {
@@ -69,7 +71,7 @@ function formatDate(dateStr: string) {
 function PropertyCard({
   property, onOpen, onDelete, onImageUpload,
 }: {
-  property: { id: string; name: string; areaHectares?: number | null; areaAcres?: number | null; tileImage?: string | null; createdAt: string };
+  property: { id: string; name: string; areaHectares?: number | null; areaAcres?: number | null; tileImage?: string | null; status?: string | null; createdAt: string };
   onOpen: () => void;
   onDelete: (e: React.MouseEvent) => void;
   onImageUpload: (dataUrl: string) => void;
@@ -78,6 +80,7 @@ function PropertyCard({
   const [uploading, setUploading] = useState(false);
   const [hovered,   setHovered]   = useState(false);
   const hasBoundary = (property.areaHectares ?? 0) > 0;
+  const isEnquiry = property.status === "enquiry";
 
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -109,7 +112,7 @@ function PropertyCard({
       {/* Photo area */}
       <div style={{ height: 130, position: "relative", overflow: "hidden", flexShrink: 0, background: "#e8e2d8" }}>
         {property.tileImage ? (
-          <img src={property.tileImage} alt={property.name}
+          <img src={resolveObjectUrl(property.tileImage)} alt={property.name}
             style={{ width: "100%", height: "100%", objectFit: "cover", display: "block",
                      filter: hovered ? "brightness(1.05)" : "brightness(0.97)", transition: "filter 0.2s" }} />
         ) : (
@@ -120,6 +123,13 @@ function PropertyCard({
         )}
         {/* Gradient overlay */}
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, transparent 45%, rgba(44,36,22,0.5))" }} />
+
+        {/* New enquiry badge */}
+        {isEnquiry && (
+          <div style={{ position: "absolute", top: 8, left: 8, fontSize: 9, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#fff", background: BLUE, padding: "3px 8px", borderRadius: 12, boxShadow: "0 1px 4px rgba(0,0,0,0.3)" }}>
+            New enquiry
+          </div>
+        )}
 
         {/* Property name on photo */}
         <div style={{ position: "absolute", bottom: 10, left: 12, right: 36 }}>
@@ -178,6 +188,7 @@ export default function PropertiesPage() {
   const createProperty   = useCreateProperty();
   const deleteProperty   = useDeleteProperty();
   const updateProperty   = useUpdateProperty();
+  const claimProperty    = useClaimProperty();
 
   const [showCreate, setShowCreate] = useState(false);
   const [newName,    setNewName]    = useState("");
@@ -198,7 +209,19 @@ export default function PropertiesPage() {
     );
   }
 
-  function handleOpen(id: string) {
+  async function handleOpen(id: string, status?: string | null) {
+    if (status === "enquiry") {
+      // Claim the lead for this designer BEFORE entering the workspace so the
+      // intake page never loads an unowned property.
+      try {
+        await claimProperty.mutateAsync({ id });
+        await queryClient.invalidateQueries({ queryKey: getListPropertiesQueryKey() });
+      } catch {
+        // Someone else already claimed it (or it vanished) — refresh and bail.
+        await queryClient.invalidateQueries({ queryKey: getListPropertiesQueryKey() });
+        return;
+      }
+    }
     setActivePropertyId(id);
     navigate("/intake");
   }
@@ -297,7 +320,7 @@ export default function PropertiesPage() {
                 <PropertyCard
                   key={property.id}
                   property={property}
-                  onOpen={() => handleOpen(property.id)}
+                  onOpen={() => handleOpen(property.id, property.status)}
                   onDelete={(e) => { e.stopPropagation(); setDeleteId(property.id); }}
                   onImageUpload={(dataUrl) => handleImageUpload(property.id, dataUrl)}
                 />

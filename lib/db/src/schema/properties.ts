@@ -10,6 +10,7 @@ export const propertiesTable = pgTable("properties", {
   areaHectares: real("area_hectares"),
   areaAcres: real("area_acres"),
   tileImage: text("tile_image"),
+  status: text("status").notNull().default("active"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

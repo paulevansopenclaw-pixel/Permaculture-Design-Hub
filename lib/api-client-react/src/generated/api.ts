@@ -29,6 +29,8 @@ import type {
   ConceptRenderRequest,
   DesignedSwale,
   DesignedSwaleInput,
+  EnquiryInput,
+  EnquiryResponse,
   ErrorEnvelope,
   HandleBrowserLoginCallbackParams,
   HealthStatus,
@@ -513,6 +515,76 @@ export const useDeleteProperty = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getDeletePropertyMutationOptions(options));
+    }
+
+export const getClaimPropertyUrl = (id: string,) => {
+
+
+
+
+  return `/api/properties/${id}/claim`
+}
+
+/**
+ * @summary Claim an unassigned enquiry property for the current designer
+ */
+export const claimProperty = async (id: string, options?: RequestInit): Promise<Property> => {
+
+  return customFetch<Property>(getClaimPropertyUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getClaimPropertyMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof claimProperty>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof claimProperty>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['claimProperty'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof claimProperty>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  claimProperty(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ClaimPropertyMutationResult = NonNullable<Awaited<ReturnType<typeof claimProperty>>>
+
+    export type ClaimPropertyMutationError = ErrorType<void>
+
+    /**
+ * @summary Claim an unassigned enquiry property for the current designer
+ */
+export const useClaimProperty = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof claimProperty>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof claimProperty>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getClaimPropertyMutationOptions(options));
     }
 
 export const getGetPropertyStatsUrl = (id: string,) => {
@@ -3415,4 +3487,146 @@ export function useGetStorageObject<TData = Awaited<ReturnType<typeof getStorage
 
 
 
+
+export const getRequestPublicUploadUrlUrl = () => {
+
+
+
+
+  return `/api/public/uploads/request-url`
+}
+
+/**
+ * @summary Request a presigned upload URL for a public enquiry idea photo (no auth)
+ */
+export const requestPublicUploadUrl = async (uploadUrlRequest: UploadUrlRequest, options?: RequestInit): Promise<UploadUrlResponse> => {
+
+  return customFetch<UploadUrlResponse>(getRequestPublicUploadUrlUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      uploadUrlRequest,)
+  }
+);}
+
+
+
+
+export const getRequestPublicUploadUrlMutationOptions = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestPublicUploadUrl>>, TError,{data: BodyType<UploadUrlRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof requestPublicUploadUrl>>, TError,{data: BodyType<UploadUrlRequest>}, TContext> => {
+
+const mutationKey = ['requestPublicUploadUrl'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof requestPublicUploadUrl>>, {data: BodyType<UploadUrlRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  requestPublicUploadUrl(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RequestPublicUploadUrlMutationResult = NonNullable<Awaited<ReturnType<typeof requestPublicUploadUrl>>>
+    export type RequestPublicUploadUrlMutationBody = BodyType<UploadUrlRequest>
+    export type RequestPublicUploadUrlMutationError = ErrorType<ErrorEnvelope>
+
+    /**
+ * @summary Request a presigned upload URL for a public enquiry idea photo (no auth)
+ */
+export const useRequestPublicUploadUrl = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestPublicUploadUrl>>, TError,{data: BodyType<UploadUrlRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof requestPublicUploadUrl>>,
+        TError,
+        {data: BodyType<UploadUrlRequest>},
+        TContext
+      > => {
+      return useMutation(getRequestPublicUploadUrlMutationOptions(options));
+    }
+
+export const getCreateEnquiryUrl = () => {
+
+
+
+
+  return `/api/public/enquiries`
+}
+
+/**
+ * @summary Submit a public client enquiry; auto-creates a site tile for the designer (no auth)
+ */
+export const createEnquiry = async (enquiryInput: EnquiryInput, options?: RequestInit): Promise<EnquiryResponse> => {
+
+  return customFetch<EnquiryResponse>(getCreateEnquiryUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      enquiryInput,)
+  }
+);}
+
+
+
+
+export const getCreateEnquiryMutationOptions = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createEnquiry>>, TError,{data: BodyType<EnquiryInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createEnquiry>>, TError,{data: BodyType<EnquiryInput>}, TContext> => {
+
+const mutationKey = ['createEnquiry'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createEnquiry>>, {data: BodyType<EnquiryInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createEnquiry(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateEnquiryMutationResult = NonNullable<Awaited<ReturnType<typeof createEnquiry>>>
+    export type CreateEnquiryMutationBody = BodyType<EnquiryInput>
+    export type CreateEnquiryMutationError = ErrorType<ErrorEnvelope>
+
+    /**
+ * @summary Submit a public client enquiry; auto-creates a site tile for the designer (no auth)
+ */
+export const useCreateEnquiry = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createEnquiry>>, TError,{data: BodyType<EnquiryInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createEnquiry>>,
+        TError,
+        {data: BodyType<EnquiryInput>},
+        TContext
+      > => {
+      return useMutation(getCreateEnquiryMutationOptions(options));
+    }
 

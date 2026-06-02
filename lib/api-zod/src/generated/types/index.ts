@@ -18,6 +18,8 @@ export * from './comprehensivePlant';
 export * from './conceptRenderRequest';
 export * from './designedSwale';
 export * from './designedSwaleInput';
+export * from './enquiryInput';
+export * from './enquiryResponse';
 export * from './errorEnvelope';
 export * from './handleBrowserLoginCallbackParams';
 export * from './healthStatus';

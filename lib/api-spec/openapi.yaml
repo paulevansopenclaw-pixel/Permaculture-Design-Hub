@@ -141,6 +141,27 @@ paths:
         "204":
           description: Deleted
 
+  /properties/{id}/claim:
+    post:
+      operationId: claimProperty
+      tags: [properties]
+      summary: Claim an unassigned enquiry property for the current designer
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Claimed property
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Property"
+        "404":
+          description: Not found
+
   /properties/{id}/stats:
     get:
       operationId: getPropertyStats
@@ -1037,6 +1058,56 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
 
+  /public/uploads/request-url:
+    post:
+      tags: [public]
+      operationId: requestPublicUploadUrl
+      summary: Request a presigned upload URL for a public enquiry idea photo (no auth)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UploadUrlRequest'
+      responses:
+        '200':
+          description: Presigned upload URL generated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadUrlResponse'
+        '400':
+          description: Missing or invalid required fields.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+
+  /public/enquiries:
+    post:
+      tags: [public]
+      operationId: createEnquiry
+      summary: Submit a public client enquiry; auto-creates a site tile for the designer (no auth)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnquiryInput'
+      responses:
+        '201':
+          description: Enquiry received and site tile created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnquiryResponse'
+        '400':
+          description: Missing or invalid required fields.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+
 components:
   parameters:
     AuthorizationSessionHeader:
@@ -1077,6 +1148,8 @@ components:
           type: ["number", "null"]
         tileImage:
           type: ["string", "null"]
+        status:
+          type: string
         createdAt:
           type: string
 
@@ -1991,6 +2064,53 @@ components:
           type: string
         metadata:
           $ref: '#/components/schemas/UploadUrlRequest'
+    EnquiryInput:
+      type: object
+      required: [name, email, address]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        email:
+          type: string
+          minLength: 3
+        address:
+          type: string
+          minLength: 1
+        latitude:
+          type: ["number", "null"]
+        longitude:
+          type: ["number", "null"]
+        roughSize:
+          type: ["string", "null"]
+        message:
+          type: ["string", "null"]
+        primaryGoal:
+          type: ["string", "null"]
+        maintenanceCapacity:
+          type: ["string", "null"]
+        householdSize:
+          type: ["integer", "null"]
+        annualRainfallMm:
+          type: ["number", "null"]
+        estimatedSoilType:
+          type: ["string", "null"]
+        climateZone:
+          type: ["string", "null"]
+        ideaPhotos:
+          type: array
+          items:
+            type: string
+
+    EnquiryResponse:
+      type: object
+      required: [enquiryId, propertyId]
+      properties:
+        enquiryId:
+          type: string
+        propertyId:
+          type: string
+
     ErrorEnvelope:
       type: object
       required: [error]

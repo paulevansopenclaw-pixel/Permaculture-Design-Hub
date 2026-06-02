@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import * as turf from "@turf/turf";
 import { useQueryClient } from "@tanstack/react-query";
 import patternMark from "@assets/pattern-mark.png";
+import { resolveObjectUrl } from "@/lib/objectUrl";
 import {
   useListProperties,
   useGetProperty,
@@ -573,7 +574,7 @@ export default function IntakePage() {
                     className="relative group overflow-hidden"
                     style={{ background: "#f7f7f7", border: "1px solid #e5e5e5", aspectRatio: "4/3" }}
                   >
-                    <img src={src} alt={`Vision board photo ${i + 1}`} className="w-full h-full object-cover" />
+                    <img src={resolveObjectUrl(src)} alt={`Vision board photo ${i + 1}`} className="w-full h-full object-cover" />
                     <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center">
                       <button
                         onClick={() => handleRemovePhoto(i)}

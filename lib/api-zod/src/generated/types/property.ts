@@ -18,5 +18,6 @@ export interface Property {
   areaAcres?: number | null;
   /** @nullable */
   tileImage?: string | null;
+  status?: string;
   createdAt: string;
 }

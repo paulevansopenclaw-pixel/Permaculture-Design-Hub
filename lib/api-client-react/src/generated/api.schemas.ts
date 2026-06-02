@@ -25,6 +25,7 @@ export interface Property {
   areaAcres?: number | null;
   /** @nullable */
   tileImage?: string | null;
+  status?: string;
   createdAt: string;
 }
 
@@ -578,6 +579,41 @@ export interface UploadUrlResponse {
   uploadURL: string;
   objectPath: string;
   metadata?: UploadUrlRequest;
+}
+
+export interface EnquiryInput {
+  /** @minLength 1 */
+  name: string;
+  /** @minLength 3 */
+  email: string;
+  /** @minLength 1 */
+  address: string;
+  /** @nullable */
+  latitude?: number | null;
+  /** @nullable */
+  longitude?: number | null;
+  /** @nullable */
+  roughSize?: string | null;
+  /** @nullable */
+  message?: string | null;
+  /** @nullable */
+  primaryGoal?: string | null;
+  /** @nullable */
+  maintenanceCapacity?: string | null;
+  /** @nullable */
+  householdSize?: number | null;
+  /** @nullable */
+  annualRainfallMm?: number | null;
+  /** @nullable */
+  estimatedSoilType?: string | null;
+  /** @nullable */
+  climateZone?: string | null;
+  ideaPhotos?: string[];
+}
+
+export interface EnquiryResponse {
+  enquiryId: string;
+  propertyId: string;
 }
 
 export interface ErrorEnvelope {

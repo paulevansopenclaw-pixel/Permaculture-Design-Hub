@@ -7,6 +7,7 @@ import {
 import { eq, and } from "drizzle-orm";
 import { db, propertiesTable, planRendersTable } from "@workspace/db";
 import { ObjectStorageService, ObjectNotFoundError } from "../lib/objectStorage";
+import { canAccessObject, ObjectPermission } from "../lib/objectAcl";
 
 const router: IRouter = Router();
 const objectStorageService = new ObjectStorageService();
@@ -91,36 +92,45 @@ router.get("/storage/public-objects/*filePath", async (req: Request, res: Respon
  */
 router.get("/storage/objects/*path", async (req: Request, res: Response) => {
   try {
-    if (!req.isAuthenticated()) {
-      res.status(401).json({ error: "Unauthorized" });
-      return;
-    }
     const raw = req.params.path;
     const wildcardPath = Array.isArray(raw) ? raw.join("/") : raw;
     const objectPath = `/objects/${wildcardPath}`;
 
-    // Only serve plan-render objects, and only to the owner of the property
-    // they belong to. The objectPath is the stable identity stored in plan_renders.
-    const [render] = await db
-      .select({ propertyId: planRendersTable.propertyId })
-      .from(planRendersTable)
-      .where(eq(planRendersTable.objectPath, objectPath))
-      .limit(1);
-    if (!render) {
-      res.status(404).json({ error: "Object not found" });
-      return;
-    }
-    const [owned] = await db
-      .select({ id: propertiesTable.id })
-      .from(propertiesTable)
-      .where(and(eq(propertiesTable.id, render.propertyId), eq(propertiesTable.ownerId, req.user.id)))
-      .limit(1);
-    if (!owned) {
-      res.status(403).json({ error: "Forbidden" });
-      return;
+    const objectFile = await objectStorageService.getObjectEntityFile(objectPath);
+
+    // Public-read objects (e.g. enquiry idea photos) are served to anyone.
+    const isPublic = await canAccessObject({
+      objectFile,
+      requestedPermission: ObjectPermission.READ,
+    });
+
+    if (!isPublic) {
+      // Private plan-render objects — only the owner of the property they
+      // belong to may read them. objectPath is the identity in plan_renders.
+      if (!req.isAuthenticated()) {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+      }
+      const [render] = await db
+        .select({ propertyId: planRendersTable.propertyId })
+        .from(planRendersTable)
+        .where(eq(planRendersTable.objectPath, objectPath))
+        .limit(1);
+      if (!render) {
+        res.status(404).json({ error: "Object not found" });
+        return;
+      }
+      const [owned] = await db
+        .select({ id: propertiesTable.id })
+        .from(propertiesTable)
+        .where(and(eq(propertiesTable.id, render.propertyId), eq(propertiesTable.ownerId, req.user.id)))
+        .limit(1);
+      if (!owned) {
+        res.status(403).json({ error: "Forbidden" });
+        return;
+      }
     }
 
-    const objectFile = await objectStorageService.getObjectEntityFile(objectPath);
     const response = await objectStorageService.downloadObject(objectFile);
 
     res.status(response.status);

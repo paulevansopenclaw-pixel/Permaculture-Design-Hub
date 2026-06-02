@@ -1,11 +1,12 @@
-import { useEffect } from "react";
-import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
+import { Switch, Route, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import MapPage from "@/pages/MapPage";
 import PropertiesPage from "@/pages/PropertiesPage";
+import PatternLanding from "@/pages/PatternLanding";
+import EnquirePage from "@/pages/EnquirePage";
 import IntakePage from "@/pages/IntakePage";
 import AnalysisPage from "@/pages/AnalysisPage";
 import PlansPage from "@/pages/PlansPage";
@@ -23,14 +24,6 @@ const queryClient = new QueryClient({
     },
   },
 });
-
-function RootRedirect() {
-  const [, navigate] = useLocation();
-  useEffect(() => {
-    navigate("/properties");
-  }, [navigate]);
-  return null;
-}
 
 function ClientBlockedPage() {
   return (
@@ -66,7 +59,6 @@ function Router() {
 
   return (
     <Switch>
-      <Route path="/" component={RootRedirect} />
       <Route path="/properties" component={PropertiesPage} />
       <Route path="/intake" component={IntakePage} />
       <Route path="/workspace" component={MapPage} />
@@ -122,11 +114,17 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <AuthGate>
-          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-            <Router />
-          </WouterRouter>
-        </AuthGate>
+        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+          <Switch>
+            <Route path="/" component={PatternLanding} />
+            <Route path="/enquire" component={EnquirePage} />
+            <Route>
+              <AuthGate>
+                <Router />
+              </AuthGate>
+            </Route>
+          </Switch>
+        </WouterRouter>
         <Toaster />
       </TooltipProvider>
     </QueryClientProvider>

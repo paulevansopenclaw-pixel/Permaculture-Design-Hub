@@ -28,6 +28,7 @@ export const ListPropertiesResponseItem = zod.object({
   "areaHectares": zod.number().nullish(),
   "areaAcres": zod.number().nullish(),
   "tileImage": zod.string().nullish(),
+  "status": zod.string().optional(),
   "createdAt": zod.string()
 })
 export const ListPropertiesResponse = zod.array(ListPropertiesResponseItem)
@@ -66,6 +67,7 @@ export const GetPropertyResponse = zod.object({
   "areaHectares": zod.number().nullish(),
   "areaAcres": zod.number().nullish(),
   "tileImage": zod.string().nullish(),
+  "status": zod.string().optional(),
   "createdAt": zod.string()
 })
 
@@ -99,6 +101,7 @@ export const UpdatePropertyResponse = zod.object({
   "areaHectares": zod.number().nullish(),
   "areaAcres": zod.number().nullish(),
   "tileImage": zod.string().nullish(),
+  "status": zod.string().optional(),
   "createdAt": zod.string()
 })
 
@@ -108,6 +111,27 @@ export const UpdatePropertyResponse = zod.object({
  */
 export const DeletePropertyParams = zod.object({
   "id": zod.coerce.string()
+})
+
+
+/**
+ * @summary Claim an unassigned enquiry property for the current designer
+ */
+export const ClaimPropertyParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const ClaimPropertyResponse = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "boundaryGeojson": zod.object({
+
+}).passthrough().nullish(),
+  "areaHectares": zod.number().nullish(),
+  "areaAcres": zod.number().nullish(),
+  "tileImage": zod.string().nullish(),
+  "status": zod.string().optional(),
+  "createdAt": zod.string()
 })
 
 
@@ -942,6 +966,63 @@ export const GetPublicObjectParams = zod.object({
  */
 export const GetStorageObjectParams = zod.object({
   "objectPath": zod.coerce.string().describe('Object path within the private object dir.')
+})
+
+
+/**
+ * @summary Request a presigned upload URL for a public enquiry idea photo (no auth)
+ */
+
+
+
+
+
+export const RequestPublicUploadUrlBody = zod.object({
+  "name": zod.string().min(1),
+  "size": zod.number().min(1),
+  "contentType": zod.string().min(1)
+})
+
+
+
+
+
+
+export const RequestPublicUploadUrlResponse = zod.object({
+  "uploadURL": zod.string().url(),
+  "objectPath": zod.string(),
+  "metadata": zod.object({
+  "name": zod.string().min(1),
+  "size": zod.number().min(1),
+  "contentType": zod.string().min(1)
+}).optional()
+})
+
+
+/**
+ * @summary Submit a public client enquiry; auto-creates a site tile for the designer (no auth)
+ */
+
+export const createEnquiryBodyEmailMin = 3;
+
+
+
+
+export const CreateEnquiryBody = zod.object({
+  "name": zod.string().min(1),
+  "email": zod.string().min(createEnquiryBodyEmailMin),
+  "address": zod.string().min(1),
+  "latitude": zod.number().nullish(),
+  "longitude": zod.number().nullish(),
+  "roughSize": zod.string().nullish(),
+  "message": zod.string().nullish(),
+  "primaryGoal": zod.string().nullish(),
+  "maintenanceCapacity": zod.string().nullish(),
+  "householdSize": zod.number().nullish(),
+  "annualRainfallMm": zod.number().nullish(),
+  "estimatedSoilType": zod.string().nullish(),
+  "climateZone": zod.string().nullish(),
+  "ideaPhotos": zod.array(zod.string()).optional()
 })
 
 

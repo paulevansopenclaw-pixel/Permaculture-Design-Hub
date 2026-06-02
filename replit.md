@@ -60,6 +60,8 @@ _Populate as you build — explicit user instructions worth remembering across s
 - **Always run codegen after editing openapi.yaml**: `pnpm --filter @workspace/api-spec run codegen` — then restart the frontend workflow.
 - **Rebuild libs before full typecheck**: `pnpm run typecheck:libs` rebuilds composite libs, then `pnpm run typecheck` checks everything. The root `typecheck` script does both in order.
 - **Don't call `pnpm run dev` at workspace root** — it has no dev script by design. Start workflows individually via `restart_workflow`.
+- **API runs behind Replit's proxy**: `app.ts` sets `trust proxy = 1` so `express-rate-limit` and `req.ip` read `X-Forwarded-For` correctly. Without it, rate-limited routes throw `ERR_ERL_UNEXPECTED_X_FORWARDED_FOR`.
+- **Public intake flow**: `/` (landing) and `/enquire` live OUTSIDE AuthGate. Public submissions create an unclaimed property (`ownerId` NULL, `status='enquiry'`) that appears in the shared studio inbox on `/properties`; opening one claims it. Public photo uploads only get public ACL if under the `/objects/uploads/<uuid>` prefix.
 
 ## Pointers
 

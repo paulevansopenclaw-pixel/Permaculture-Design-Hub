@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, and } from "drizzle-orm";
+import { eq, and, or, isNull } from "drizzle-orm";
 import { db, propertiesTable, commentsTable } from "@workspace/db";
 import {
   CreatePropertyBody,
@@ -8,6 +8,7 @@ import {
   UpdatePropertyBody,
   DeletePropertyParams,
   GetPropertyStatsParams,
+  ClaimPropertyParams,
 } from "@workspace/api-zod";
 
 const router: IRouter = Router();
@@ -17,7 +18,12 @@ router.get("/properties", async (req, res): Promise<void> => {
   const rows = await db
     .select()
     .from(propertiesTable)
-    .where(eq(propertiesTable.ownerId, req.user.id))
+    .where(
+      or(
+        eq(propertiesTable.ownerId, req.user.id),
+        and(isNull(propertiesTable.ownerId), eq(propertiesTable.status, "enquiry")),
+      ),
+    )
     .orderBy(propertiesTable.createdAt);
   res.json(rows.map((p) => ({
     ...p,
@@ -79,6 +85,28 @@ router.delete("/properties/:id", async (req, res): Promise<void> => {
   await db.delete(propertiesTable)
     .where(and(eq(propertiesTable.id, params.data.id), eq(propertiesTable.ownerId, req.user.id)));
   res.sendStatus(204);
+});
+
+router.post("/properties/:id/claim", async (req, res): Promise<void> => {
+  if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const params = ClaimPropertyParams.safeParse(req.params);
+  if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
+  const [claimed] = await db
+    .update(propertiesTable)
+    .set({ ownerId: req.user.id, status: "active" })
+    .where(and(eq(propertiesTable.id, params.data.id), isNull(propertiesTable.ownerId)))
+    .returning();
+  if (claimed) {
+    res.json({ ...claimed, boundaryGeojson: claimed.boundaryGeojson ? JSON.parse(claimed.boundaryGeojson) : null });
+    return;
+  }
+  // Already claimed — return it if it belongs to this designer, else 404.
+  const [existing] = await db
+    .select()
+    .from(propertiesTable)
+    .where(and(eq(propertiesTable.id, params.data.id), eq(propertiesTable.ownerId, req.user.id)));
+  if (!existing) { res.status(404).json({ error: "Property not found" }); return; }
+  res.json({ ...existing, boundaryGeojson: existing.boundaryGeojson ? JSON.parse(existing.boundaryGeojson) : null });
 });
 
 router.get("/properties/:id/stats", async (req, res): Promise<void> => {

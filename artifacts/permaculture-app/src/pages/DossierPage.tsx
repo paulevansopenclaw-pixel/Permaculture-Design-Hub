@@ -3,6 +3,7 @@ import { Fingerprint } from "lucide-react";
 import { useLocation } from "wouter";
 import * as turf from "@turf/turf";
 import patternMark from "@assets/pattern-mark.png";
+import { resolveObjectUrl } from "@/lib/objectUrl";
 import {
   useGetProperty,
   useGetClientBrief,
@@ -441,7 +442,7 @@ export default function DossierPage() {
                   : <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:8, marginBottom:16 }}>
                       {moodImages.map((src,i)=>(
                         <div key={i} style={{ aspectRatio:"4/3", border:RULE, overflow:"hidden", background:LIGHT }}>
-                          <img src={src} alt={`Mood ${i+1}`} style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }}/>
+                          <img src={resolveObjectUrl(src)} alt={`Mood ${i+1}`} style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }}/>
                         </div>
                       ))}
                     </div>
