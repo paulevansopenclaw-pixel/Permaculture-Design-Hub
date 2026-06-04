@@ -68,19 +68,23 @@ function formatDate(dateStr: string) {
 }
 
 // ── Property card ─────────────────────────────────────────────────────────────
+const TIER_LABELS = ["Discovery", "Site Reading", "The Design", "Full Dossier"] as const;
+
 function PropertyCard({
-  property, onOpen, onDelete, onImageUpload,
+  property, onOpen, onDelete, onImageUpload, onTierChange,
 }: {
-  property: { id: string; name: string; areaHectares?: number | null; areaAcres?: number | null; tileImage?: string | null; status?: string | null; createdAt: string };
+  property: { id: string; name: string; areaHectares?: number | null; areaAcres?: number | null; tileImage?: string | null; status?: string | null; clientTier?: number | null; createdAt: string };
   onOpen: () => void;
   onDelete: (e: React.MouseEvent) => void;
   onImageUpload: (dataUrl: string) => void;
+  onTierChange: (tier: number) => void;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [hovered,   setHovered]   = useState(false);
   const hasBoundary = (property.areaHectares ?? 0) > 0;
   const isEnquiry = property.status === "enquiry";
+  const currentTier = property.clientTier ?? 0;
 
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -150,12 +154,38 @@ function PropertyCard({
 
       {/* Card body */}
       <div style={{ padding: "12px 14px 14px", flex: 1 }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
           <span style={{ fontSize: 11, color: MID }}>{formatArea(property.areaHectares, property.areaAcres)}</span>
           {hasBoundary && (
             <span style={{ fontSize: 9, color: GREEN, background: GREEN + "18", padding: "2px 7px", borderRadius: 12, border: `1px solid ${GREEN}38`, fontWeight: 600 }}>Mapped</span>
           )}
         </div>
+
+        {/* Client access tier control */}
+        <div
+          onClick={e => e.stopPropagation()}
+          style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#f4f1ea", borderRadius: 7, padding: "6px 8px", marginBottom: 8 }}
+        >
+          <span style={{ fontSize: 9, color: MID, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em" }}>Client access</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <button
+              onClick={() => onTierChange(Math.max(0, currentTier - 1))}
+              disabled={currentTier === 0}
+              style={{ background: "none", border: "none", cursor: currentTier === 0 ? "default" : "pointer", color: currentTier === 0 ? "#ccc" : MID, fontSize: 12, lineHeight: 1, padding: "0 2px" }}
+              aria-label="Lower tier"
+            >‹</button>
+            <span style={{ fontSize: 9, fontWeight: 700, color: GREEN, minWidth: 68, textAlign: "center" }}>
+              {TIER_LABELS[currentTier]}
+            </span>
+            <button
+              onClick={() => onTierChange(Math.min(3, currentTier + 1))}
+              disabled={currentTier === 3}
+              style={{ background: "none", border: "none", cursor: currentTier === 3 ? "default" : "pointer", color: currentTier === 3 ? "#ccc" : MID, fontSize: 12, lineHeight: 1, padding: "0 2px" }}
+              aria-label="Raise tier"
+            >›</button>
+          </div>
+        </div>
+
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: 8, borderTop: RULE }}>
           <span style={{ fontSize: 10, color: DIM }}>{formatDate(property.createdAt)}</span>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -237,6 +267,13 @@ export default function PropertiesPage() {
   function handleImageUpload(id: string, tileImage: string) {
     updateProperty.mutate(
       { id, data: { tileImage } },
+      { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListPropertiesQueryKey() }) },
+    );
+  }
+
+  function handleTierChange(id: string, clientTier: number) {
+    updateProperty.mutate(
+      { id, data: { clientTier } },
       { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListPropertiesQueryKey() }) },
     );
   }
@@ -323,6 +360,7 @@ export default function PropertiesPage() {
                   onOpen={() => handleOpen(property.id, property.status)}
                   onDelete={(e) => { e.stopPropagation(); setDeleteId(property.id); }}
                   onImageUpload={(dataUrl) => handleImageUpload(property.id, dataUrl)}
+                  onTierChange={(tier) => handleTierChange(property.id, tier)}
                 />
               ))}
             </div>

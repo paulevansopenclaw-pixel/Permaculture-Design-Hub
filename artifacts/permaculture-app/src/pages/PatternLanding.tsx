@@ -27,7 +27,10 @@ export default function PatternLanding() {
       {/* Header */}
       <header className="px-6 py-8 border-b border-[#2c3525]/15 flex justify-between items-center max-w-7xl mx-auto">
         <div className="text-2xl font-semibold tracking-tight">Pattern</div>
-        <div className="font-mono text-xs uppercase tracking-widest text-[#4a5d3f]">Vol. I — Design Studio</div>
+        <div className="flex items-center gap-8">
+          <div className="font-mono text-xs uppercase tracking-widest text-[#4a5d3f] hidden md:block">Vol. I — Design Studio</div>
+          <Link href="/properties" className="font-mono text-xs uppercase tracking-widest text-[#2c3525] border-b border-[#2c3525]/40 pb-px hover:border-[#2c3525] transition-colors">Studio →</Link>
+        </div>
       </header>
 
       {/* ── Hero: asymmetric split ── */}

@@ -1150,6 +1150,9 @@ components:
           type: ["string", "null"]
         status:
           type: string
+        clientTier:
+          type: integer
+          description: Unlocked design tier for client portal (0=discovery only, 1=+site reading, 2=+the design, 3=+full dossier)
         createdAt:
           type: string
 
@@ -1183,6 +1186,10 @@ components:
           type: ["number", "null"]
         tileImage:
           type: ["string", "null"]
+        clientTier:
+          type: integer
+          minimum: 0
+          maximum: 3
 
     PropertyStats:
       type: object

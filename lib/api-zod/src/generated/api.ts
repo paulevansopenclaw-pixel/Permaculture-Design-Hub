@@ -29,6 +29,7 @@ export const ListPropertiesResponseItem = zod.object({
   "areaAcres": zod.number().nullish(),
   "tileImage": zod.string().nullish(),
   "status": zod.string().optional(),
+  "clientTier": zod.number().optional().describe('Unlocked design tier for client portal (0=discovery only, 1=+site reading, 2=+the design, 3=+full dossier)'),
   "createdAt": zod.string()
 })
 export const ListPropertiesResponse = zod.array(ListPropertiesResponseItem)
@@ -68,6 +69,7 @@ export const GetPropertyResponse = zod.object({
   "areaAcres": zod.number().nullish(),
   "tileImage": zod.string().nullish(),
   "status": zod.string().optional(),
+  "clientTier": zod.number().optional().describe('Unlocked design tier for client portal (0=discovery only, 1=+site reading, 2=+the design, 3=+full dossier)'),
   "createdAt": zod.string()
 })
 
@@ -80,6 +82,9 @@ export const UpdatePropertyParams = zod.object({
 })
 
 
+export const updatePropertyBodyClientTierMin = 0;
+export const updatePropertyBodyClientTierMax = 3;
+
 
 
 export const UpdatePropertyBody = zod.object({
@@ -89,7 +94,8 @@ export const UpdatePropertyBody = zod.object({
 }).passthrough().nullish(),
   "areaHectares": zod.number().nullish(),
   "areaAcres": zod.number().nullish(),
-  "tileImage": zod.string().nullish()
+  "tileImage": zod.string().nullish(),
+  "clientTier": zod.number().min(updatePropertyBodyClientTierMin).max(updatePropertyBodyClientTierMax).optional()
 })
 
 export const UpdatePropertyResponse = zod.object({
@@ -102,6 +108,7 @@ export const UpdatePropertyResponse = zod.object({
   "areaAcres": zod.number().nullish(),
   "tileImage": zod.string().nullish(),
   "status": zod.string().optional(),
+  "clientTier": zod.number().optional().describe('Unlocked design tier for client portal (0=discovery only, 1=+site reading, 2=+the design, 3=+full dossier)'),
   "createdAt": zod.string()
 })
 
@@ -131,6 +138,7 @@ export const ClaimPropertyResponse = zod.object({
   "areaAcres": zod.number().nullish(),
   "tileImage": zod.string().nullish(),
   "status": zod.string().optional(),
+  "clientTier": zod.number().optional().describe('Unlocked design tier for client portal (0=discovery only, 1=+site reading, 2=+the design, 3=+full dossier)'),
   "createdAt": zod.string()
 })
 

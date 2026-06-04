@@ -19,5 +19,7 @@ export interface Property {
   /** @nullable */
   tileImage?: string | null;
   status?: string;
+  /** Unlocked design tier for client portal (0=discovery only, 1=+site reading, 2=+the design, 3=+full dossier) */
+  clientTier?: number;
   createdAt: string;
 }

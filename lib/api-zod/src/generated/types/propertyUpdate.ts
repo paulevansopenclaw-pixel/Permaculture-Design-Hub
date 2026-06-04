@@ -18,4 +18,9 @@ export interface PropertyUpdate {
   areaAcres?: number | null;
   /** @nullable */
   tileImage?: string | null;
+  /**
+     * @minimum 0
+     * @maximum 3
+     */
+  clientTier?: number;
 }

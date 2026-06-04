@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, real } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, real, integer } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -11,6 +11,7 @@ export const propertiesTable = pgTable("properties", {
   areaAcres: real("area_acres"),
   tileImage: text("tile_image"),
   status: text("status").notNull().default("active"),
+  clientTier: integer("client_tier").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
