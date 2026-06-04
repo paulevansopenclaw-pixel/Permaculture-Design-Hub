@@ -228,7 +228,7 @@ function MiniMap({ mode, boundaryGeojson, token, zones = [], structures = [], se
         const isDashed = sw.swaleType === "keyline";
         layers.push(
           L.geoJSON({ type: "Feature", geometry: geo, properties: {} } as any, {
-            style: () => ({ color: "#0ea5e9", weight: 2.5, opacity: 0.9, fill: false, ...(isDashed ? { dashArray: "6 4" } : {}) }),
+            style: () => ({ color: "#2A8C7A", weight: 2.5, opacity: 0.9, fill: false, ...(isDashed ? { dashArray: "6 4" } : {}) }),
           }).addTo(map)
         );
       } catch { /* ignore */ }
@@ -254,7 +254,7 @@ function MiniMap({ mode, boundaryGeojson, token, zones = [], structures = [], se
     const markers: L.CircleMarker[] = [];
     structures.forEach((s) => {
       const m = L.circleMarker([s.lat, s.lng], {
-        radius: 5, color: "#fff", weight: 1.5, fillColor: "#1e3a5f", fillOpacity: 1,
+        radius: 5, color: "#fff", weight: 1.5, fillColor: "#5C4033", fillOpacity: 1,
       }).bindTooltip(s.label, { permanent: false, direction: "top" }).addTo(map);
       markers.push(m);
     });
@@ -328,9 +328,9 @@ const MAP_CONFIGS: { mode: MiniMapMode; label: string; icon: string; accent: str
   { mode: "boundary",   label: "Boundary",   icon: "⬡", accent: "#4a6b2e" },
   { mode: "contour",    label: "Terrain",    icon: "⛰", accent: "#1f6b7a" },
   { mode: "zones",      label: "Zones",      icon: "🗺", accent: "#ca8a04" },
-  { mode: "swales",     label: "Swales",     icon: "💧", accent: "#0ea5e9" },
-  { mode: "sectors",    label: "Sectors",    icon: "🧭", accent: "#f97316" },
-  { mode: "structures", label: "Structures", icon: "🏗", accent: "#7c3aed" },
+  { mode: "swales",     label: "Swales",     icon: "💧", accent: "#2A8C7A" },
+  { mode: "sectors",    label: "Sectors",    icon: "🧭", accent: "#B45032" },
+  { mode: "structures", label: "Structures", icon: "🏗", accent: "#8B6914" },
 ];
 
 function ReportMapCard({
@@ -699,8 +699,8 @@ export default function AnalysisPage() {
                   <div className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: "#555" }}>Swale Legend</div>
                   <div className="flex flex-wrap gap-2">
                     {Array.from(new Set(swales.map((s) => s.swaleType))).map((t) => (
-                      <div key={t} className="flex items-center gap-1.5 px-2 py-1" style={{ border: "2px solid #0ea5e9" }}>
-                        <div className="w-5 h-0.5" style={{ background: "#0ea5e9", borderTop: t === "keyline" ? "2px dashed #0ea5e9" : "2px solid #0ea5e9" }} />
+                      <div key={t} className="flex items-center gap-1.5 px-2 py-1" style={{ border: "2px solid #2A8C7A" }}>
+                        <div className="w-5 h-0.5" style={{ background: "#2A8C7A", borderTop: t === "keyline" ? "2px dashed #2A8C7A" : "2px solid #2A8C7A" }} />
                         <span className="text-[10px] font-semibold" style={{ color: "#333" }}>{t}</span>
                       </div>
                     ))}
@@ -831,7 +831,7 @@ export default function AnalysisPage() {
                               {(ph.elements ?? []).length > 0 && (
                                 <div className="flex flex-wrap gap-1.5">
                                   {ph.elements!.map((el, j) => (
-                                    <span key={j} className="text-[10px] px-2 py-0.5 font-medium" style={{ background: "#eff6ff", color: "#1f6b7a", border: "1px solid #bfdbfe" }}>
+                                    <span key={j} className="text-[10px] px-2 py-0.5 font-medium" style={{ background: "#fef9ec", color: "#8B6914", border: "1px solid #e9d5a0" }}>
                                       {el}
                                     </span>
                                   ))}
