@@ -188,7 +188,7 @@ router.post(
 
     const send = (data: object) => res.write(`data: ${JSON.stringify(data)}\n\n`);
 
-    const prompts = buildVisionPrompts(parsed.data.primaryGoal).slice(0, 10);
+    const prompts = buildVisionPrompts(parsed.data.primaryGoal).slice(0, 6);
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: VISION_MODEL });
 

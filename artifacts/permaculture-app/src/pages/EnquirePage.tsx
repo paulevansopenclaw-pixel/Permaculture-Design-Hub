@@ -3,7 +3,7 @@ import { Link } from "wouter";
 import { useCreateEnquiry } from "@workspace/api-client-react";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
-const TOTAL_SLOTS = 10;
+const TOTAL_SLOTS = 6;
 const MAX_UPLOAD = 10;
 
 const GOAL_OPTIONS = [
