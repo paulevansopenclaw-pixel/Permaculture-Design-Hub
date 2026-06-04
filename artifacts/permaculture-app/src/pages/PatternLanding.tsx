@@ -21,6 +21,7 @@ export default function PatternLanding() {
         @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=IBM+Plex+Mono:ital,wght@0,400;0,500;1,400&display=swap');
         .font-serif { font-family: 'Fraunces', serif; }
         .font-mono { font-family: 'IBM Plex Mono', monospace; }
+        .img-tint { filter: grayscale(15%) sepia(12%); mix-blend-mode: multiply; opacity: 0.92; }
       `}} />
 
       {/* Header */}
@@ -29,139 +30,139 @@ export default function PatternLanding() {
         <div className="font-mono text-xs uppercase tracking-widest text-[#4a5d3f]">Vol. I — Design Studio</div>
       </header>
 
-      {/* Hero */}
-      <section className="px-6 py-24 md:py-32 max-w-5xl mx-auto text-center">
-        <h1 className="text-5xl md:text-7xl font-light tracking-tight leading-[1.1] mb-8 text-[#1a1c18]">
-          Cultivate your land.<br />
-          <span className="italic text-[#4a5d3f]">Regenerate your world.</span>
-        </h1>
-        <p className="text-lg md:text-xl max-w-2xl mx-auto text-[#2c3525]/80 mb-12 leading-relaxed">
-          We help you turn your property into a thriving, productive, and resilient permaculture ecosystem. Design with nature, not against it.
-        </p>
-        <EnquireButton>Start your enquiry</EnquireButton>
-      </section>
+      {/* ── Hero: asymmetric split ── */}
+      <section className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-[1fr_420px] lg:grid-cols-[1fr_560px] min-h-[72vh]">
+        {/* Left: headline */}
+        <div className="flex flex-col justify-center px-6 md:px-12 py-20 md:py-0 border-b md:border-b-0 md:border-r border-[#2c3525]/15">
+          <h1 className="text-5xl md:text-6xl lg:text-7xl font-light tracking-tight leading-[1.05] mb-8 text-[#1a1c18]">
+            Cultivate<br />your land.<br />
+            <span className="italic text-[#4a5d3f]">Regenerate<br />your world.</span>
+          </h1>
+          <p className="text-base md:text-lg max-w-sm text-[#2c3525]/75 mb-10 leading-relaxed">
+            We help you turn your property into a thriving, productive, and resilient permaculture ecosystem. Design with nature, not against it.
+          </p>
+          <div>
+            <EnquireButton>Start your enquiry</EnquireButton>
+          </div>
+        </div>
 
-      {/* Collage / Grid */}
-      <section className="border-y border-[#2c3525]/15 py-12 px-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-2 md:grid-cols-12 auto-rows-[180px] gap-4">
-
-            <figure className="relative group col-span-2 md:col-span-7 row-span-2">
-              <div className="overflow-hidden bg-[#e8e4da] h-full border border-[#2c3525]/10 p-1">
-                <img src={img("food-forest.png")} alt="Food forest" className="w-full h-full object-cover grayscale-[20%] sepia-[15%] mix-blend-multiply opacity-90 transition-transform duration-700 group-hover:scale-105" />
-              </div>
-              <figcaption className="absolute bottom-2 left-2 right-2 bg-[#fcf9f2]/85 backdrop-blur-sm px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider text-[#4a5d3f] flex justify-between">
-                <span>Fig 1. Multi-strata food forest</span>
-                <span>01</span>
-              </figcaption>
-            </figure>
-
-            <figure className="relative group col-span-1 md:col-span-5 row-span-1">
-              <div className="overflow-hidden bg-[#e8e4da] h-full border border-[#2c3525]/10 p-1">
-                <img src={img("swale-contour.png")} alt="Swales on contour" className="w-full h-full object-cover grayscale-[20%] sepia-[15%] mix-blend-multiply opacity-90 transition-transform duration-700 group-hover:scale-105" />
-              </div>
-              <figcaption className="absolute bottom-2 left-2 right-2 bg-[#fcf9f2]/85 backdrop-blur-sm px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider text-[#4a5d3f] flex justify-between">
-                <span>Fig 2. Hydrology & earthworks</span>
-                <span>02</span>
-              </figcaption>
-            </figure>
-
-            <figure className="relative group col-span-1 md:col-span-3 row-span-1">
-              <div className="overflow-hidden bg-[#e8e4da] h-full border border-[#2c3525]/10 p-1">
-                <img src={img("hands-soil.png")} alt="Hands in soil" className="w-full h-full object-cover grayscale-[20%] sepia-[15%] mix-blend-multiply opacity-90 transition-transform duration-700 group-hover:scale-105" />
-              </div>
-              <figcaption className="absolute bottom-2 left-2 right-2 bg-[#fcf9f2]/85 backdrop-blur-sm px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider text-[#4a5d3f]">
-                <span>Fig 3. Soil health</span>
-              </figcaption>
-            </figure>
-
-            <figure className="relative group col-span-1 md:col-span-2 row-span-1">
-              <div className="overflow-hidden bg-[#e8e4da] h-full border border-[#2c3525]/10 p-1">
-                <img src={img("herbs-closeup.png")} alt="Herbs" className="w-full h-full object-cover grayscale-[20%] sepia-[15%] mix-blend-multiply opacity-90 transition-transform duration-700 group-hover:scale-105" />
-              </div>
-              <figcaption className="absolute bottom-2 left-2 right-2 bg-[#fcf9f2]/85 backdrop-blur-sm px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider text-[#4a5d3f]">
-                <span>Fig 4. Herbs</span>
-              </figcaption>
-            </figure>
-
-            <figure className="relative group col-span-1 md:col-span-4 row-span-1">
-              <div className="overflow-hidden bg-[#e8e4da] h-full border border-[#2c3525]/10 p-1">
-                <img src={img("meadow-pollinators.png")} alt="Meadow" className="w-full h-full object-cover grayscale-[20%] sepia-[15%] mix-blend-multiply opacity-90 transition-transform duration-700 group-hover:scale-105" />
-              </div>
-              <figcaption className="absolute bottom-2 left-2 right-2 bg-[#fcf9f2]/85 backdrop-blur-sm px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider text-[#4a5d3f] flex justify-between">
-                <span>Fig 5. Pollinator ecology</span>
-                <span>03</span>
-              </figcaption>
-            </figure>
-
-            <figure className="relative group col-span-1 md:col-span-4 row-span-1">
-              <div className="overflow-hidden bg-[#e8e4da] h-full border border-[#2c3525]/10 p-1">
-                <img src={img("harvest-basket.png")} alt="Harvest basket" className="w-full h-full object-cover grayscale-[20%] sepia-[15%] mix-blend-multiply opacity-90 transition-transform duration-700 group-hover:scale-105" />
-              </div>
-              <figcaption className="absolute bottom-2 left-2 right-2 bg-[#fcf9f2]/85 backdrop-blur-sm px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider text-[#4a5d3f]">
-                <span>Fig 6. Seasonal yield</span>
-              </figcaption>
-            </figure>
-
-            <figure className="relative group col-span-2 md:col-span-8 row-span-1">
-              <div className="overflow-hidden bg-[#e8e4da] h-full border border-[#2c3525]/10 p-1">
-                <img src={img("property-aerial.png")} alt="Aerial homestead" className="w-full h-full object-cover grayscale-[20%] sepia-[15%] mix-blend-multiply opacity-90 transition-transform duration-700 group-hover:scale-105" />
-              </div>
-              <figcaption className="absolute bottom-2 left-2 right-2 bg-[#fcf9f2]/85 backdrop-blur-sm px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider text-[#4a5d3f] flex justify-between">
-                <span>Fig 7. Whole-site zonation</span>
-                <span>04</span>
-              </figcaption>
-            </figure>
-
+        {/* Right: stacked image pair */}
+        <div className="hidden md:grid grid-rows-2 h-full">
+          <div className="overflow-hidden border-b border-[#2c3525]/15">
+            <img src={img("food-forest.png")} alt="Food forest" className="img-tint w-full h-full object-cover transition-transform duration-700 hover:scale-105" />
+          </div>
+          <div className="overflow-hidden">
+            <img src={img("swale-contour.png")} alt="Swales on contour" className="img-tint w-full h-full object-cover transition-transform duration-700 hover:scale-105" />
           </div>
         </div>
       </section>
 
-      {/* How it works */}
-      <section className="py-24 px-6 max-w-5xl mx-auto">
-        <div className="text-center mb-16">
-          <h2 className="text-3xl md:text-4xl font-light italic text-[#1a1c18] mb-6">The Pattern Method</h2>
-          <div className="h-px w-16 bg-[#2c3525]/30 mx-auto"></div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-12 md:gap-8">
-          <div className="relative pt-6 border-t border-[#2c3525]/20">
-            <div className="absolute top-0 left-0 -mt-2 bg-[#fcf9f2] pr-4 font-mono text-[10px] uppercase tracking-wider text-[#4a5d3f]">Phase I</div>
-            <h3 className="text-xl font-medium mb-3 text-[#1a1c18]">Map your land</h3>
-            <p className="text-[#2c3525]/80 leading-relaxed text-sm">We study your topography, hydrology, climate, and soil to understand the unique language of your property.</p>
-          </div>
-          <div className="relative pt-6 border-t border-[#2c3525]/20">
-            <div className="absolute top-0 left-0 -mt-2 bg-[#fcf9f2] pr-4 font-mono text-[10px] uppercase tracking-wider text-[#4a5d3f]">Phase II</div>
-            <h3 className="text-xl font-medium mb-3 text-[#1a1c18]">Design with nature</h3>
-            <p className="text-[#2c3525]/80 leading-relaxed text-sm">Drafting a holistic master plan that integrates water capture, food forests, animal systems, and human habitats.</p>
-          </div>
-          <div className="relative pt-6 border-t border-[#2c3525]/20">
-            <div className="absolute top-0 left-0 -mt-2 bg-[#fcf9f2] pr-4 font-mono text-[10px] uppercase tracking-wider text-[#4a5d3f]">Phase III</div>
-            <h3 className="text-xl font-medium mb-3 text-[#1a1c18]">Watch it flourish</h3>
-            <p className="text-[#2c3525]/80 leading-relaxed text-sm">Implementation guidance to bring the design to life, establishing an ecosystem that grows richer year after year.</p>
-          </div>
-        </div>
-      </section>
-
-      {/* Additional full-width image & CTA */}
+      {/* ── Editorial collage ── */}
       <section className="border-t border-[#2c3525]/15">
-        <div className="grid grid-cols-1 md:grid-cols-2">
-          <div className="p-12 md:p-24 flex flex-col justify-center border-b md:border-b-0 md:border-r border-[#2c3525]/15 bg-[#f5f1e6]">
-            <h2 className="text-4xl md:text-5xl font-light mb-6 leading-tight">Ready to observe<br />and interact?</h2>
-            <p className="text-[#2c3525]/80 mb-10 max-w-md text-lg">Every great design begins with a conversation. Let us help you realize the potential of your land.</p>
+        {/* Row 1: wide landscape + text card */}
+        <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr] border-b border-[#2c3525]/15" style={{height: "360px"}}>
+          <div className="overflow-hidden border-r border-[#2c3525]/15">
+            <img src={img("property-aerial.png")} alt="Aerial view of homestead" className="img-tint w-full h-full object-cover transition-transform duration-700 hover:scale-105" />
+          </div>
+          <div className="bg-[#e8e4da] flex flex-col justify-end p-8 md:p-10">
+            <p className="font-mono text-[10px] uppercase tracking-widest text-[#4a5d3f] mb-3">The practice</p>
+            <p className="text-2xl md:text-3xl font-light leading-snug text-[#1a1c18]">
+              Every site has a<br /><em>pattern waiting<br />to be read.</em>
+            </p>
+          </div>
+        </div>
+
+        {/* Row 2: three equal columns */}
+        <div className="grid grid-cols-1 md:grid-cols-3 border-b border-[#2c3525]/15" style={{height: "280px"}}>
+          <div className="overflow-hidden border-r border-[#2c3525]/15">
+            <img src={img("hands-soil.png")} alt="Hands in soil" className="img-tint w-full h-full object-cover transition-transform duration-700 hover:scale-105" />
+          </div>
+          <div className="overflow-hidden border-r border-[#2c3525]/15">
+            <img src={img("meadow-pollinators.png")} alt="Pollinator meadow" className="img-tint w-full h-full object-cover transition-transform duration-700 hover:scale-105" />
+          </div>
+          <div className="overflow-hidden">
+            <img src={img("harvest-basket.png")} alt="Seasonal harvest" className="img-tint w-full h-full object-cover transition-transform duration-700 hover:scale-105" />
+          </div>
+        </div>
+
+        {/* Row 3: narrow + wide + dark pull-quote */}
+        <div className="grid grid-cols-1 md:grid-cols-[1fr_2fr_1fr]" style={{height: "320px"}}>
+          <div className="overflow-hidden border-r border-[#2c3525]/15">
+            <img src={img("herbs-closeup.png")} alt="Herbs" className="img-tint w-full h-full object-cover transition-transform duration-700 hover:scale-105" />
+          </div>
+          <div className="overflow-hidden border-r border-[#2c3525]/15">
+            <img src={img("garden-people.png")} alt="Designers at work in the garden" className="img-tint w-full h-full object-cover transition-transform duration-700 hover:scale-105" />
+          </div>
+          <div className="bg-[#2c3525] flex flex-col justify-center px-8 py-10">
+            <p className="text-[#fcf9f2]/50 font-mono text-[9px] uppercase tracking-widest mb-4">Principle</p>
+            <p className="text-[#fcf9f2] text-lg font-light italic leading-snug">
+              "Observe and interact."
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* ── The Pattern Method — staggered ── */}
+      <section className="py-24 px-6 max-w-7xl mx-auto">
+        <div className="flex items-baseline gap-6 mb-16">
+          <h2 className="text-3xl md:text-4xl font-light italic text-[#1a1c18]">The Pattern Method</h2>
+          <div className="flex-1 h-px bg-[#2c3525]/20 hidden md:block"></div>
+        </div>
+
+        {/* Phase I — left-anchored */}
+        <div className="grid grid-cols-1 md:grid-cols-[1fr_2fr] border-t border-[#2c3525]/20">
+          <div className="py-10 pr-0 md:pr-12 border-b md:border-b-0 md:border-r border-[#2c3525]/20">
+            <span className="font-mono text-[10px] uppercase tracking-wider text-[#4a5d3f]">Phase I</span>
+            <h3 className="text-2xl font-medium mt-3 text-[#1a1c18]">Map your land</h3>
+          </div>
+          <div className="py-10 md:pl-12 border-b border-[#2c3525]/20">
+            <p className="text-[#2c3525]/80 leading-relaxed max-w-lg">We study your topography, hydrology, climate, and soil to understand the unique language of your property.</p>
+          </div>
+        </div>
+
+        {/* Phase II — center-shifted */}
+        <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr_2fr] border-b border-[#2c3525]/20">
+          <div className="hidden md:block" />
+          <div className="py-10 md:px-8 border-b md:border-b-0 md:border-x border-[#2c3525]/20 text-center">
+            <span className="font-mono text-[10px] uppercase tracking-wider text-[#4a5d3f]">Phase II</span>
+            <h3 className="text-2xl font-medium mt-3 text-[#1a1c18]">Design with nature</h3>
+          </div>
+          <div className="py-10 md:pl-12">
+            <p className="text-[#2c3525]/80 leading-relaxed max-w-sm">Drafting a holistic master plan that integrates water capture, food forests, animal systems, and human habitats.</p>
+          </div>
+        </div>
+
+        {/* Phase III — right-anchored */}
+        <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr] border-b border-[#2c3525]/20">
+          <div className="hidden md:block border-r border-[#2c3525]/20" />
+          <div className="py-10 md:pl-12">
+            <span className="font-mono text-[10px] uppercase tracking-wider text-[#4a5d3f]">Phase III</span>
+            <h3 className="text-2xl font-medium mt-3 mb-3 text-[#1a1c18]">Watch it flourish</h3>
+            <p className="text-[#2c3525]/80 leading-relaxed text-sm">Implementation guidance that establishes an ecosystem growing richer year after year.</p>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Bottom CTA: image-led ── */}
+      <section className="border-t border-[#2c3525]/15">
+        <div className="grid grid-cols-1 md:grid-cols-[3fr_2fr]">
+          <div className="relative min-h-[440px]">
+            <img src={img("food-forest.png")} alt="Lush food forest" className="absolute inset-0 w-full h-full object-cover img-tint" />
+          </div>
+          <div className="p-12 md:p-16 flex flex-col justify-center bg-[#f0ede4] border-l border-[#2c3525]/15">
+            <p className="font-mono text-[10px] uppercase tracking-widest text-[#4a5d3f] mb-6">Ready to begin?</p>
+            <h2 className="text-3xl md:text-4xl font-light mb-6 leading-tight">Observe and<br />interact with<br /><em>your land.</em></h2>
+            <p className="text-[#2c3525]/75 mb-10 text-sm leading-relaxed max-w-xs">Every great design begins with a conversation. Let us help you realise the full potential of your property.</p>
             <div>
               <EnquireButton>Begin your design</EnquireButton>
             </div>
-          </div>
-          <div className="relative min-h-[500px]">
-            <img src={img("garden-people.png")} alt="People in garden" className="absolute inset-0 w-full h-full object-cover grayscale-[20%] sepia-[20%] mix-blend-multiply opacity-90" />
           </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="py-16 text-center border-t border-[#2c3525]/15 flex flex-col items-center bg-[#e8e4da]/30">
-        <div className="text-3xl font-semibold tracking-tight text-[#1a1c18] mb-6">Pattern</div>
+      <footer className="py-12 px-6 border-t border-[#2c3525]/15 flex flex-col md:flex-row justify-between items-center gap-4 bg-[#e8e4da]/30 max-w-7xl mx-auto">
+        <div className="text-2xl font-semibold tracking-tight text-[#1a1c18]">Pattern</div>
         <div className="flex gap-6 font-mono text-xs uppercase tracking-wider text-[#4a5d3f]">
           <span>© {new Date().getFullYear()} Pattern Studio</span>
           <span>·</span>
