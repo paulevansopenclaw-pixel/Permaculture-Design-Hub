@@ -1,6 +1,5 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import rateLimit from "express-rate-limit";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { db, enquiriesTable, propertiesTable, clientBriefsTable } from "@workspace/db";
 import {
   RequestPublicUploadUrlBody,
@@ -9,8 +8,6 @@ import {
   GenerateVisionImagesBody,
 } from "@workspace/api-zod";
 import { ObjectStorageService } from "../lib/objectStorage";
-
-const VISION_MODEL = "gemini-2.5-flash-image";
 
 const router: IRouter = Router();
 const objectStorageService = new ObjectStorageService();
@@ -47,72 +44,62 @@ const visionLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// ── Vision image prompt library ───────────────────────────────────────────────
-const FOOD_PROMPTS = [
-  "A lush temperate food forest: apple and pear trees with berry bush understory and shade-tolerant herbs, dappled afternoon sunlight, photorealistic landscape photography",
-  "An abundant kitchen garden with raised timber beds overflowing with tomatoes, climbing beans, herbs and sunflowers, golden hour light, wide angle",
-  "A thriving orchard with wildflower meadow understory, fruit trees in blossom, a rustic beehive in the background, soft spring light",
-  "A diverse forest garden edge with chickens foraging, espaliered fruit on a stone wall, and a vegetable patch, photorealistic",
+// ── Pexels search query library ───────────────────────────────────────────────
+const FOOD_QUERIES = [
+  "food forest garden", "kitchen garden raised beds", "fruit orchard blossom",
+  "permaculture vegetable garden", "backyard food garden harvest",
+  "edible landscape garden", "herb garden cottage",
 ];
-const WILDLIFE_PROMPTS = [
-  "A rewilded stream corridor with native riparian plants, stepping stones, and a small cascade, rich biodiversity, photorealistic nature photography",
-  "A native wildflower meadow in full bloom with butterflies and bees, golden light, shallow depth of field, photorealistic",
-  "A created wildlife pond edged with rushes and aquatic plants, dragonflies skimming the surface, dusk light, serene",
-  "A dense native hedgerow with nesting birds, autumn berries, and dew-covered spiderwebs, morning light, photorealistic",
+const WILDLIFE_QUERIES = [
+  "rewilded stream native plants", "wildflower meadow butterflies",
+  "wildlife pond garden", "native hedgerow birds",
+  "rewilding landscape nature", "native plant garden",
 ];
-const WATER_PROMPTS = [
-  "Earthwork swales on contour across a gentle hillside covered in pasture and young trees, after rain, aerial perspective, photorealistic",
-  "A rain garden with native plants and a dry creek bed catching and filtering roof runoff, lush and thriving, photorealistic",
-  "A restored natural creek with large rocks, deep pools, and overhanging native trees, crystal clear water, photorealistic",
-  "Terraced garden beds stepping down a hillside with water channels between them, productive and beautiful, photorealistic landscape",
+const WATER_QUERIES = [
+  "rain garden swale landscape", "natural stream garden",
+  "terraced garden hillside water", "water harvesting garden",
+  "natural pond garden landscape", "rain garden native plants",
 ];
-const RELAX_PROMPTS = [
-  "A peaceful permaculture retreat with a hammock strung between fruit trees, wildflowers, a fire circle on a summer evening, golden hour, photorealistic",
-  "A stone terrace garden with climbing roses, herbs in terracotta pots, and a natural swimming pond beyond, Mediterranean feel, photorealistic",
-  "An outdoor living space surrounded by edible landscape — espaliered fruit trees, herb garden, a pergola draped in vines, evening light",
-  "A forest garden sanctuary with winding bark chip paths, a natural pond, birdsong, dappled light through the canopy, photorealistic",
+const RELAX_QUERIES = [
+  "permaculture garden retreat hammock", "cottage garden terrace",
+  "garden pergola outdoor living", "forest garden path sanctuary",
+  "peaceful garden landscape", "natural swimming pond garden",
 ];
 
-function buildVisionPrompts(primaryGoal?: string | null): string[] {
+function buildVisionQueries(primaryGoal?: string | null): string[] {
   const g = (primaryGoal ?? "").toLowerCase();
   if (g.includes("food") || g.includes("grow") || g.includes("income")) {
-    return [
-      ...FOOD_PROMPTS,
-      RELAX_PROMPTS[0], RELAX_PROMPTS[2],
-      WATER_PROMPTS[0], WILDLIFE_PROMPTS[1],
-      WILDLIFE_PROMPTS[2], WATER_PROMPTS[3],
-    ];
+    return [...FOOD_QUERIES, RELAX_QUERIES[0], WATER_QUERIES[0], WILDLIFE_QUERIES[1]];
   }
   if (g.includes("wild") || g.includes("restor") || g.includes("native")) {
-    return [
-      ...WILDLIFE_PROMPTS,
-      WATER_PROMPTS[2], WATER_PROMPTS[0],
-      FOOD_PROMPTS[3], RELAX_PROMPTS[3],
-      WATER_PROMPTS[1], FOOD_PROMPTS[0],
-    ];
+    return [...WILDLIFE_QUERIES, WATER_QUERIES[1], FOOD_QUERIES[3], RELAX_QUERIES[3]];
   }
   if (g.includes("water") || g.includes("capture")) {
-    return [
-      ...WATER_PROMPTS,
-      WILDLIFE_PROMPTS[2], WILDLIFE_PROMPTS[0],
-      FOOD_PROMPTS[0], RELAX_PROMPTS[0],
-      WILDLIFE_PROMPTS[1], FOOD_PROMPTS[3],
-    ];
+    return [...WATER_QUERIES, WILDLIFE_QUERIES[1], FOOD_QUERIES[0], RELAX_QUERIES[0]];
   }
   if (g.includes("relax") || g.includes("beautif") || g.includes("place")) {
-    return [
-      ...RELAX_PROMPTS,
-      FOOD_PROMPTS[0], FOOD_PROMPTS[2],
-      WILDLIFE_PROMPTS[1], WATER_PROMPTS[1],
-      WILDLIFE_PROMPTS[3], WATER_PROMPTS[2],
-    ];
+    return [...RELAX_QUERIES, FOOD_QUERIES[0], WILDLIFE_QUERIES[1], WATER_QUERIES[1]];
   }
-  // Mixed / undecided — one from each prompt, then fill with variety
   return [
-    FOOD_PROMPTS[0], WILDLIFE_PROMPTS[0], WATER_PROMPTS[0], RELAX_PROMPTS[0],
-    FOOD_PROMPTS[2], WILDLIFE_PROMPTS[2], WATER_PROMPTS[2], RELAX_PROMPTS[2],
-    FOOD_PROMPTS[1], WILDLIFE_PROMPTS[1],
+    FOOD_QUERIES[0], WILDLIFE_QUERIES[0], WATER_QUERIES[0], RELAX_QUERIES[0],
+    FOOD_QUERIES[2], WILDLIFE_QUERIES[2], WATER_QUERIES[2], RELAX_QUERIES[2],
+    FOOD_QUERIES[1], WILDLIFE_QUERIES[1],
   ];
+}
+
+interface PexelsPhoto {
+  id: number;
+  src: { medium: string; large: string };
+  photographer: string;
+  alt: string;
+}
+
+async function fetchPexelsPhotos(query: string, apiKey: string, page = 1): Promise<PexelsPhoto[]> {
+  const url = `https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&per_page=3&page=${page}&orientation=landscape`;
+  const res = await fetch(url, { headers: { Authorization: apiKey } });
+  if (!res.ok) return [];
+  const data = await res.json() as { photos: PexelsPhoto[] };
+  return data.photos ?? [];
 }
 
 /**
@@ -156,14 +143,12 @@ router.post(
 
 /**
  * POST /public/vision-images
- * Public (no auth) streaming SSE endpoint — generates 6 permaculture images
- * in parallel and sends each via SSE as soon as Gemini returns it. The client
- * receives images progressively (first appears in ~3–5 s) rather than waiting
- * for the full batch.
+ * Public (no auth). Searches Pexels with goal-tuned queries and returns up to
+ * 12 photo URLs instantly — no generation wait.
  *
- * SSE event format:
- *   data: {"image":{"b64_json":"…","mimeType":"image/png","prompt":"…"}}
- *   data: {"done":true}
+ * Supports an optional `page` field so the client can request fresh batches.
+ *
+ * Response: JSON { images: [{ url, thumb, photographer, alt, query }] }
  */
 router.post(
   "/public/vision-images",
@@ -175,45 +160,45 @@ router.post(
       return;
     }
 
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = process.env.PEXELS_API_KEY;
     if (!apiKey) {
-      res.status(500).json({ error: "Image generation not configured" });
+      res.status(500).json({ error: "Image search not configured" });
       return;
     }
 
-    res.setHeader("Content-Type", "text/event-stream");
-    res.setHeader("Cache-Control", "no-cache");
-    res.setHeader("Connection", "keep-alive");
-    res.flushHeaders();
+    const page: number = typeof (req.body as Record<string, unknown>).page === "number"
+      ? Math.max(1, (req.body as Record<string, unknown>).page as number)
+      : 1;
 
-    const send = (data: object) => res.write(`data: ${JSON.stringify(data)}\n\n`);
+    const queries = buildVisionQueries(parsed.data.primaryGoal).slice(0, 6);
 
-    const prompts = buildVisionPrompts(parsed.data.primaryGoal).slice(0, 6);
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: VISION_MODEL });
-
-    // All 6 kick off simultaneously; each fires an SSE event the moment it resolves.
-    await Promise.allSettled(
-      prompts.map(async (prompt) => {
-        try {
-          const result = await model.generateContent([{ text: prompt }]);
-          const parts = result.response.candidates?.[0]?.content?.parts ?? [];
-          for (const part of parts) {
-            const inline = part.inlineData;
-            if (inline?.data) {
-              send({ image: { b64_json: inline.data, mimeType: inline.mimeType ?? "image/png", prompt } });
-              return;
-            }
-          }
-        } catch {
-          // Skip failed image silently — remaining images still stream through.
-        }
-      }),
+    const results = await Promise.allSettled(
+      queries.map((q) => fetchPexelsPhotos(q, apiKey, page)),
     );
 
-    req.log.info({ count: prompts.length }, "vision images streamed");
-    send({ done: true });
-    res.end();
+    // One photo per query, deduplicated by Pexels ID
+    const seen = new Set<number>();
+    const images: { url: string; thumb: string; photographer: string; alt: string; query: string }[] = [];
+
+    for (let i = 0; i < results.length; i++) {
+      const r = results[i];
+      if (r.status !== "fulfilled") continue;
+      for (const photo of r.value) {
+        if (seen.has(photo.id)) continue;
+        seen.add(photo.id);
+        images.push({
+          url: photo.src.large,
+          thumb: photo.src.medium,
+          photographer: photo.photographer,
+          alt: photo.alt ?? queries[i],
+          query: queries[i],
+        });
+        break; // one per query keeps variety high
+      }
+    }
+
+    req.log.info({ count: images.length, page }, "pexels vision images returned");
+    res.json({ images });
   },
 );
 

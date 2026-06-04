@@ -23,7 +23,7 @@ const MAINTENANCE_OPTIONS = [
 ];
 
 // ── Types ────────────────────────────────────────────────────────────────────
-type VisionImg = { b64_json: string; mimeType: string; prompt: string };
+type VisionImg = { url: string; thumb: string; photographer: string; alt: string; query: string };
 type UploadState = "uploading" | "done" | "error";
 type UploadedFile = {
   id: string;
@@ -91,6 +91,7 @@ export default function EnquirePage() {
   const [genError, setGenError] = useState<string | null>(null);
   const abortRef = useRef<boolean>(false);
   const batchCountRef = useRef(0);
+  const pageRef = useRef(1);
 
   // Submit
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -100,7 +101,7 @@ export default function EnquirePage() {
     /.+@.+\..+/.test(email.trim()) &&
     address.trim().length > 0;
 
-  // ── Stream a new AI batch ──────────────────────────────────────────────────
+  // ── Fetch a new Pexels batch ───────────────────────────────────────────────
   const streamBatch = useCallback(() => {
     setCurrentBatch([]);
     setBatchSelected(new Set());
@@ -108,6 +109,7 @@ export default function EnquirePage() {
     setGenError(null);
     abortRef.current = false;
     batchCountRef.current += 1;
+    pageRef.current += 1;
 
     (async () => {
       try {
@@ -118,38 +120,20 @@ export default function EnquirePage() {
             primaryGoal: primaryGoal || null,
             maintenanceCapacity: maintenanceCapacity || null,
             householdSize: householdSize ? Number(householdSize) : null,
+            page: pageRef.current,
           }),
         });
-        if (!res.ok || !res.body) {
+        if (!res.ok) {
           if (!abortRef.current) {
             setGenError("Couldn't reach the image service. You can still send your enquiry.");
             setGenerating(false);
           }
           return;
         }
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = "";
-        while (!abortRef.current) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split("\n");
-          buffer = lines.pop() ?? "";
-          for (const line of lines) {
-            if (!line.startsWith("data: ")) continue;
-            try {
-              const data = JSON.parse(line.slice(6)) as
-                | { image: VisionImg }
-                | { done: boolean };
-              if ("image" in data) {
-                setCurrentBatch((prev) => [...prev, data.image]);
-              }
-              if ("done" in data && data.done) {
-                setGenerating(false);
-              }
-            } catch { /* ignore malformed lines */ }
-          }
+        const data = await res.json() as { images: VisionImg[] };
+        if (!abortRef.current) {
+          setCurrentBatch(data.images ?? []);
+          setGenerating(false);
         }
       } catch {
         if (!abortRef.current) {
@@ -236,9 +220,7 @@ export default function EnquirePage() {
     const moodBoardImages = uploadedFiles
       .filter((f) => f.status === "done" && f.objectPath)
       .map((f) => f.objectPath as string);
-    const ideaImagesBase64 = savedImages.map(
-      (img) => `data:${img.mimeType};base64,${img.b64_json}`,
-    );
+    const ideaImagesBase64 = savedImages.map((img) => img.url);
     try {
       await createEnquiry.mutateAsync({
         data: {
@@ -273,7 +255,7 @@ export default function EnquirePage() {
           .filter((f) => f.status === "done")
           .map((f, i) => ({ src: f.preview, label: `Photo ${i + 1}` }))
       : savedImages.map((img, i) => ({
-          src: `data:${img.mimeType};base64,${img.b64_json}`,
+          src: img.thumb,
           label: `Idea ${i + 1}`,
         }));
 
@@ -515,7 +497,7 @@ export default function EnquirePage() {
                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                       {savedImages.map((img, i) => (
                         <div key={i} style={{ width: 56, height: 56, position: "relative", flexShrink: 0 }}>
-                          <img src={`data:${img.mimeType};base64,${img.b64_json}`} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                          <img src={img.thumb} alt={img.alt} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                           <button
                             onClick={() => setSavedImages((prev) => prev.filter((_, j) => j !== i))}
                             style={{ position: "absolute", top: 2, right: 2, background: "rgba(0,0,0,0.55)", color: "#fff", border: "none", width: 16, height: 16, cursor: "pointer", fontSize: 10, display: "flex", alignItems: "center", justifyContent: "center" }}
@@ -556,8 +538,8 @@ export default function EnquirePage() {
                           aria-pressed={isSel}
                         >
                           <img
-                            src={`data:${img.mimeType};base64,${img.b64_json}`}
-                            alt={`Idea ${i + 1}`}
+                            src={img.thumb}
+                            alt={img.alt}
                             style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", filter: isSel ? "none" : "brightness(0.85)" }}
                           />
                           <div style={{
