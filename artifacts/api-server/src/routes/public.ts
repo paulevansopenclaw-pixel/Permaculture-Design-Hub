@@ -132,8 +132,14 @@ router.post(
 
 /**
  * POST /public/vision-images
- * Public (no auth) AI-generated permaculture vision images based on survey answers.
- * Generates 8 images in parallel using Gemini image model.
+ * Public (no auth) streaming SSE endpoint — generates 6 permaculture images
+ * in parallel and sends each via SSE as soon as Gemini returns it. The client
+ * receives images progressively (first appears in ~3–5 s) rather than waiting
+ * for the full batch.
+ *
+ * SSE event format:
+ *   data: {"image":{"b64_json":"…","mimeType":"image/png","prompt":"…"}}
+ *   data: {"done":true}
  */
 router.post(
   "/public/vision-images",
@@ -151,33 +157,39 @@ router.post(
       return;
     }
 
-    const prompts = buildVisionPrompts(parsed.data.primaryGoal);
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+    res.flushHeaders();
+
+    const send = (data: object) => res.write(`data: ${JSON.stringify(data)}\n\n`);
+
+    const prompts = buildVisionPrompts(parsed.data.primaryGoal).slice(0, 6);
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: VISION_MODEL });
 
-    const results = await Promise.allSettled(
-      prompts.slice(0, 8).map(async (prompt) => {
-        const result = await model.generateContent([{ text: prompt }]);
-        const parts = result.response.candidates?.[0]?.content?.parts ?? [];
-        for (const part of parts) {
-          const inline = part.inlineData;
-          if (inline?.data) {
-            return { b64_json: inline.data, mimeType: inline.mimeType ?? "image/png", prompt };
+    // All 6 kick off simultaneously; each fires an SSE event the moment it resolves.
+    await Promise.allSettled(
+      prompts.map(async (prompt) => {
+        try {
+          const result = await model.generateContent([{ text: prompt }]);
+          const parts = result.response.candidates?.[0]?.content?.parts ?? [];
+          for (const part of parts) {
+            const inline = part.inlineData;
+            if (inline?.data) {
+              send({ image: { b64_json: inline.data, mimeType: inline.mimeType ?? "image/png", prompt } });
+              return;
+            }
           }
+        } catch {
+          // Skip failed image silently — remaining images still stream through.
         }
-        throw new Error("No image in Gemini response");
       }),
     );
 
-    const images = results
-      .filter(
-        (r): r is PromiseFulfilledResult<{ b64_json: string; mimeType: string; prompt: string }> =>
-          r.status === "fulfilled",
-      )
-      .map((r) => r.value);
-
-    req.log.info({ count: images.length }, "vision images generated");
-    res.json({ images });
+    req.log.info({ prompts: prompts.length }, "vision images streamed");
+    send({ done: true });
+    res.end();
   },
 );
 
