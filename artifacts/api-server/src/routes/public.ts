@@ -76,19 +76,43 @@ const RELAX_PROMPTS = [
 function buildVisionPrompts(primaryGoal?: string | null): string[] {
   const g = (primaryGoal ?? "").toLowerCase();
   if (g.includes("food") || g.includes("grow") || g.includes("income")) {
-    return [...FOOD_PROMPTS, RELAX_PROMPTS[0], WATER_PROMPTS[0], WILDLIFE_PROMPTS[1], WILDLIFE_PROMPTS[2]];
+    return [
+      ...FOOD_PROMPTS,
+      RELAX_PROMPTS[0], RELAX_PROMPTS[2],
+      WATER_PROMPTS[0], WILDLIFE_PROMPTS[1],
+      WILDLIFE_PROMPTS[2], WATER_PROMPTS[3],
+    ];
   }
   if (g.includes("wild") || g.includes("restor") || g.includes("native")) {
-    return [...WILDLIFE_PROMPTS, WATER_PROMPTS[2], WATER_PROMPTS[0], FOOD_PROMPTS[3], RELAX_PROMPTS[3]];
+    return [
+      ...WILDLIFE_PROMPTS,
+      WATER_PROMPTS[2], WATER_PROMPTS[0],
+      FOOD_PROMPTS[3], RELAX_PROMPTS[3],
+      WATER_PROMPTS[1], FOOD_PROMPTS[0],
+    ];
   }
   if (g.includes("water") || g.includes("capture")) {
-    return [...WATER_PROMPTS, WILDLIFE_PROMPTS[2], FOOD_PROMPTS[0], RELAX_PROMPTS[0], WILDLIFE_PROMPTS[1]];
+    return [
+      ...WATER_PROMPTS,
+      WILDLIFE_PROMPTS[2], WILDLIFE_PROMPTS[0],
+      FOOD_PROMPTS[0], RELAX_PROMPTS[0],
+      WILDLIFE_PROMPTS[1], FOOD_PROMPTS[3],
+    ];
   }
   if (g.includes("relax") || g.includes("beautif") || g.includes("place")) {
-    return [...RELAX_PROMPTS, FOOD_PROMPTS[0], WILDLIFE_PROMPTS[1], WATER_PROMPTS[1], FOOD_PROMPTS[3]];
+    return [
+      ...RELAX_PROMPTS,
+      FOOD_PROMPTS[0], FOOD_PROMPTS[2],
+      WILDLIFE_PROMPTS[1], WATER_PROMPTS[1],
+      WILDLIFE_PROMPTS[3], WATER_PROMPTS[2],
+    ];
   }
-  // Mixed / undecided
-  return [FOOD_PROMPTS[0], WILDLIFE_PROMPTS[0], WATER_PROMPTS[0], RELAX_PROMPTS[0], FOOD_PROMPTS[2], WILDLIFE_PROMPTS[2], WATER_PROMPTS[2], RELAX_PROMPTS[2]];
+  // Mixed / undecided — one from each prompt, then fill with variety
+  return [
+    FOOD_PROMPTS[0], WILDLIFE_PROMPTS[0], WATER_PROMPTS[0], RELAX_PROMPTS[0],
+    FOOD_PROMPTS[2], WILDLIFE_PROMPTS[2], WATER_PROMPTS[2], RELAX_PROMPTS[2],
+    FOOD_PROMPTS[1], WILDLIFE_PROMPTS[1],
+  ];
 }
 
 /**
@@ -164,7 +188,7 @@ router.post(
 
     const send = (data: object) => res.write(`data: ${JSON.stringify(data)}\n\n`);
 
-    const prompts = buildVisionPrompts(parsed.data.primaryGoal).slice(0, 6);
+    const prompts = buildVisionPrompts(parsed.data.primaryGoal).slice(0, 10);
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: VISION_MODEL });
 
@@ -187,7 +211,7 @@ router.post(
       }),
     );
 
-    req.log.info({ prompts: prompts.length }, "vision images streamed");
+    req.log.info({ count: prompts.length }, "vision images streamed");
     send({ done: true });
     res.end();
   },
