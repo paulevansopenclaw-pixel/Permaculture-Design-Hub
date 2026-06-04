@@ -339,6 +339,7 @@ export default function EnquirePage() {
             isNext
             gradient="linear-gradient(135deg, #1a2e1a 0%, #2c4a1e 50%, #1a3020 100%)"
             description="Terrain elevation mapped from satellite data. Solar and wind sectors calculated for your exact location. Annual water budget modelled for your rainfall. Soil type assessed. Climate zone confirmed. A complete technical portrait of what your land can do — and what it's been waiting for."
+            onLogin={login}
           />
 
           {/* Phase III — locked */}
@@ -346,6 +347,7 @@ export default function EnquirePage() {
             phase="III" name="The Design" tagline="Your master permaculture plan, revealed."
             gradient="linear-gradient(135deg, #1c2818 0%, #243620 60%, #1a2c18 100%)"
             description="Zone layout with spatial diagrams. A layered forest garden design from canopy to ground cover. Water harvesting and storage systems sized for your rainfall. Plant guilds hand-selected for your climate, soil, and goals. The complete blueprint — every element, every relationship, every reason."
+            onLogin={login}
           />
 
           {/* Phase IV — locked */}
@@ -354,6 +356,7 @@ export default function EnquirePage() {
             gradient="linear-gradient(135deg, #141e14 0%, #1e2e18 60%, #131c12 100%)"
             description="A fully illustrated design report ready to print. A phased implementation guide — what to plant in year one, year three, year ten. A curated plant supplier list for your region. 3D concept visualisations. A shareable presentation for your family, council, or investors. Everything, beautifully bound."
             isLast
+            onLogin={login}
           />
         </section>
 
@@ -788,10 +791,10 @@ export default function EnquirePage() {
 // ── Sub-components ────────────────────────────────────────────────────────────
 
 function LockedPhase({
-  phase, name, tagline, description, gradient, isNext = false, isLast = false,
+  phase, name, tagline, description, gradient, isNext = false, isLast = false, onLogin,
 }: {
   phase: string; name: string; tagline: string; description: string;
-  gradient: string; isNext?: boolean; isLast?: boolean;
+  gradient: string; isNext?: boolean; isLast?: boolean; onLogin: () => void;
 }) {
   return (
     <div style={{ position: "relative", overflow: "hidden", minHeight: 220, border: "1px solid rgba(44,53,37,0.2)", borderTop: "none", ...(isLast ? {} : { borderBottom: "none" }) }}>
@@ -819,9 +822,14 @@ function LockedPhase({
               Next to unlock
             </span>
           )}
-          <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.12em", border: "1px solid rgba(252,249,242,0.2)", color: "rgba(252,249,242,0.5)", padding: "12px 24px" }}>
+          <button
+            onClick={onLogin}
+            style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.12em", border: "1px solid rgba(252,249,242,0.2)", color: "rgba(252,249,242,0.5)", padding: "12px 24px", background: "transparent", cursor: "pointer" }}
+            onMouseEnter={(e) => { e.currentTarget.style.borderColor = "rgba(252,249,242,0.5)"; e.currentTarget.style.color = "rgba(252,249,242,0.85)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = "rgba(252,249,242,0.2)"; e.currentTarget.style.color = "rgba(252,249,242,0.5)"; }}
+          >
             Create portal to unlock →
-          </div>
+          </button>
         </div>
       </div>
     </div>
