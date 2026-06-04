@@ -56,6 +56,8 @@ import type {
   StructureUpdate,
   UploadUrlRequest,
   UploadUrlResponse,
+  VisionImagesRequest,
+  VisionImagesResponse,
   WaterBudgetReport,
   Zone,
   ZoneInput
@@ -3557,6 +3559,77 @@ export const useRequestPublicUploadUrl = <TError = ErrorType<ErrorEnvelope>,
         TContext
       > => {
       return useMutation(getRequestPublicUploadUrlMutationOptions(options));
+    }
+
+export const getGenerateVisionImagesUrl = () => {
+
+
+
+
+  return `/api/public/vision-images`
+}
+
+/**
+ * @summary Generate AI permaculture vision images from survey answers (no auth)
+ */
+export const generateVisionImages = async (visionImagesRequest: VisionImagesRequest, options?: RequestInit): Promise<VisionImagesResponse> => {
+
+  return customFetch<VisionImagesResponse>(getGenerateVisionImagesUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      visionImagesRequest,)
+  }
+);}
+
+
+
+
+export const getGenerateVisionImagesMutationOptions = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateVisionImages>>, TError,{data: BodyType<VisionImagesRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof generateVisionImages>>, TError,{data: BodyType<VisionImagesRequest>}, TContext> => {
+
+const mutationKey = ['generateVisionImages'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof generateVisionImages>>, {data: BodyType<VisionImagesRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  generateVisionImages(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GenerateVisionImagesMutationResult = NonNullable<Awaited<ReturnType<typeof generateVisionImages>>>
+    export type GenerateVisionImagesMutationBody = BodyType<VisionImagesRequest>
+    export type GenerateVisionImagesMutationError = ErrorType<ErrorEnvelope>
+
+    /**
+ * @summary Generate AI permaculture vision images from survey answers (no auth)
+ */
+export const useGenerateVisionImages = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateVisionImages>>, TError,{data: BodyType<VisionImagesRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof generateVisionImages>>,
+        TError,
+        {data: BodyType<VisionImagesRequest>},
+        TContext
+      > => {
+      return useMutation(getGenerateVisionImagesMutationOptions(options));
     }
 
 export const getCreateEnquiryUrl = () => {

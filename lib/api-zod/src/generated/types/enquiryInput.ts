@@ -34,4 +34,6 @@ export interface EnquiryInput {
   /** @nullable */
   climateZone?: string | null;
   ideaPhotos?: string[];
+  /** Base64 data URLs of AI-selected vision images */
+  ideaImagesBase64?: string[];
 }

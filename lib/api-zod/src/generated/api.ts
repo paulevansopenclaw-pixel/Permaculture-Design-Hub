@@ -1008,6 +1008,24 @@ export const RequestPublicUploadUrlResponse = zod.object({
 
 
 /**
+ * @summary Generate AI permaculture vision images from survey answers (no auth)
+ */
+export const GenerateVisionImagesBody = zod.object({
+  "primaryGoal": zod.string().nullish(),
+  "maintenanceCapacity": zod.string().nullish(),
+  "householdSize": zod.number().nullish()
+})
+
+export const GenerateVisionImagesResponse = zod.object({
+  "images": zod.array(zod.object({
+  "b64_json": zod.string(),
+  "mimeType": zod.string(),
+  "prompt": zod.string()
+}))
+})
+
+
+/**
  * @summary Submit a public client enquiry; auto-creates a site tile for the designer (no auth)
  */
 
@@ -1030,7 +1048,8 @@ export const CreateEnquiryBody = zod.object({
   "annualRainfallMm": zod.number().nullish(),
   "estimatedSoilType": zod.string().nullish(),
   "climateZone": zod.string().nullish(),
-  "ideaPhotos": zod.array(zod.string()).optional()
+  "ideaPhotos": zod.array(zod.string()).optional(),
+  "ideaImagesBase64": zod.array(zod.string()).optional().describe('Base64 data URLs of AI-selected vision images')
 })
 
 

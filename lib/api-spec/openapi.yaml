@@ -1083,6 +1083,37 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
 
+  /public/vision-images:
+    post:
+      tags: [public]
+      operationId: generateVisionImages
+      summary: Generate AI permaculture vision images from survey answers (no auth)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VisionImagesRequest'
+      responses:
+        '200':
+          description: Generated vision images.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VisionImagesResponse'
+        '429':
+          description: Rate limited.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Generation error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+
   /public/enquiries:
     post:
       tags: [public]
@@ -2108,6 +2139,11 @@ components:
           type: array
           items:
             type: string
+        ideaImagesBase64:
+          type: array
+          items:
+            type: string
+          description: Base64 data URLs of AI-selected vision images
 
     EnquiryResponse:
       type: object
@@ -2117,6 +2153,36 @@ components:
           type: string
         propertyId:
           type: string
+
+    VisionImagesRequest:
+      type: object
+      properties:
+        primaryGoal:
+          type: ["string", "null"]
+        maintenanceCapacity:
+          type: ["string", "null"]
+        householdSize:
+          type: ["integer", "null"]
+
+    VisionImage:
+      type: object
+      required: [b64_json, mimeType, prompt]
+      properties:
+        b64_json:
+          type: string
+        mimeType:
+          type: string
+        prompt:
+          type: string
+
+    VisionImagesResponse:
+      type: object
+      required: [images]
+      properties:
+        images:
+          type: array
+          items:
+            $ref: '#/components/schemas/VisionImage'
 
     ErrorEnvelope:
       type: object

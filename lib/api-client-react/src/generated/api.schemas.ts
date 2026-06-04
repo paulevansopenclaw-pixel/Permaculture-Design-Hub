@@ -616,11 +616,32 @@ export interface EnquiryInput {
   /** @nullable */
   climateZone?: string | null;
   ideaPhotos?: string[];
+  /** Base64 data URLs of AI-selected vision images */
+  ideaImagesBase64?: string[];
 }
 
 export interface EnquiryResponse {
   enquiryId: string;
   propertyId: string;
+}
+
+export interface VisionImagesRequest {
+  /** @nullable */
+  primaryGoal?: string | null;
+  /** @nullable */
+  maintenanceCapacity?: string | null;
+  /** @nullable */
+  householdSize?: number | null;
+}
+
+export interface VisionImage {
+  b64_json: string;
+  mimeType: string;
+  prompt: string;
+}
+
+export interface VisionImagesResponse {
+  images: VisionImage[];
 }
 
 export interface ErrorEnvelope {
