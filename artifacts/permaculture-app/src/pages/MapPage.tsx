@@ -142,10 +142,10 @@ function parseGeoJsonFile(text: string): GeoJSON.Polygon | null {
 }
 
 const SECTOR_TYPES = [
-  { value: "custom_view",  label: "Custom View Corridor", emoji: "👁",  color: "rgba(255,215,0,0.3)",   border: "#d4a800" },
-  { value: "noise",        label: "Nuisance/Road Noise",  emoji: "🔊",  color: "rgba(220,38,38,0.3)",   border: "#dc2626" },
-  { value: "wind",         label: "Damaging Winds",       emoji: "💨",  color: "rgba(59,130,246,0.3)",  border: "#3b82f6" },
-  { value: "winter_solar", label: "Winter Solar Arc",     emoji: "☀️",  color: "rgba(249,115,22,0.3)",  border: "#f97316" },
+  { value: "custom_view",  label: "Custom View Corridor", emoji: "👁",  color: "rgba(200,151,26,0.3)",  border: "#C8971A" },
+  { value: "noise",        label: "Nuisance/Road Noise",  emoji: "🔊",  color: "rgba(180,80,50,0.3)",   border: "#B45032" },
+  { value: "wind",         label: "Damaging Winds",       emoji: "💨",  color: "rgba(85,119,168,0.3)",  border: "#5577A8" },
+  { value: "winter_solar", label: "Winter Solar Arc",     emoji: "☀️",  color: "rgba(210,138,32,0.3)",  border: "#D28A20" },
 ];
 
 // (solar arc geometry is now computed inline via suncalc in the SVG overlay effect)
@@ -171,8 +171,8 @@ const PATHWAY_TYPES = [
 // ─── ZONE ANALYSIS CONSTANTS ──────────────────────────────────────────────────
 const ZONE_STYLES = [
   { zone: 1, label: "Zone 1 — Daily Use",         drawLabel: "Draw Zone 1 (Daily)",            color: "#CA8A04", fillColor: "#FDE68A", fillOpacity: 0.35, hint: "Kitchen garden, herbs — most visited" },
-  { zone: 2, label: "Zone 2 — Semi-Daily",         drawLabel: "Draw Zone 2 (Semi-Daily)",        color: "#16A34A", fillColor: "#86EFAC", fillOpacity: 0.35, hint: "Orchard, small livestock, compost" },
-  { zone: 3, label: "Zone 3 — Farm / Pasture",     drawLabel: "Draw Zone 3 (Pasture/Crops)",     color: "#15803D", fillColor: "#4ADE80", fillOpacity: 0.30, hint: "Crops, larger livestock, fuel plants" },
+  { zone: 2, label: "Zone 2 — Semi-Daily",         drawLabel: "Draw Zone 2 (Semi-Daily)",        color: "#4A7C3F", fillColor: "#9DC08B", fillOpacity: 0.35, hint: "Orchard, small livestock, compost" },
+  { zone: 3, label: "Zone 3 — Farm / Pasture",     drawLabel: "Draw Zone 3 (Pasture/Crops)",     color: "#3B6B30", fillColor: "#7AAF68", fillOpacity: 0.30, hint: "Crops, larger livestock, fuel plants" },
   { zone: 4, label: "Zone 4 — Semi-Wild / Timber", drawLabel: "Draw Zone 4 (Woodlot/Semi-Wild)", color: "#92400E", fillColor: "#D4A27A", fillOpacity: 0.30, hint: "Timber, foraging, managed forest" },
   { zone: 5, label: "Zone 5 — Wilderness",         drawLabel: "Draw Zone 5 (Wild Nature)",       color: "#475569", fillColor: "#94A3B8", fillOpacity: 0.30, hint: "No intervention — wildlife sanctuary" },
 ];
@@ -635,9 +635,9 @@ export default function MapPage() {
     });
     pathwayPolylineHandlerRef.current = pathwayPolylineHandler;
 
-    // Sensory vector line handler — dashed red-orange stroke
+    // Sensory vector line handler — dashed terracotta stroke
     const sensoryLineHandler = new PolylineHandler(map, {
-      shapeOptions: { color: "#ef4444", weight: 2.5, opacity: 0.9, dashArray: "8 5" },
+      shapeOptions: { color: "#B85232", weight: 2.5, opacity: 0.9, dashArray: "8 5" },
       allowIntersection: true,
     });
     sensoryLineHandlerRef.current = sensoryLineHandler;
@@ -773,7 +773,7 @@ export default function MapPage() {
     if (overpassLayerRef.current) { map.removeLayer(overpassLayerRef.current); overpassLayerRef.current = null; }
     if (!overpassPreview || !mapLoaded) return;
     const layer = L.geoJSON(overpassPreview as any, {
-      style: { color: "#3b82f6", weight: 2.5, opacity: 1, fillColor: "#3b82f6", fillOpacity: 0.08, dashArray: "8 5" },
+      style: { color: "#4A8C8C", weight: 2.5, opacity: 1, fillColor: "#4A8C8C", fillOpacity: 0.08, dashArray: "8 5" },
     }).addTo(map);
     overpassLayerRef.current = layer;
     try { map.fitBounds(layer.getBounds(), { padding: [40, 40] }); } catch { /* no-op */ }
@@ -840,7 +840,7 @@ export default function MapPage() {
         if (!m) return;
         contourDataRef.current = fc;
         const layer = L.geoJSON(fc as any, {
-          style: () => ({ color: "#ef4444", weight: 2, opacity: 0.9, fill: false }),
+          style: () => ({ color: "#A0714F", weight: 2, opacity: 0.9, fill: false }),
         }).addTo(m);
         contourLayerRef.current = layer;
         // Auto-run keyline analysis as soon as contours are ready
@@ -924,8 +924,8 @@ export default function MapPage() {
           paint: {
             "line-color": [
               "case",
-              ["==", ["%", ["to-number", ["coalesce", ["get", "ele"], 0]], 5], 0], "#ef4444",
-              "#ff666688",
+              ["==", ["%", ["to-number", ["coalesce", ["get", "ele"], 0]], 5], 0], "#C4875A",
+              "#C4875A88",
             ],
             "line-width": ["case", ["==", ["%", ["to-number", ["coalesce", ["get", "ele"], 0]], 5], 0], 1.8, 0.8],
             "line-opacity": 0.85,
@@ -946,14 +946,14 @@ export default function MapPage() {
         glMap.addLayer({
           id: "gl-zones-fill", type: "fill", source: "gl-zones",
           paint: {
-            "fill-color": ["match", ["get", "zoneNumber"], 1, "#FDE68A", 2, "#86EFAC", 3, "#4ADE80", 4, "#D4A27A", 5, "#94A3B8", "#ffffff"],
+            "fill-color": ["match", ["get", "zoneNumber"], 1, "#FDE68A", 2, "#9DC08B", 3, "#7AAF68", 4, "#D4A27A", 5, "#94A3B8", "#ffffff"],
             "fill-opacity": 0.30,
           },
         });
         glMap.addLayer({
           id: "gl-zones-line", type: "line", source: "gl-zones",
           paint: {
-            "line-color": ["match", ["get", "zoneNumber"], 1, "#CA8A04", 2, "#16A34A", 3, "#15803D", 4, "#92400E", 5, "#475569", "#888888"],
+            "line-color": ["match", ["get", "zoneNumber"], 1, "#CA8A04", 2, "#4A7C3F", 3, "#3B6B30", 4, "#92400E", 5, "#475569", "#888888"],
             "line-width": 2, "line-opacity": 0.85,
           },
         });
@@ -971,8 +971,8 @@ export default function MapPage() {
       });
       if (sectorFeatures.length > 0) {
         glMap.addSource("gl-sectors", { type: "geojson", data: { type: "FeatureCollection", features: sectorFeatures } });
-        glMap.addLayer({ id: "gl-sectors-fill", type: "fill", source: "gl-sectors", paint: { "fill-color": "#3b82f6", "fill-opacity": 0.18 } });
-        glMap.addLayer({ id: "gl-sectors-line", type: "line", source: "gl-sectors", paint: { "line-color": "#93c5fd", "line-width": 1.5, "line-opacity": 0.75 } });
+        glMap.addLayer({ id: "gl-sectors-fill", type: "fill", source: "gl-sectors", paint: { "fill-color": "#5A7B42", "fill-opacity": 0.18 } });
+        glMap.addLayer({ id: "gl-sectors-line", type: "line", source: "gl-sectors", paint: { "line-color": "#8FAD6A", "line-width": 1.5, "line-opacity": 0.75 } });
       }
 
       // Animate to pitched 3D view
@@ -1154,9 +1154,9 @@ export default function MapPage() {
     if (!activePropertyId || !showSensoryVectors) return;
 
     const typeConfig: Record<string, { color: string; emoji: string }> = {
-      road_noise:       { color: "#ef4444", emoji: "🔊" },
-      view_corridor:    { color: "#22c55e", emoji: "👁" },
-      privacy_threat:   { color: "#a855f7", emoji: "🚫" },
+      road_noise:       { color: "#B85232", emoji: "🔊" },
+      view_corridor:    { color: "#2A9D8F", emoji: "👁" },
+      privacy_threat:   { color: "#7C4F7E", emoji: "🚫" },
     };
 
     sensoryVectors.forEach((sv) => {
@@ -4096,7 +4096,7 @@ export default function MapPage() {
                 <div className="grid grid-cols-1 gap-1">
                   {(["road_noise", "view_corridor", "privacy_threat"] as const).map((t) => {
                     const labels: Record<string, string> = { road_noise: "🔊 Road Noise", view_corridor: "👁 View Corridor", privacy_threat: "🚫 Privacy Threat" };
-                    const colors: Record<string, string> = { road_noise: "#ef4444", view_corridor: "#22c55e", privacy_threat: "#a855f7" };
+                    const colors: Record<string, string> = { road_noise: "#B85232", view_corridor: "#2A9D8F", privacy_threat: "#7C4F7E" };
                     const active = sensoryVectorType === t;
                     return (
                       <button
@@ -4132,9 +4132,9 @@ export default function MapPage() {
                     onClick={() => { setDropSensoryPointMode(true); setDrawSensoryLineMode(false); }}
                     className="flex-1 text-[11px] py-1.5 rounded font-medium transition-colors"
                     style={{
-                      background: dropSensoryPointMode ? "hsl(270, 40%, 18%)" : "hsl(94, 22%, 12%)",
-                      border: `1px solid ${dropSensoryPointMode ? "#a855f7" : "hsl(94, 22%, 22%)"}`,
-                      color: dropSensoryPointMode ? "#c084fc" : "hsl(42, 15%, 55%)",
+                      background: dropSensoryPointMode ? "hsl(26, 40%, 18%)" : "hsl(94, 22%, 12%)",
+                      border: `1px solid ${dropSensoryPointMode ? "#B85232" : "hsl(94, 22%, 22%)"}`,
+                      color: dropSensoryPointMode ? "#D4845A" : "hsl(42, 15%, 55%)",
                     }}
                   >
                     {dropSensoryPointMode ? "Click map…" : "Drop Point"}
@@ -4143,9 +4143,9 @@ export default function MapPage() {
                     onClick={() => { setDrawSensoryLineMode(true); setDropSensoryPointMode(false); }}
                     className="flex-1 text-[11px] py-1.5 rounded font-medium transition-colors"
                     style={{
-                      background: drawSensoryLineMode ? "hsl(270, 40%, 18%)" : "hsl(94, 22%, 12%)",
-                      border: `1px solid ${drawSensoryLineMode ? "#a855f7" : "hsl(94, 22%, 22%)"}`,
-                      color: drawSensoryLineMode ? "#c084fc" : "hsl(42, 15%, 55%)",
+                      background: drawSensoryLineMode ? "hsl(26, 40%, 18%)" : "hsl(94, 22%, 12%)",
+                      border: `1px solid ${drawSensoryLineMode ? "#B85232" : "hsl(94, 22%, 22%)"}`,
+                      color: drawSensoryLineMode ? "#D4845A" : "hsl(42, 15%, 55%)",
                     }}
                   >
                     {drawSensoryLineMode ? "Drawing…" : "Draw Line"}
@@ -4155,8 +4155,8 @@ export default function MapPage() {
 
               {/* Pending point confirm */}
               {pendingSensoryPoint && (
-                <div className="space-y-1.5 rounded-lg p-2" style={{ background: "hsl(270, 30%, 12%)", border: "1px solid #a855f733" }}>
-                  <p className="text-[11px]" style={{ color: "#c084fc" }}>Point placed — save?</p>
+                <div className="space-y-1.5 rounded-lg p-2" style={{ background: "hsl(26, 25%, 12%)", border: "1px solid #B8523233" }}>
+                  <p className="text-[11px]" style={{ color: "#D4845A" }}>Point placed — save?</p>
                   <div className="flex gap-1.5">
                     <button
                       disabled={createSensoryVector.isPending}
@@ -4169,7 +4169,7 @@ export default function MapPage() {
                         );
                       }}
                       className="flex-1 text-[11px] py-1 rounded font-medium"
-                      style={{ background: "hsl(270, 45%, 30%)", color: "#e9d5ff" }}
+                      style={{ background: "hsl(26, 40%, 22%)", color: "#f0d5c0" }}
                     >
                       {createSensoryVector.isPending ? "Saving…" : "Save"}
                     </button>
@@ -4184,8 +4184,8 @@ export default function MapPage() {
 
               {/* Pending line confirm */}
               {pendingSensoryLine && (
-                <div className="space-y-1.5 rounded-lg p-2" style={{ background: "hsl(270, 30%, 12%)", border: "1px solid #a855f733" }}>
-                  <p className="text-[11px]" style={{ color: "#c084fc" }}>Line drawn — save?</p>
+                <div className="space-y-1.5 rounded-lg p-2" style={{ background: "hsl(26, 25%, 12%)", border: "1px solid #B8523233" }}>
+                  <p className="text-[11px]" style={{ color: "#D4845A" }}>Line drawn — save?</p>
                   <div className="flex gap-1.5">
                     <button
                       disabled={createSensoryVector.isPending}
@@ -4197,7 +4197,7 @@ export default function MapPage() {
                         );
                       }}
                       className="flex-1 text-[11px] py-1 rounded font-medium"
-                      style={{ background: "hsl(270, 45%, 30%)", color: "#e9d5ff" }}
+                      style={{ background: "hsl(26, 40%, 22%)", color: "#f0d5c0" }}
                     >
                       {createSensoryVector.isPending ? "Saving…" : "Save"}
                     </button>
@@ -4213,20 +4213,20 @@ export default function MapPage() {
               {/* Saved vectors list */}
               {sensoryVectors.length > 0 && (
                 <div>
-                  <div className="text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: "#a855f7" }}>
+                  <div className="text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: "#B85232" }}>
                     Saved ({sensoryVectors.length})
                   </div>
                   <div className="space-y-1">
                     {sensoryVectors.map((sv) => {
                       const typeEmoji: Record<string, string> = { road_noise: "🔊", view_corridor: "👁", privacy_threat: "🚫" };
-                      const typeColor: Record<string, string> = { road_noise: "#ef4444", view_corridor: "#22c55e", privacy_threat: "#a855f7" };
+                      const typeColor: Record<string, string> = { road_noise: "#B85232", view_corridor: "#2A9D8F", privacy_threat: "#7C4F7E" };
                       let geomType = "?";
                       try { geomType = (JSON.parse(sv.geojsonGeometry) as { type: string }).type; } catch { /* */ }
                       return (
                         <div key={sv.id} className="rounded p-1.5 text-[10px] flex items-start justify-between gap-1"
-                          style={{ background: "hsl(270, 20%, 10%)", border: `1px solid ${typeColor[sv.vectorType] ?? "#a855f7"}33` }}>
+                          style={{ background: "hsl(26, 15%, 10%)", border: `1px solid ${typeColor[sv.vectorType] ?? "#B85232"}33` }}>
                           <div className="flex-1 min-w-0">
-                            <div className="font-medium truncate" style={{ color: typeColor[sv.vectorType] ?? "#c084fc" }}>
+                            <div className="font-medium truncate" style={{ color: typeColor[sv.vectorType] ?? "#D4845A" }}>
                               {typeEmoji[sv.vectorType] ?? "?"} {sv.label || sv.vectorType.replace(/_/g, " ")}
                             </div>
                             <div style={{ color: "hsl(42, 15%, 45%)" }}>{geomType.toLowerCase()}</div>

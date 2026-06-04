@@ -49,17 +49,17 @@ async function fetchMapboxToken(): Promise<string> {
 
 const ZONE_COLORS: Record<number, { fill: string; stroke: string }> = {
   1: { fill: "#FDE68A", stroke: "#CA8A04" },
-  2: { fill: "#86EFAC", stroke: "#16A34A" },
-  3: { fill: "#4ADE80", stroke: "#15803D" },
+  2: { fill: "#9DC08B", stroke: "#4A7C3F" },
+  3: { fill: "#7AAF68", stroke: "#3B6B30" },
   4: { fill: "#D4A27A", stroke: "#92400E" },
   5: { fill: "#94A3B8", stroke: "#475569" },
 };
 
 const SECTOR_COLORS: Record<string, string> = {
-  wind: "#3b82f6",
-  noise: "#dc2626",
-  winter_solar: "#f97316",
-  custom_view: "#d4a800",
+  wind: "#5577A8",
+  noise: "#B45032",
+  winter_solar: "#D28A20",
+  custom_view: "#C8971A",
 };
 
 const PATHWAY_COLORS: Record<string, string> = {
@@ -68,7 +68,7 @@ const PATHWAY_COLORS: Record<string, string> = {
 };
 
 const SENSORY_COLORS: Record<string, string> = {
-  road_noise: "#ef4444", view_corridor: "#22d3ee", privacy_threat: "#a855f7",
+  road_noise: "#B85232", view_corridor: "#2A9D8F", privacy_threat: "#7C4F7E",
 };
 
 const PRIORITY_COLOR: Record<string, { bg: string; text: string; border: string }> = {

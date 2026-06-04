@@ -29,16 +29,16 @@ const RULE = "#6b5f4e";
 
 const ZONE_COLORS: Record<number, { fill: string; stroke: string }> = {
   1: { fill: "#FDE68A", stroke: "#CA8A04" },
-  2: { fill: "#86EFAC", stroke: "#16A34A" },
-  3: { fill: "#4ADE80", stroke: "#15803D" },
+  2: { fill: "#9DC08B", stroke: "#4A7C3F" },
+  3: { fill: "#7AAF68", stroke: "#3B6B30" },
   4: { fill: "#D4A27A", stroke: "#92400E" },
   5: { fill: "#94A3B8", stroke: "#475569" },
 };
 const SECTOR_COLORS: Record<string, string> = {
-  wind: "#3b82f6",
-  noise: "#dc2626",
-  winter_solar: "#f97316",
-  custom_view: "#d4a800",
+  wind: "#5577A8",
+  noise: "#B45032",
+  winter_solar: "#D28A20",
+  custom_view: "#C8971A",
 };
 const PATHWAY_COLORS: Record<string, string> = {
   driveway: "#8B6914",
@@ -48,9 +48,9 @@ const PATHWAY_COLORS: Record<string, string> = {
   firebreak: "#DC2626",
 };
 const SENSORY_COLORS: Record<string, string> = {
-  road_noise: "#ef4444",
-  view_corridor: "#22d3ee",
-  privacy_threat: "#a855f7",
+  road_noise: "#B85232",
+  view_corridor: "#2A9D8F",
+  privacy_threat: "#7C4F7E",
 };
 
 export type PlanLayerKey = "boundary" | "water" | "zones" | "sectors" | "structures";
@@ -157,9 +157,9 @@ export const PlanPlate = forwardRef<SVGSVGElement, PlanPlateProps>(function Plan
   const legend: { color: string; label: string; dashed?: boolean }[] = [];
   if (visible.boundary) legend.push({ color: INK, label: "Property boundary" });
   if (visible.water) {
-    legend.push({ color: "#2563eb", label: "Contour (1 m)" });
-    if (swales.length) legend.push({ color: "#0891b2", label: "Designed swale", dashed: true });
-    if (waterAnalysis?.damSite) legend.push({ color: "#1d4ed8", label: "Keyline dam site" });
+    legend.push({ color: "#2A7C8E", label: "Contour (1 m)" });
+    if (swales.length) legend.push({ color: "#2A8C7A", label: "Designed swale", dashed: true });
+    if (waterAnalysis?.damSite) legend.push({ color: "#1F6B7A", label: "Keyline dam site" });
   }
   if (visible.zones) {
     const nums = [...new Set(zones.map((z) => z.zoneNumber))].sort();
@@ -321,7 +321,7 @@ export const PlanPlate = forwardRef<SVGSVGElement, PlanPlateProps>(function Plan
                 key={`c${i}`}
                 d={d}
                 fill="none"
-                stroke={index ? "#1d4ed8" : "#60a5fa"}
+                stroke={index ? "#2A7C8E" : "#5A9EBF"}
                 strokeWidth={index ? 1.1 : 0.6}
                 strokeOpacity={index ? 0.85 : 0.55}
               />
@@ -339,8 +339,8 @@ export const PlanPlate = forwardRef<SVGSVGElement, PlanPlateProps>(function Plan
             const [mx, my] = proj.project(mid[0], mid[1]);
             return (
               <g key={sw.id}>
-                <path d={d} fill="none" stroke="#0891b2" strokeWidth="2.5" strokeDasharray="7 4" strokeLinecap="round" />
-                <text x={mx} y={my - 5} textAnchor="middle" fontSize="9" fontWeight={700} fill="#0e7490" stroke={PARCHMENT} strokeWidth="2.5" paintOrder="stroke">
+                <path d={d} fill="none" stroke="#2A8C7A" strokeWidth="2.5" strokeDasharray="7 4" strokeLinecap="round" />
+                <text x={mx} y={my - 5} textAnchor="middle" fontSize="9" fontWeight={700} fill="#1F6B5C" stroke={PARCHMENT} strokeWidth="2.5" paintOrder="stroke">
                   {sw.name} · {sw.lengthM} m
                 </text>
               </g>
@@ -352,8 +352,8 @@ export const PlanPlate = forwardRef<SVGSVGElement, PlanPlateProps>(function Plan
               const [x, y] = proj.project(lng, lat);
               return (
                 <g>
-                  <path d={`M${x},${y - 9} L${x + 8},${y + 6} L${x - 8},${y + 6} Z`} fill="#1d4ed8" stroke="#fff" strokeWidth="1" />
-                  <text x={x + 11} y={y + 3} fontSize="9" fontWeight={700} fill="#1d4ed8" stroke={PARCHMENT} strokeWidth="2.5" paintOrder="stroke">
+                  <path d={`M${x},${y - 9} L${x + 8},${y + 6} L${x - 8},${y + 6} Z`} fill="#1F6B7A" stroke="#fff" strokeWidth="1" />
+                  <text x={x + 11} y={y + 3} fontSize="9" fontWeight={700} fill="#1F6B7A" stroke={PARCHMENT} strokeWidth="2.5" paintOrder="stroke">
                     Dam site
                   </text>
                 </g>
