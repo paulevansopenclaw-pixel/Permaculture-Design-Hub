@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Link } from "wouter";
 import { useCreateEnquiry } from "@workspace/api-client-react";
+import { useAuth } from "@workspace/replit-auth-web";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 const TOTAL_SLOTS = 6;
@@ -61,6 +62,7 @@ async function uploadToGCS(uploadURL: string, file: File): Promise<void> {
 // ── Main component ───────────────────────────────────────────────────────────
 export default function EnquirePage() {
   const createEnquiry = useCreateEnquiry();
+  const { login } = useAuth();
 
   const [step, setStep] = useState(0); // 0 basics · 1 survey · 2 vision · 3 review · 4 done
 
@@ -258,6 +260,140 @@ export default function EnquirePage() {
           src: img.thumb,
           label: `Idea ${i + 1}`,
         }));
+
+  // ── Step 4: Journey begun — full-page experience ───────────────────────────
+  if (step === 4) {
+    return (
+      <div style={{ minHeight: "100vh", background: "#fcf9f2", fontFamily: "'Fraunces', Georgia, serif", color: "#1a1c18" }}>
+        <style dangerouslySetInnerHTML={{ __html: `
+          @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=IBM+Plex+Mono:ital,wght@0,400;0,500;1,400&display=swap');
+          .mono { font-family: 'IBM Plex Mono', monospace; }
+          @keyframes fade-up { 0%{opacity:0;transform:translateY(16px)}100%{opacity:1;transform:translateY(0)} }
+          .fade-up { animation: fade-up 0.7s ease-out forwards; }
+          .fade-up-2 { animation: fade-up 0.7s 0.15s ease-out both; }
+          .fade-up-3 { animation: fade-up 0.7s 0.3s ease-out both; }
+        `}} />
+
+        {/* Header */}
+        <header style={{ padding: "24px 40px", borderBottom: "1px solid rgba(44,53,37,0.12)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <Link href="/" style={{ fontSize: 20, fontWeight: 600, letterSpacing: "-0.02em", color: "#1a1c18", textDecoration: "none" }}>Pattern</Link>
+          <span className="mono" style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.12em", color: "#4a5d3f" }}>Your Design Journey</span>
+        </header>
+
+        {/* Hero */}
+        <section style={{ maxWidth: 700, margin: "0 auto", padding: "88px 32px 72px", textAlign: "center" }}>
+          <div className="fade-up">
+            <span className="mono" style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.16em", color: "#4a5d3f", display: "inline-flex", alignItems: "center", gap: 8, marginBottom: 32 }}>
+              <span style={{ width: 18, height: 18, background: "#4a5d3f", color: "#fcf9f2", borderRadius: "50%", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 11 }}>✓</span>
+              Enquiry received
+            </span>
+          </div>
+          <h1 className="fade-up-2" style={{ fontSize: "clamp(3rem,8vw,5.5rem)", fontWeight: 300, lineHeight: 1.0, letterSpacing: "-0.03em", marginBottom: 32 }}>
+            Your journey<br /><em style={{ color: "#4a5d3f" }}>has begun.</em>
+          </h1>
+          <p className="fade-up-3" style={{ fontSize: 18, color: "rgba(44,53,37,0.75)", lineHeight: 1.8, marginBottom: 12 }}>
+            One of our Pattern designers is now looking at<br />
+            <strong style={{ color: "#2c3525" }}>{name.split(" ")[0] ? `${name.split(" ")[0]}'s` : "your"} land at {address}</strong>.
+          </p>
+          <p className="fade-up-3" style={{ fontSize: 14, color: "rgba(44,53,37,0.5)", lineHeight: 1.6 }}>
+            We'll be in touch at <strong style={{ color: "#2c3525" }}>{email}</strong>
+          </p>
+        </section>
+
+        {/* What you're getting */}
+        <section style={{ maxWidth: 900, margin: "0 auto", padding: "0 32px 80px" }}>
+          <div style={{ textAlign: "center", marginBottom: 40 }}>
+            <span className="mono" style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.18em", color: "rgba(44,53,37,0.4)" }}>
+              Here's what we're building for you
+            </span>
+          </div>
+
+          {/* Phase I — FREE / unlocked */}
+          <div style={{ border: "1px solid rgba(44,53,37,0.2)", background: "#fffdf9", borderBottom: "none" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "240px 1fr" }}>
+              <div style={{ borderRight: "1px solid rgba(44,53,37,0.12)", padding: "36px 32px", background: "#f0ede4", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                <div>
+                  <span className="mono" style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.14em", color: "#4a5d3f" }}>Phase I</span>
+                  <h3 style={{ fontSize: 22, fontWeight: 300, marginTop: 8, marginBottom: 0 }}>Discovery</h3>
+                </div>
+                <div style={{ marginTop: 24, display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ width: 20, height: 20, background: "#4a5d3f", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", color: "#fcf9f2", fontSize: 11, flexShrink: 0 }}>✓</span>
+                  <span className="mono" style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.1em", color: "#4a5d3f" }}>Active now · Free</span>
+                </div>
+              </div>
+              <div style={{ padding: "36px 40px" }}>
+                <p style={{ fontSize: 18, fontStyle: "italic", fontWeight: 300, color: "#2c3525", marginBottom: 12 }}>Your project takes root.</p>
+                <p style={{ fontSize: 14, color: "rgba(44,53,37,0.65)", lineHeight: 1.8, marginBottom: 20 }}>
+                  Your property is now live in the Pattern studio. Your designer can see your goals, your {reviewThumbs.length > 0 ? `${reviewThumbs.length}-image vision board, your` : ""} brief, and the story of what you want this land to become.
+                </p>
+                <span className="mono" style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.12em", color: "#4a5d3f", borderTop: "1px solid rgba(44,53,37,0.1)", paddingTop: 16, display: "block" }}>
+                  Your site is active in the Pattern studio ·  No action needed
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Phase II — locked, blurred bg */}
+          <LockedPhase
+            phase="II" name="Site Reading" tagline="We read every inch of your land."
+            isNext
+            gradient="linear-gradient(135deg, #1a2e1a 0%, #2c4a1e 50%, #1a3020 100%)"
+            description="Terrain elevation mapped from satellite data. Solar and wind sectors calculated for your exact location. Annual water budget modelled for your rainfall. Soil type assessed. Climate zone confirmed. A complete technical portrait of what your land can do — and what it's been waiting for."
+          />
+
+          {/* Phase III — locked */}
+          <LockedPhase
+            phase="III" name="The Design" tagline="Your master permaculture plan, revealed."
+            gradient="linear-gradient(135deg, #1c2818 0%, #243620 60%, #1a2c18 100%)"
+            description="Zone layout with spatial diagrams. A layered forest garden design from canopy to ground cover. Water harvesting and storage systems sized for your rainfall. Plant guilds hand-selected for your climate, soil, and goals. The complete blueprint — every element, every relationship, every reason."
+          />
+
+          {/* Phase IV — locked */}
+          <LockedPhase
+            phase="IV" name="Full Dossier" tagline="The complete picture."
+            gradient="linear-gradient(135deg, #141e14 0%, #1e2e18 60%, #131c12 100%)"
+            description="A fully illustrated design report ready to print. A phased implementation guide — what to plant in year one, year three, year ten. A curated plant supplier list for your region. 3D concept visualisations. A shareable presentation for your family, council, or investors. Everything, beautifully bound."
+            isLast
+          />
+        </section>
+
+        {/* Account setup CTA — dark forest */}
+        <section style={{ background: "#2c3525", padding: "80px 32px", textAlign: "center" }}>
+          <span className="mono" style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.18em", color: "rgba(252,249,242,0.45)", display: "block", marginBottom: 24 }}>
+            Create your client portal
+          </span>
+          <h2 style={{ fontSize: "clamp(2rem,5vw,3.2rem)", fontWeight: 300, color: "#fcf9f2", lineHeight: 1.1, letterSpacing: "-0.02em", marginBottom: 20 }}>
+            Watch your design<br /><em style={{ color: "#8aab6a" }}>come to life.</em>
+          </h2>
+          <p style={{ fontSize: 16, color: "rgba(252,249,242,0.65)", lineHeight: 1.8, maxWidth: 480, margin: "0 auto 40px" }}>
+            Complete your account setup to unlock your client portal — track every phase of your design as it's built, receive your site analysis, and access your final plan when it's ready.
+          </p>
+          <button
+            onClick={login}
+            style={{ background: "#fcf9f2", color: "#2c3525", padding: "20px 52px", fontSize: 12, fontFamily: "'IBM Plex Mono', monospace", textTransform: "uppercase", letterSpacing: "0.16em", border: "none", cursor: "pointer", marginBottom: 20, fontWeight: 500 }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = "#f0ede4"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "#fcf9f2"; }}
+          >
+            Complete my account setup
+          </button>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 24, flexWrap: "wrap" }}>
+            {["Free to start", "Takes 30 seconds", "No card needed"].map((t) => (
+              <span key={t} className="mono" style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.12em", color: "rgba(252,249,242,0.35)", display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ width: 3, height: 3, background: "rgba(252,249,242,0.35)", borderRadius: "50%", display: "inline-block" }} />
+                {t}
+              </span>
+            ))}
+          </div>
+        </section>
+
+        {/* Footer */}
+        <footer style={{ background: "#1a1c18", padding: "28px 40px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span className="mono" style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.12em", color: "rgba(252,249,242,0.3)" }}>Pattern Studio</span>
+          <Link href="/enquire" className="mono" style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.12em", color: "rgba(252,249,242,0.3)", textDecoration: "none" }}>Start a new enquiry</Link>
+        </footer>
+      </div>
+    );
+  }
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
@@ -643,34 +779,54 @@ export default function EnquirePage() {
           </section>
         )}
 
-        {/* ── 4: Done ────────────────────────────────────────────────────── */}
-        {step === 4 && (
-          <section style={{ textAlign: "center", paddingTop: 48 }}>
-            <span className="mono" style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.12em", color: "#4a5d3f", display: "block", marginBottom: 24 }}>Enquiry received</span>
-            <h1 style={{ fontSize: "clamp(2rem,5vw,3rem)", fontWeight: 300, lineHeight: 1.1, letterSpacing: "-0.02em", marginBottom: 24 }}>
-              Thank you, <em style={{ color: "#4a5d3f" }}>{name.split(" ")[0] || "friend"}.</em>
-            </h1>
-            <p style={{ color: "rgba(44,53,37,0.75)", marginBottom: 16, lineHeight: 1.7, maxWidth: 400, margin: "0 auto 16px" }}>
-              Your land is now on our studio board. A designer will study <strong>{address || "your property"}</strong> and reach out to <strong>{email}</strong> to begin.
-            </p>
-            {reviewThumbs.length > 0 && (
-              <p style={{ color: "rgba(44,53,37,0.55)", fontSize: 13, maxWidth: 380, margin: "0 auto 40px", lineHeight: 1.6 }}>
-                Your {reviewThumbs.length} vision image{reviewThumbs.length > 1 ? "s" : ""} {reviewThumbs.length > 1 ? "have" : "has"} been saved to your profile and will inspire your final design.
-              </p>
-            )}
-            <div style={{ marginTop: 40 }}>
-              <Link href="/" className="mono" style={{ background: "#2c3525", color: "#fcf9f2", padding: "16px 32px", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.12em", display: "inline-block", textDecoration: "none" }}>
-                Back to home
-              </Link>
-            </div>
-          </section>
-        )}
+        {/* step 4 handled by early-return above */}
       </main>
     </div>
   );
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────
+
+function LockedPhase({
+  phase, name, tagline, description, gradient, isNext = false, isLast = false,
+}: {
+  phase: string; name: string; tagline: string; description: string;
+  gradient: string; isNext?: boolean; isLast?: boolean;
+}) {
+  return (
+    <div style={{ position: "relative", overflow: "hidden", minHeight: 220, border: "1px solid rgba(44,53,37,0.2)", borderTop: "none", ...(isLast ? {} : { borderBottom: "none" }) }}>
+      <div style={{ position: "absolute", inset: 0, background: gradient }} />
+      <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: "40px 48px", gap: 32, flexWrap: "wrap" }}>
+        <div style={{ flex: 1, minWidth: 260 }}>
+          <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.14em", color: "rgba(252,249,242,0.45)", display: "block", marginBottom: 12 }}>
+            Phase {phase}
+          </span>
+          <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 16 }}>
+            <div style={{ width: 36, height: 36, borderRadius: "50%", border: "1px solid rgba(252,249,242,0.25)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(252,249,242,0.55)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" />
+                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+              </svg>
+            </div>
+            <h3 style={{ fontSize: 24, fontWeight: 300, color: "#fcf9f2", margin: 0 }}>{name}</h3>
+          </div>
+          <p style={{ fontSize: 16, fontStyle: "italic", color: "rgba(252,249,242,0.7)", marginBottom: 12 }}>{tagline}</p>
+          <p style={{ fontSize: 13, color: "rgba(252,249,242,0.45)", lineHeight: 1.8, maxWidth: 480 }}>{description}</p>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8, flexShrink: 0 }}>
+          {isNext && (
+            <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 9, textTransform: "uppercase", letterSpacing: "0.14em", color: "rgba(252,249,242,0.35)" }}>
+              Next to unlock
+            </span>
+          )}
+          <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.12em", border: "1px solid rgba(252,249,242,0.2)", color: "rgba(252,249,242,0.5)", padding: "12px 24px" }}>
+            Create portal to unlock →
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function ProgressRail({ step }: { step: number }) {
   const labels = ["Basics", "Survey", "Vision", "Review"];
