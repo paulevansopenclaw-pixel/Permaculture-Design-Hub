@@ -62,7 +62,10 @@ async function uploadToGCS(uploadURL: string, file: File): Promise<void> {
 // ── Main component ───────────────────────────────────────────────────────────
 export default function EnquirePage() {
   const createEnquiry = useCreateEnquiry();
-  const { login } = useAuth();
+  useAuth(); // keep session state warm
+  const loginToPortal = () => {
+    window.location.href = `/api/login?returnTo=/properties`;
+  };
 
   const [step, setStep] = useState(0); // 0 basics · 1 survey · 2 vision · 3 review · 4 done
 
@@ -339,7 +342,7 @@ export default function EnquirePage() {
             isNext
             gradient="linear-gradient(135deg, #1a2e1a 0%, #2c4a1e 50%, #1a3020 100%)"
             description="Terrain elevation mapped from satellite data. Solar and wind sectors calculated for your exact location. Annual water budget modelled for your rainfall. Soil type assessed. Climate zone confirmed. A complete technical portrait of what your land can do — and what it's been waiting for."
-            onLogin={login}
+            onLogin={loginToPortal}
           />
 
           {/* Phase III — locked */}
@@ -347,7 +350,7 @@ export default function EnquirePage() {
             phase="III" name="The Design" tagline="Your master permaculture plan, revealed."
             gradient="linear-gradient(135deg, #1c2818 0%, #243620 60%, #1a2c18 100%)"
             description="Zone layout with spatial diagrams. A layered forest garden design from canopy to ground cover. Water harvesting and storage systems sized for your rainfall. Plant guilds hand-selected for your climate, soil, and goals. The complete blueprint — every element, every relationship, every reason."
-            onLogin={login}
+            onLogin={loginToPortal}
           />
 
           {/* Phase IV — locked */}
@@ -356,7 +359,7 @@ export default function EnquirePage() {
             gradient="linear-gradient(135deg, #141e14 0%, #1e2e18 60%, #131c12 100%)"
             description="A fully illustrated design report ready to print. A phased implementation guide — what to plant in year one, year three, year ten. A curated plant supplier list for your region. 3D concept visualisations. A shareable presentation for your family, council, or investors. Everything, beautifully bound."
             isLast
-            onLogin={login}
+            onLogin={loginToPortal}
           />
         </section>
 
@@ -372,7 +375,7 @@ export default function EnquirePage() {
             Complete your account setup to unlock your client portal — track every phase of your design as it's built, receive your site analysis, and access your final plan when it's ready.
           </p>
           <button
-            onClick={login}
+            onClick={loginToPortal}
             style={{ background: "#fcf9f2", color: "#2c3525", padding: "20px 52px", fontSize: 12, fontFamily: "'IBM Plex Mono', monospace", textTransform: "uppercase", letterSpacing: "0.16em", border: "none", cursor: "pointer", marginBottom: 20, fontWeight: 500 }}
             onMouseEnter={(e) => { e.currentTarget.style.background = "#f0ede4"; }}
             onMouseLeave={(e) => { e.currentTarget.style.background = "#fcf9f2"; }}
