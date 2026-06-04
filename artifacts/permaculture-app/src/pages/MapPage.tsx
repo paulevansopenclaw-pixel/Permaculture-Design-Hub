@@ -438,6 +438,7 @@ export default function MapPage() {
   const [waterBudget, setWaterBudget] = useState<WaterBudgetReport | null>(null);
   const [isRunningWaterBudget, setIsRunningWaterBudget] = useState(false);
   const [waterBudgetError, setWaterBudgetError] = useState<string | null>(null);
+  const [legendCollapsed, setLegendCollapsed] = useState(false);
   const [freehandMode, setFreehandMode] = useState(false);
   const [editBoundaryMode, setEditBoundaryMode] = useState(false);
   const [editFootprintMode, setEditFootprintMode] = useState(false);
@@ -4476,6 +4477,107 @@ export default function MapPage() {
             {show3D ? "⬛ Flat 2D" : "🏔 3D Terrain"}
           </button>
         )}
+
+        {/* ── LAYER LEGEND OVERLAY ── */}
+        {mapLoaded && ((showZones && zones.length > 0) || (showSectors && sectors.length > 0)) && (() => {
+          const activeZoneNumbers = [...new Set(zones.map((z: any) => z.zoneNumber as number))].sort((a, b) => a - b);
+          const activeZoneEntries = activeZoneNumbers
+            .map((n) => ZONE_STYLES.find((s) => s.zone === n))
+            .filter(Boolean) as typeof ZONE_STYLES;
+
+          const activeSectorTypes = [...new Set(sectors.map((s: any) => s.sectorType as string))];
+          const activeSectorEntries = activeSectorTypes
+            .map((t) => SECTOR_TYPES.find((st) => st.value === t))
+            .filter(Boolean) as typeof SECTOR_TYPES;
+
+          const hasEntries = (showZones && activeZoneEntries.length > 0) || (showSectors && activeSectorEntries.length > 0);
+          if (!hasEntries) return null;
+
+          return (
+            <div
+              style={{
+                position: "absolute",
+                bottom: 52,
+                left: 12,
+                zIndex: 500,
+                background: "rgba(10,20,10,0.88)",
+                border: "1px solid hsl(94, 35%, 22%)",
+                borderRadius: 10,
+                boxShadow: "0 4px 18px rgba(0,0,0,0.55)",
+                backdropFilter: "blur(8px)",
+                minWidth: 160,
+                maxWidth: 220,
+                overflow: "hidden",
+              }}
+            >
+              {/* Header row */}
+              <button
+                onClick={() => setLegendCollapsed((v) => !v)}
+                style={{
+                  width: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  padding: "7px 10px",
+                  background: "transparent",
+                  border: "none",
+                  cursor: "pointer",
+                  borderBottom: legendCollapsed ? "none" : "1px solid hsl(94, 30%, 18%)",
+                }}
+              >
+                <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "hsl(84, 35%, 52%)" }}>
+                  Legend
+                </span>
+                <span style={{ fontSize: 9, color: "hsl(84, 30%, 40%)", transform: legendCollapsed ? "rotate(0deg)" : "rotate(180deg)", transition: "transform 0.15s ease", display: "inline-block" }}>
+                  ▾
+                </span>
+              </button>
+
+              {/* Entries */}
+              {!legendCollapsed && (
+                <div style={{ padding: "6px 10px 8px" }}>
+                  {showZones && activeZoneEntries.length > 0 && (
+                    <>
+                      <div style={{ fontSize: 8, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", color: "hsl(84, 25%, 40%)", marginBottom: 5 }}>Zones</div>
+                      {activeZoneEntries.map((entry) => (
+                        <div key={entry.zone} style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 4 }}>
+                          <div style={{
+                            width: 12, height: 12, borderRadius: 2, flexShrink: 0,
+                            background: entry.fillColor,
+                            border: `1.5px solid ${entry.color}`,
+                            opacity: 0.9,
+                          }} />
+                          <span style={{ fontSize: 10, color: "hsl(42, 25%, 78%)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                            {entry.label}
+                          </span>
+                        </div>
+                      ))}
+                    </>
+                  )}
+
+                  {showSectors && activeSectorEntries.length > 0 && (
+                    <>
+                      <div style={{ fontSize: 8, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", color: "hsl(84, 25%, 40%)", marginTop: showZones && activeZoneEntries.length > 0 ? 7 : 0, marginBottom: 5 }}>Sectors</div>
+                      {activeSectorEntries.map((entry) => (
+                        <div key={entry.value} style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 4 }}>
+                          <div style={{
+                            width: 12, height: 12, borderRadius: 2, flexShrink: 0,
+                            background: entry.color,
+                            border: `1.5px solid ${entry.border}`,
+                            opacity: 0.9,
+                          }} />
+                          <span style={{ fontSize: 10, color: "hsl(42, 25%, 78%)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                            {entry.emoji} {entry.label}
+                          </span>
+                        </div>
+                      ))}
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {!mapLoaded && (
           <div className="absolute inset-0 flex items-center justify-center" style={{ background: "hsl(94, 18%, 8%)" }}>
