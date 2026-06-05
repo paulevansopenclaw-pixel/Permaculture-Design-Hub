@@ -425,6 +425,35 @@ router.post(
       "analyze-site: payload assembled",
     );
 
+    // ── Return cached result if available (saves Gemini quota) ─────────────────
+    const forceRefresh = req.query.refresh === "1";
+    if (!forceRefresh && brief.aiAnalysisReport && brief.aiAnalysisGeneratedAt) {
+      const ageMs = Date.now() - new Date(brief.aiAnalysisGeneratedAt).getTime();
+      const cacheTtlMs = 23 * 60 * 60 * 1000; // 23 hours
+      if (ageMs < cacheTtlMs) {
+        try {
+          const cachedParsed = JSON.parse(brief.aiAnalysisReport);
+          req.log.info({ propertyId, ageMs }, "analyze-site: returning cached result");
+          res.json({
+            propertyId,
+            WaterStrategy:          cachedParsed.WaterStrategy          ?? "",
+            SunAndEnergy:           cachedParsed.SunAndEnergy           ?? "",
+            LandAndBiodiversity:    cachedParsed.LandAndBiodiversity    ?? "",
+            ClimateResilience:      cachedParsed.ClimateResilience      ?? "",
+            InfrastructureCritique: cachedParsed.InfrastructureCritique ?? "",
+            PatternStrategy:        cachedParsed.PatternStrategy        ?? null,
+            DesignRecommendations:  cachedParsed.DesignRecommendations  ?? null,
+            autoCreatedWindSector: false,
+            generatedAt: brief.aiAnalysisGeneratedAt,
+            climateSource: "cached",
+            cached: true,
+            rawJson: brief.aiAnalysisReport,
+          });
+          return;
+        } catch { /* cached JSON corrupt — fall through to regenerate */ }
+      }
+    }
+
     const prompt = buildPrompt(property, brief, sectors, zones.length, climate, structures, swales, sensoryVectors);
 
     const genAI = new GoogleGenerativeAI(apiKey);
@@ -433,8 +462,21 @@ router.post(
       generationConfig: { responseMimeType: "application/json", maxOutputTokens: 8192 },
     });
 
-    const result   = await model.generateContent(prompt);
-    const rawJson  = result.response.text().trim();
+    let rawJson: string;
+    try {
+      const result = await model.generateContent(prompt);
+      rawJson = result.response.text().trim();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      const is429 = msg.includes("429") || msg.toLowerCase().includes("quota") || msg.toLowerCase().includes("too many");
+      req.log.warn({ err, propertyId }, "Gemini generateContent failed");
+      res.status(is429 ? 429 : 502).json({
+        error: is429
+          ? "The AI analysis service is busy — please wait a minute and try again. Your previous analysis (if any) is still available."
+          : "AI service temporarily unavailable. Please try again shortly.",
+      });
+      return;
+    }
 
     interface PlantRec { name: string; latinName: string; layer: string; purpose: string; zones: string; notes: string; }
     interface DesignElement { type: string; name: string; description: string; rationale: string; placement: string; priority: string; }
