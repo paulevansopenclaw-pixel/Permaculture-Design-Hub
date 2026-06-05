@@ -28,11 +28,11 @@ const INK = "#2c2416";
 const RULE = "#6b5f4e";
 
 const ZONE_COLORS: Record<number, { fill: string; stroke: string }> = {
-  1: { fill: "#FDE68A", stroke: "#CA8A04" },
-  2: { fill: "#9DC08B", stroke: "#4A7C3F" },
-  3: { fill: "#7AAF68", stroke: "#3B6B30" },
-  4: { fill: "#D4A27A", stroke: "#92400E" },
-  5: { fill: "#94A3B8", stroke: "#475569" },
+  1: { fill: "#2d7a1e", stroke: "#1a5210" },  // Zone 1 — strong green (home & intensive)
+  2: { fill: "#6aaa44", stroke: "#3d7828" },  // Zone 2 — medium green (food forest)
+  3: { fill: "#9dc48a", stroke: "#5a8a45" },  // Zone 3 — soft sage green (farmland)
+  4: { fill: "#D4A27A", stroke: "#92400E" },  // Zone 4 — earth tone (woodlot)
+  5: { fill: "#94A3B8", stroke: "#475569" },  // Zone 5 — grey-blue (wild/unmanaged)
 };
 const SECTOR_COLORS: Record<string, string> = {
   wind: "#5577A8",
@@ -158,13 +158,20 @@ export const PlanPlate = forwardRef<SVGSVGElement, PlanPlateProps>(function Plan
   if (visible.boundary) legend.push({ color: INK, label: "Property boundary" });
   if (visible.water) {
     legend.push({ color: "#2A7C8E", label: "Contour (1 m)" });
-    if (swales.length) legend.push({ color: "#2A8C7A", label: "Designed swale", dashed: true });
-    if (waterAnalysis?.damSite) legend.push({ color: "#1F6B7A", label: "Keyline dam site" });
+    if (swales.length) legend.push({ color: "#0077CC", label: "Designed swale", dashed: true });
+    if (waterAnalysis?.damSite) legend.push({ color: "#0077CC", label: "Keyline Dam Site (Passive Water Catchment & Drought Buffering)" });
   }
   if (visible.zones) {
+    const ZONE_LABELS: Record<number, string> = {
+      1: "Zone 1 (Home & Intensive Production — High Frequency Access)",
+      2: "Zone 2 (Food Forest & Small Orchards — Semi-Frequent Access)",
+      3: "Zone 3 (Farmland & Managed Grazing — Low Frequency Maintenance)",
+      4: "Zone 4 (Managed Woodlot & Foraging — Minimal Management)",
+      5: "Zone 5 (Wild & Unmanaged — Observation Only)",
+    };
     const nums = [...new Set(zones.map((z) => z.zoneNumber))].sort();
     nums.forEach((n) =>
-      legend.push({ color: ZONE_COLORS[n]?.stroke ?? "#888", label: `Zone ${n}` }),
+      legend.push({ color: ZONE_COLORS[n]?.stroke ?? "#888", label: ZONE_LABELS[n] ?? `Zone ${n}` }),
     );
   }
   if (visible.sectors) {
@@ -191,7 +198,7 @@ export const PlanPlate = forwardRef<SVGSVGElement, PlanPlateProps>(function Plan
     >
       <defs>
         <pattern id="pp-grid" width="40" height="40" patternUnits="userSpaceOnUse">
-          <path d="M40 0 L0 0 0 40" fill="none" stroke="#d8ccb0" strokeWidth="0.5" />
+          <path d="M40 0 L0 0 0 40" fill="none" stroke="#d8ccb0" strokeWidth="0.5" strokeOpacity="0.3" />
         </pattern>
         <radialGradient id="pp-vignette" cx="50%" cy="42%" r="70%">
           <stop offset="0%" stopColor={PARCHMENT} />
@@ -322,8 +329,8 @@ export const PlanPlate = forwardRef<SVGSVGElement, PlanPlateProps>(function Plan
                 d={d}
                 fill="none"
                 stroke={index ? "#2A7C8E" : "#5A9EBF"}
-                strokeWidth={index ? 1.1 : 0.6}
-                strokeOpacity={index ? 0.85 : 0.55}
+                strokeWidth={index ? 1.0 : 0.5}
+                strokeOpacity={index ? 0.25 : 0.35}
               />
             );
           })}
@@ -339,8 +346,8 @@ export const PlanPlate = forwardRef<SVGSVGElement, PlanPlateProps>(function Plan
             const [mx, my] = proj.project(mid[0], mid[1]);
             return (
               <g key={sw.id}>
-                <path d={d} fill="none" stroke="#2A8C7A" strokeWidth="2.5" strokeDasharray="7 4" strokeLinecap="round" />
-                <text x={mx} y={my - 5} textAnchor="middle" fontSize="9" fontWeight={700} fill="#1F6B5C" stroke={PARCHMENT} strokeWidth="2.5" paintOrder="stroke">
+                <path d={d} fill="none" stroke="#0077CC" strokeWidth="2.5" strokeDasharray="7 4" strokeLinecap="round" />
+                <text x={mx} y={my - 5} textAnchor="middle" fontSize="9" fontWeight={700} fill="#0055AA" stroke={PARCHMENT} strokeWidth="2.5" paintOrder="stroke">
                   {sw.name} · {sw.lengthM} m
                 </text>
               </g>
@@ -352,8 +359,8 @@ export const PlanPlate = forwardRef<SVGSVGElement, PlanPlateProps>(function Plan
               const [x, y] = proj.project(lng, lat);
               return (
                 <g>
-                  <path d={`M${x},${y - 9} L${x + 8},${y + 6} L${x - 8},${y + 6} Z`} fill="#1F6B7A" stroke="#fff" strokeWidth="1" />
-                  <text x={x + 11} y={y + 3} fontSize="9" fontWeight={700} fill="#1F6B7A" stroke={PARCHMENT} strokeWidth="2.5" paintOrder="stroke">
+                  <path d={`M${x},${y - 9} L${x + 8},${y + 6} L${x - 8},${y + 6} Z`} fill="#0077CC" stroke="#fff" strokeWidth="1" />
+                  <text x={x + 11} y={y + 3} fontSize="9" fontWeight={700} fill="#0055AA" stroke={PARCHMENT} strokeWidth="2.5" paintOrder="stroke">
                     Dam site
                   </text>
                 </g>
@@ -452,7 +459,7 @@ export const PlanPlate = forwardRef<SVGSVGElement, PlanPlateProps>(function Plan
       {/* ── LEGEND (top-left) ── */}
       {legend.length > 0 && (
         <g transform={`translate(${PAD + 4}, ${PAD + 4})`}>
-          <rect x="0" y="0" width="172" height={18 + legend.length * 17} fill="#fffdf8" fillOpacity={0.92} stroke={INK} strokeWidth="1" />
+          <rect x="0" y="0" width="318" height={18 + legend.length * 17} fill="#fffdf8" fillOpacity={0.94} stroke={INK} strokeWidth="1" />
           <text x="10" y="14" fontSize="9" fontWeight={800} fill={INK} fontFamily="monospace" letterSpacing="0.1em">
             LEGEND
           </text>
@@ -465,7 +472,7 @@ export const PlanPlate = forwardRef<SVGSVGElement, PlanPlateProps>(function Plan
                 ) : (
                   <rect x="0" y="2" width="18" height="9" fill={l.color} fillOpacity={0.5} stroke={l.color} strokeWidth="1" />
                 )}
-                <text x="26" y="10" fontSize="9" fill={INK}>
+                <text x="26" y="10" fontSize="8.5" fill={INK}>
                   {l.label}
                 </text>
               </g>

@@ -48,11 +48,11 @@ async function fetchMapboxToken(): Promise<string> {
 }
 
 const ZONE_COLORS: Record<number, { fill: string; stroke: string }> = {
-  1: { fill: "#FDE68A", stroke: "#CA8A04" },
-  2: { fill: "#9DC08B", stroke: "#4A7C3F" },
-  3: { fill: "#7AAF68", stroke: "#3B6B30" },
-  4: { fill: "#D4A27A", stroke: "#92400E" },
-  5: { fill: "#94A3B8", stroke: "#475569" },
+  1: { fill: "#2d7a1e", stroke: "#1a5210" },  // Zone 1 — strong green (home & intensive)
+  2: { fill: "#6aaa44", stroke: "#3d7828" },  // Zone 2 — medium green (food forest)
+  3: { fill: "#9dc48a", stroke: "#5a8a45" },  // Zone 3 — soft sage green (farmland)
+  4: { fill: "#D4A27A", stroke: "#92400E" },  // Zone 4 — earth tone (woodlot)
+  5: { fill: "#94A3B8", stroke: "#475569" },  // Zone 5 — grey-blue (wild/unmanaged)
 };
 
 const SECTOR_COLORS: Record<string, string> = {
@@ -192,7 +192,7 @@ function MiniMap({ mode, boundaryGeojson, token, zones = [], structures = [], se
       style: (f) => {
         const elev = (f?.properties?.elevation ?? 0) as number;
         const isMajor = elev % 10 === 0;
-        return { color: "#1f6b7a", weight: isMajor ? 1.5 : 0.7, opacity: isMajor ? 0.75 : 0.45, fill: false };
+        return { color: "#1f6b7a", weight: isMajor ? 1.0 : 0.5, opacity: isMajor ? 0.25 : 0.35, fill: false };
       },
     }).addTo(map);
     return () => { map.removeLayer(layer); };
@@ -228,7 +228,7 @@ function MiniMap({ mode, boundaryGeojson, token, zones = [], structures = [], se
         const isDashed = sw.swaleType === "keyline";
         layers.push(
           L.geoJSON({ type: "Feature", geometry: geo, properties: {} } as any, {
-            style: () => ({ color: "#2A8C7A", weight: 2.5, opacity: 0.9, fill: false, ...(isDashed ? { dashArray: "6 4" } : {}) }),
+            style: () => ({ color: "#0077CC", weight: 2.5, opacity: 0.9, fill: false, ...(isDashed ? { dashArray: "6 4" } : {}) }),
           }).addTo(map)
         );
       } catch { /* ignore */ }
@@ -328,7 +328,7 @@ const MAP_CONFIGS: { mode: MiniMapMode; label: string; icon: string; accent: str
   { mode: "boundary",   label: "Boundary",   icon: "⬡", accent: "#4a6b2e" },
   { mode: "contour",    label: "Terrain",    icon: "⛰", accent: "#1f6b7a" },
   { mode: "zones",      label: "Zones",      icon: "🗺", accent: "#ca8a04" },
-  { mode: "swales",     label: "Swales",     icon: "💧", accent: "#2A8C7A" },
+  { mode: "swales",     label: "Swales",     icon: "💧", accent: "#0077CC" },
   { mode: "sectors",    label: "Sectors",    icon: "🧭", accent: "#B45032" },
   { mode: "structures", label: "Structures", icon: "🏗", accent: "#8B6914" },
 ];
@@ -357,7 +357,7 @@ function ReportMapCard({
           {cfg.label} Map
         </span>
       </div>
-      <div className="relative" style={{ height: 180, background: "#0a0a0a" }}>
+      <div className="relative" style={{ height: 220, background: "#0a0a0a" }}>
         {boundaryGeojson ? (
           <MiniMap
             mode={cfg.mode}
@@ -656,7 +656,7 @@ export default function AnalysisPage() {
                   No boundary has been drawn yet. Go to the Workspace to define the property boundary first.
                 </div>
               )}
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 {MAP_CONFIGS.map((cfg) => (
                   <ReportMapCard
                     key={cfg.mode}
