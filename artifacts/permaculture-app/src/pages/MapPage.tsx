@@ -413,6 +413,7 @@ export default function MapPage() {
   const [sensoryVectorType, setSensoryVectorType] = useState<"road_noise" | "view_corridor" | "privacy_threat">("road_noise");
   const [sensoryVectorLabel, setSensoryVectorLabel] = useState("");
   const [showWater, setShowWater] = useState(true);
+  const [wizardStep, setWizardStep] = useState(1);
   const [waterAnalysis, setWaterAnalysis] = useState<WaterAnalysisResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [minUphillAcres, setMinUphillAcres] = useState(0.5);
@@ -2398,6 +2399,14 @@ export default function MapPage() {
     return () => clearTimeout(timer);
   }, [searchQuery, mapboxToken]);
 
+  // ─── WIZARD STEP AUTO-TOGGLE layers ──────────────────────────────────────
+  useEffect(() => {
+    if (wizardStep === 1) { setShowSatellite(true); setShowBoundary(true); }
+    else if (wizardStep === 2) { setShowContours(true); setShowWater(true); }
+    else if (wizardStep === 3) { setShowStructures(true); setShowPathways(true); }
+    else if (wizardStep === 4) { setShowSectors(true); setShowZones(true); setShowSensoryVectors(true); }
+  }, [wizardStep]);
+
   function flyToResult(result: any) {
     const map = mapRef.current;
     if (!map) return;
@@ -2952,6 +2961,50 @@ export default function MapPage() {
           )}
         </SidebarSection>
 
+        {/* ── WIZARD STEP INDICATOR ── */}
+        {inputMode === "native" && (
+          <div className="shrink-0 px-3 pt-3 pb-2.5 border-b" style={{ borderColor: "hsl(94, 35%, 18%)" }}>
+            <div className="text-[8px] uppercase tracking-widest mb-2.5" style={{ color: "hsl(42, 15%, 38%)" }}>
+              Map Steps — Scale of Permanence
+            </div>
+            <div className="grid grid-cols-4 gap-1">
+              {([
+                { num: 1, label: "Base & Boundary", icon: "⬡" },
+                { num: 2, label: "Water & Topo",    icon: "⛰"  },
+                { num: 3, label: "Access & Build",  icon: "🏗" },
+                { num: 4, label: "Sectors & Zones", icon: "🗺" },
+              ] as const).map(({ num, label, icon }) => {
+                const isActive = wizardStep === num;
+                const isDone   = wizardStep > num;
+                return (
+                  <button
+                    key={num}
+                    onClick={() => setWizardStep(num)}
+                    className="flex flex-col items-center gap-0.5 py-2 rounded transition-all"
+                    style={{
+                      background: isActive ? "hsl(94,35%,20%)" : isDone ? "hsl(94,28%,14%)" : "transparent",
+                      border: `1px solid ${isActive ? "hsl(94,45%,32%)" : isDone ? "hsl(94,28%,22%)" : "hsl(94,28%,18%)"}`,
+                    }}
+                  >
+                    <span className="text-[13px] leading-none">{isDone ? "✓" : icon}</span>
+                    <span
+                      className="text-[8px] text-center leading-tight font-semibold mt-0.5"
+                      style={{ color: isActive ? "hsl(94,55%,72%)" : isDone ? "hsl(94,40%,50%)" : "hsl(42,15%,40%)" }}
+                    >
+                      {label}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="mt-2.5 h-1 rounded-full overflow-hidden" style={{ background: "hsl(94,28%,16%)" }}>
+              <div
+                className="h-full rounded-full transition-all duration-300"
+                style={{ width: `${((wizardStep - 1) / 3) * 100}%`, background: "hsl(94,42%,40%)" }}
+              />
+            </div>
+          </div>
+        )}
         {/* ── LAYER SECTIONS — native mode only ── */}
         {inputMode === "upload" ? (
           <div className="px-4 py-5 space-y-3">
@@ -2985,6 +3038,17 @@ export default function MapPage() {
         ) : (
         <>
 
+        {/* ── WIZARD STEP 1: BASE & BOUNDARY ── */}
+        {wizardStep === 1 && (
+          <div className="flex-1 overflow-y-auto min-h-0">
+            {/* Step 1 — layer visibility */}
+            <div className="px-4 pt-3 pb-2.5 border-b" style={{ borderColor: "hsl(94, 30%, 16%)" }}>
+              <div className="text-[8px] uppercase tracking-widest mb-2" style={{ color: "hsl(42, 15%, 38%)" }}>Layer Visibility</div>
+              <div className="space-y-1.5">
+                  <LayerToggle label="Satellite Imagery" color="#4a9eff" active={showSatellite} onToggle={() => setShowSatellite((v) => !v)} />
+                  <LayerToggle label="Property Boundary" color="#2D6A1A" active={showBoundary} onToggle={() => setShowBoundary((v) => !v)} disabled={!activeProperty?.boundaryGeojson} />
+              </div>
+            </div>
         {/* ── LAYER 1: BOUNDARY ── */}
         <SidebarSection label="Layer 1 — Property Boundary" defaultOpen>
           {!activePropertyId ? (
@@ -3178,298 +3242,6 @@ export default function MapPage() {
             />
           )}
         </SidebarSection>
-
-        {/* ── LAYER 2: CONTOURS ── */}
-        <SidebarSection label="Layer 2 — Terrain Contours">
-          {!activeProperty?.boundaryGeojson ? (
-            <p className="text-[10px]" style={{ color: "hsl(42, 15%, 45%)" }}>Set a property boundary first to enable contours.</p>
-          ) : showContours && !isGeneratingContours ? (
-            <div className="flex items-center gap-1.5">
-              <div className="w-6 h-0.5 rounded" style={{ background: "#ef4444" }} />
-              <span className="text-[10px]" style={{ color: "hsl(42, 15%, 55%)" }}>1m interval contours — red lines</span>
-            </div>
-          ) : !showContours ? (
-            <p className="text-[10px]" style={{ color: "hsl(42, 15%, 45%)" }}>Toggle contours on in Layer Visibility above.</p>
-          ) : null}
-        </SidebarSection>
-
-        {/* ── LAYER 3: SECTOR ANALYSIS ── */}
-        <SidebarSection label="Layer 3 — Sector Analysis">
-          <>
-          {!activePropertyId ? (
-            <p className="text-[11px]" style={{ color: "hsl(42, 15%, 50%)" }}>Select a property to add sector overlays.</p>
-          ) : role !== "designer" ? (
-            <div>
-              {sectors.length === 0 ? (
-                <p className="text-[11px]" style={{ color: "hsl(42, 15%, 50%)" }}>No sector overlays mapped yet.</p>
-              ) : (
-                <div className="space-y-1 max-h-44 overflow-y-auto">
-                  {sectors.map((s) => {
-                    const st = SECTOR_TYPES.find((t) => t.value === s.sectorType) ?? SECTOR_TYPES[0];
-                    return (
-                      <div key={s.id} className="flex items-center gap-2 px-2 py-1.5 rounded" style={{ background: "hsl(94, 35%, 14%)" }}>
-                        <span className="text-sm">{st.emoji}</span>
-                        <div className="flex-1 min-w-0">
-                          <div className="text-[11px] font-medium truncate" style={{ color: "hsl(42, 28%, 85%)" }}>{s.label || st.label}</div>
-                          <div className="text-[10px]" style={{ color: "hsl(42, 15%, 50%)" }}>{s.radiusKm}km · {s.startAngle}°→{s.endAngle}°</div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          ) : sectorCenter ? (
-            <div className="space-y-2.5">
-              <div className="flex items-center justify-between px-2 py-1.5 rounded" style={{ background: "hsl(94, 35%, 14%)", border: "1px solid hsl(94, 30%, 22%)" }}>
-                <span className="text-[11px]" style={{ color: "hsl(42, 28%, 80%)" }}>
-                  Zone 0 fixed · {sectorCenter.lat.toFixed(4)}, {sectorCenter.lng.toFixed(4)}
-                </span>
-                <button
-                  onClick={() => setDropSectorCenterMode(true)}
-                  className="text-[10px] px-1.5 py-0.5 rounded ml-2 flex-shrink-0"
-                  style={{ color: "hsl(42, 28%, 70%)", border: "1px solid hsl(94, 30%, 28%)" }}
-                >
-                  Move
-                </button>
-              </div>
-
-              <div>
-                <label className="text-[10px] font-medium mb-1 block" style={{ color: "hsl(42, 15%, 55%)" }}>Sector Type</label>
-                <select
-                  className="w-full text-xs px-2 py-1.5 rounded border outline-none"
-                  style={{ background: "hsl(94, 35%, 17%)", borderColor: "hsl(94, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
-                  value={sectorDraft.sectorType}
-                  onChange={(e) => setSectorDraft((d) => ({ ...d, sectorType: e.target.value }))}
-                >
-                  {SECTOR_TYPES.map((t) => <option key={t.value} value={t.value}>{t.emoji} {t.label}</option>)}
-                </select>
-              </div>
-
-              <div>
-                <label className="text-[10px] font-medium mb-1 block" style={{ color: "hsl(42, 15%, 55%)" }}>Label (optional)</label>
-                <input
-                  className="w-full text-xs px-2.5 py-1.5 rounded border outline-none"
-                  style={{ background: "hsl(94, 35%, 17%)", borderColor: "hsl(94, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
-                  placeholder="e.g. NW Prevailing Wind"
-                  value={sectorDraft.label}
-                  onChange={(e) => setSectorDraft((d) => ({ ...d, label: e.target.value }))}
-                />
-              </div>
-
-              <div>
-                <label className="text-[10px] font-medium mb-1 flex justify-between" style={{ color: "hsl(42, 15%, 55%)" }}>
-                  <span>Radius</span><span style={{ color: "hsl(42, 28%, 80%)" }}>{sectorDraft.radiusKm} km</span>
-                </label>
-                <input type="range" min="0.05" max="50" step="0.05"
-                  className="w-full h-1.5 rounded appearance-none"
-                  style={{ accentColor: "#84cc16" }}
-                  value={sectorDraft.radiusKm}
-                  onChange={(e) => setSectorDraft((d) => ({ ...d, radiusKm: parseFloat(e.target.value) }))}
-                />
-              </div>
-
-              <div>
-                <p className="text-[9px] mb-1.5" style={{ color: "hsl(42, 15%, 50%)" }}>
-                  Drag the handles on the map to set angles
-                </p>
-                <div className="grid grid-cols-2 gap-2 text-center">
-                  <div className="rounded px-2 py-1.5" style={{ background: "hsl(94,35%,14%)", border: "1.5px solid #84cc16" }}>
-                    <div className="text-[9px] mb-0.5" style={{ color: "hsl(42,15%,55%)" }}>Start</div>
-                    <div className="text-xs font-medium" style={{ color: "#84cc16" }}>{sectorDraft.startAngle}°</div>
-                  </div>
-                  <div className="rounded px-2 py-1.5" style={{ background: "hsl(94,35%,14%)", border: "1.5px solid #f97316" }}>
-                    <div className="text-[9px] mb-0.5" style={{ color: "hsl(42,15%,55%)" }}>End</div>
-                    <div className="text-xs font-medium" style={{ color: "#f97316" }}>{sectorDraft.endAngle}°</div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex gap-1.5 pt-1">
-                <button
-                  onClick={handleSaveSector}
-                  disabled={createSector.isPending || updateSector.isPending}
-                  className="flex-1 text-xs py-1.5 rounded font-medium"
-                  style={{ background: "hsl(84, 38%, 42%)", color: "#fff" }}
-                >
-                  {(createSector.isPending || updateSector.isPending) ? "Saving…" : editingSectorId ? "Update Sector" : "Save Sector"}
-                </button>
-                <button onClick={handleCancelSectorDraft} className="px-3 text-xs py-1.5 rounded" style={{ color: "hsl(42, 15%, 55%)" }}>
-                  Cancel
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-2.5">
-              <button
-                onClick={() => setDropSectorCenterMode(true)}
-                className="w-full text-xs px-3 py-2 rounded font-medium transition-colors"
-                style={{
-                  background: dropSectorCenterMode ? "hsl(220, 60%, 30%)" : "hsl(94, 35%, 17%)",
-                  border: "1px solid hsl(94, 30%, 22%)",
-                  color: dropSectorCenterMode ? "#fff" : "hsl(42, 28%, 88%)",
-                }}
-              >
-                {dropSectorCenterMode ? "Click on map to place Zone 0 center…" : "Place Sector Center (Zone 0)"}
-              </button>
-
-              {sectors.length > 0 && (
-                <div>
-                  <div className="text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: "hsl(42, 15%, 50%)" }}>
-                    {sectors.length} {sectors.length === 1 ? "Sector" : "Sectors"}
-                  </div>
-                  <div className="space-y-1 max-h-40 overflow-y-auto">
-                    {sectors.map((s) => {
-                      const st = SECTOR_TYPES.find((t) => t.value === s.sectorType) ?? SECTOR_TYPES[0];
-                      return (
-                        <div key={s.id} className="flex items-center gap-2 px-2 py-1.5 rounded" style={{ background: "hsl(94, 35%, 14%)" }}>
-                          <span className="text-sm">{st.emoji}</span>
-                          <div className="flex-1 min-w-0">
-                            <div className="text-[11px] font-medium truncate" style={{ color: "hsl(42, 28%, 85%)" }}>{s.label || st.label}</div>
-                            <div className="text-[10px]" style={{ color: "hsl(42, 15%, 50%)" }}>{s.radiusKm}km · {s.startAngle}°→{s.endAngle}°</div>
-                          </div>
-                          <button onClick={() => handleDeleteSector(s.id)} className="text-[10px] flex-shrink-0" style={{ color: "hsl(0, 55%, 50%)" }}>×</button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ── Solar Arcs legend + radius — shown whenever sector center is placed ── */}
-          {sectorCenter && activePropertyId && (
-            <div className="mt-2.5 pt-2.5 space-y-2" style={{ borderTop: "1px solid hsl(94, 30%, 20%)" }}>
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "hsl(42, 28%, 65%)" }}>
-                  Solar Arcs
-                </span>
-                <button
-                  onClick={() => setShowSolarArcs((v) => !v)}
-                  className="text-[10px] px-2 py-0.5 rounded"
-                  style={{
-                    background: showSolarArcs ? "hsl(43, 75%, 30%)" : "hsl(94, 35%, 17%)",
-                    border: "1px solid hsl(94, 30%, 26%)",
-                    color: showSolarArcs ? "#FBBF24" : "hsl(42, 15%, 55%)",
-                  }}
-                >
-                  {showSolarArcs ? "Visible" : "Hidden"}
-                </button>
-              </div>
-              {[
-                { key: "summer", label: "Summer Sun", fillColor: "rgba(245,175,25,0.35)", borderColor: "#C8A43C" },
-                { key: "winter", label: "Winter Sun",  fillColor: "rgba(148,185,220,0.35)", borderColor: "#8BAFC8" },
-              ].map(({ key, label, fillColor, borderColor }) => (
-                <div key={key} className="flex items-center gap-2">
-                  <span style={{
-                    display: "inline-block",
-                    width: 20,
-                    height: 12,
-                    background: fillColor,
-                    border: `1.5px solid ${borderColor}`,
-                    borderRadius: 3,
-                    flexShrink: 0,
-                  }} />
-                  <span className="text-[10px]" style={{ color: "hsl(42, 15%, 65%)" }}>{label}</span>
-                </div>
-              ))}
-              <p className="text-[10px]" style={{ color: "hsl(42, 15%, 45%)" }}>
-                Arcs scale with the Radius slider above. Radius represents the sun's reach from Zone 0.
-              </p>
-            </div>
-          )}
-          </>
-        </SidebarSection>
-
-        {/* ── LAYER 4: WATER AUTOMATION ── compact launcher */}
-        <SidebarSection label="Layer 4 — Water Automation">
-          <div className="space-y-2">
-            {/* Keyline report launcher */}
-            <button
-              onClick={() => waterAnalysis && setShowKeylineModal(true)}
-              disabled={!waterAnalysis}
-              className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-[12px] font-semibold transition-all"
-              style={{
-                background: waterAnalysis
-                  ? "linear-gradient(135deg, hsl(198,45%,10%), hsl(198,48%,13%))"
-                  : "hsl(94, 20%, 10%)",
-                border: `1px solid ${waterAnalysis ? "hsl(198, 45%, 22%)" : "hsl(94, 20%, 18%)"}`,
-                color: waterAnalysis ? "hsl(198, 70%, 72%)" : "hsl(42, 15%, 38%)",
-                boxShadow: waterAnalysis ? "0 2px 12px rgba(6,182,212,0.15)" : "none",
-                opacity: !activePropertyId || !activeProperty?.boundaryGeojson ? 0.4 : 1,
-                cursor: waterAnalysis ? "pointer" : "default",
-              }}
-            >
-              <span className="flex items-center gap-2">
-                <span className="text-[15px]">💧</span>
-                <span>
-                  {!activePropertyId || !activeProperty?.boundaryGeojson
-                    ? "Draw boundary first"
-                    : isGeneratingContours
-                    ? "Generating contours…"
-                    : !contourDataRef.current
-                    ? "Enable contours to unlock"
-                    : waterAnalysis
-                    ? "View Keyline Report"
-                    : "Awaiting contours…"}
-                </span>
-              </span>
-              {waterAnalysis?.damSite ? (
-                <span className="text-[10px] font-normal" style={{ color: "#38bdf8" }}>Dam found</span>
-              ) : waterAnalysis ? (
-                <span className="text-[10px] font-normal" style={{ color: "hsl(42, 15%, 40%)" }}>No dam</span>
-              ) : (
-                <span className="text-[13px] opacity-40">→</span>
-              )}
-            </button>
-
-            {/* Highlight toggle — stays in sidebar for quick map access */}
-            {waterAnalysis && role === "designer" && (
-              <button
-                onClick={() => {
-                  setWaterHighlightsActive((v) => !v);
-                }}
-                className="w-full text-[11px] px-3 py-1.5 rounded-lg font-medium transition-colors"
-                style={{
-                  background: waterHighlightsActive ? "hsl(142, 50%, 14%)" : "hsl(94, 22%, 12%)",
-                  border: `1px solid ${waterHighlightsActive ? "#15803d" : "hsl(94, 22%, 20%)"}`,
-                  color: waterHighlightsActive ? "#4ade80" : "hsl(42, 15%, 50%)",
-                }}
-              >
-                {waterHighlightsActive ? "✓ Water lines on map — hide" : "Show water lines on map"}
-              </button>
-            )}
-
-            {/* Saved swale layers */}
-            {designedSwales.length > 0 && (
-              <div>
-                <div className="text-[10px] font-semibold uppercase tracking-wider mb-1.5 mt-1" style={{ color: "#0ea5e9" }}>
-                  Saved Swales ({designedSwales.length})
-                </div>
-                <div className="space-y-1">
-                  {designedSwales.map((ds) => (
-                    <div key={ds.id} className="rounded p-1.5 text-[10px] flex items-start justify-between gap-1"
-                      style={{ background: "hsl(198, 25%, 12%)", border: "1px solid #0ea5e933" }}>
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium truncate" style={{ color: "#38bdf8" }}>{ds.name}</div>
-                        <div style={{ color: "hsl(42, 15%, 55%)" }}>{ds.elevationM.toFixed(1)} m · {ds.lengthM.toLocaleString()} m</div>
-                      </div>
-                      {role === "designer" && (
-                        <button
-                          onClick={() => handleDeleteSavedSwale(ds.id)}
-                          className="shrink-0 text-[9px] px-1.5 py-0.5 rounded"
-                          style={{ border: "1px solid #c00", color: "#f87171", background: "none" }}
-                        >✕</button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </SidebarSection>
-
         {/* ── LAYER 5: FEEDBACK PINS ── */}
         <SidebarSection label="Layer 5 — Feedback Pins">
           {!activePropertyId ? (
@@ -3562,7 +3334,140 @@ export default function MapPage() {
             </div>
           )}
         </SidebarSection>
+          </div>
+        )}
 
+        {/* ── WIZARD STEP 2: WATER & TOPOGRAPHY ── */}
+        {wizardStep === 2 && (
+          <div className="flex-1 overflow-y-auto min-h-0">
+            {/* Step 2 — layer visibility */}
+            <div className="px-4 pt-3 pb-2.5 border-b" style={{ borderColor: "hsl(94, 30%, 16%)" }}>
+              <div className="text-[8px] uppercase tracking-widest mb-2" style={{ color: "hsl(42, 15%, 38%)" }}>Layer Visibility</div>
+              <div className="space-y-1.5">
+                  <LayerToggle label="Terrain Contours" color="#ef4444" active={showContours} onToggle={() => setShowContours((v) => !v)} disabled={!activeProperty?.boundaryGeojson} />
+                  {isGeneratingContours && (
+                    <div className="flex items-center gap-1.5 pl-1">
+                      <div className="w-2.5 h-2.5 border border-t-transparent rounded-full animate-spin" style={{ borderColor: "#ef4444" }} />
+                      <span className="text-[9px]" style={{ color: "hsl(42,15%,55%)" }}>Fetching elevation tiles…</span>
+                    </div>
+                  )}
+                  <LayerToggle label="Water Analysis" color="#0ea5e9" active={showWater} onToggle={() => setShowWater((v) => !v)} disabled={!activePropertyId} />
+              </div>
+            </div>
+        {/* ── LAYER 2: CONTOURS ── */}
+        <SidebarSection label="Layer 2 — Terrain Contours">
+          {!activeProperty?.boundaryGeojson ? (
+            <p className="text-[10px]" style={{ color: "hsl(42, 15%, 45%)" }}>Set a property boundary first to enable contours.</p>
+          ) : showContours && !isGeneratingContours ? (
+            <div className="flex items-center gap-1.5">
+              <div className="w-6 h-0.5 rounded" style={{ background: "#ef4444" }} />
+              <span className="text-[10px]" style={{ color: "hsl(42, 15%, 55%)" }}>1m interval contours — red lines</span>
+            </div>
+          ) : !showContours ? (
+            <p className="text-[10px]" style={{ color: "hsl(42, 15%, 45%)" }}>Toggle contours on in Layer Visibility above.</p>
+          ) : null}
+        </SidebarSection>
+        {/* ── LAYER 4: WATER AUTOMATION ── compact launcher */}
+        <SidebarSection label="Layer 4 — Water Automation">
+          <div className="space-y-2">
+            {/* Keyline report launcher */}
+            <button
+              onClick={() => waterAnalysis && setShowKeylineModal(true)}
+              disabled={!waterAnalysis}
+              className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-[12px] font-semibold transition-all"
+              style={{
+                background: waterAnalysis
+                  ? "linear-gradient(135deg, hsl(198,45%,10%), hsl(198,48%,13%))"
+                  : "hsl(94, 20%, 10%)",
+                border: `1px solid ${waterAnalysis ? "hsl(198, 45%, 22%)" : "hsl(94, 20%, 18%)"}`,
+                color: waterAnalysis ? "hsl(198, 70%, 72%)" : "hsl(42, 15%, 38%)",
+                boxShadow: waterAnalysis ? "0 2px 12px rgba(6,182,212,0.15)" : "none",
+                opacity: !activePropertyId || !activeProperty?.boundaryGeojson ? 0.4 : 1,
+                cursor: waterAnalysis ? "pointer" : "default",
+              }}
+            >
+              <span className="flex items-center gap-2">
+                <span className="text-[15px]">💧</span>
+                <span>
+                  {!activePropertyId || !activeProperty?.boundaryGeojson
+                    ? "Draw boundary first"
+                    : isGeneratingContours
+                    ? "Generating contours…"
+                    : !contourDataRef.current
+                    ? "Enable contours to unlock"
+                    : waterAnalysis
+                    ? "View Keyline Report"
+                    : "Awaiting contours…"}
+                </span>
+              </span>
+              {waterAnalysis?.damSite ? (
+                <span className="text-[10px] font-normal" style={{ color: "#38bdf8" }}>Dam found</span>
+              ) : waterAnalysis ? (
+                <span className="text-[10px] font-normal" style={{ color: "hsl(42, 15%, 40%)" }}>No dam</span>
+              ) : (
+                <span className="text-[13px] opacity-40">→</span>
+              )}
+            </button>
+
+            {/* Highlight toggle — stays in sidebar for quick map access */}
+            {waterAnalysis && role === "designer" && (
+              <button
+                onClick={() => {
+                  setWaterHighlightsActive((v) => !v);
+                }}
+                className="w-full text-[11px] px-3 py-1.5 rounded-lg font-medium transition-colors"
+                style={{
+                  background: waterHighlightsActive ? "hsl(142, 50%, 14%)" : "hsl(94, 22%, 12%)",
+                  border: `1px solid ${waterHighlightsActive ? "#15803d" : "hsl(94, 22%, 20%)"}`,
+                  color: waterHighlightsActive ? "#4ade80" : "hsl(42, 15%, 50%)",
+                }}
+              >
+                {waterHighlightsActive ? "✓ Water lines on map — hide" : "Show water lines on map"}
+              </button>
+            )}
+
+            {/* Saved swale layers */}
+            {designedSwales.length > 0 && (
+              <div>
+                <div className="text-[10px] font-semibold uppercase tracking-wider mb-1.5 mt-1" style={{ color: "#0ea5e9" }}>
+                  Saved Swales ({designedSwales.length})
+                </div>
+                <div className="space-y-1">
+                  {designedSwales.map((ds) => (
+                    <div key={ds.id} className="rounded p-1.5 text-[10px] flex items-start justify-between gap-1"
+                      style={{ background: "hsl(198, 25%, 12%)", border: "1px solid #0ea5e933" }}>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium truncate" style={{ color: "#38bdf8" }}>{ds.name}</div>
+                        <div style={{ color: "hsl(42, 15%, 55%)" }}>{ds.elevationM.toFixed(1)} m · {ds.lengthM.toLocaleString()} m</div>
+                      </div>
+                      {role === "designer" && (
+                        <button
+                          onClick={() => handleDeleteSavedSwale(ds.id)}
+                          className="shrink-0 text-[9px] px-1.5 py-0.5 rounded"
+                          style={{ border: "1px solid #c00", color: "#f87171", background: "none" }}
+                        >✕</button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </SidebarSection>
+          </div>
+        )}
+
+        {/* ── WIZARD STEP 3: ACCESS & STRUCTURES ── */}
+        {wizardStep === 3 && (
+          <div className="flex-1 overflow-y-auto min-h-0">
+            {/* Step 3 — layer visibility */}
+            <div className="px-4 pt-3 pb-2.5 border-b" style={{ borderColor: "hsl(94, 30%, 16%)" }}>
+              <div className="text-[8px] uppercase tracking-widest mb-2" style={{ color: "hsl(42, 15%, 38%)" }}>Layer Visibility</div>
+              <div className="space-y-1.5">
+                  <LayerToggle label="Structures" color="#1e3a5f" active={showStructures} onToggle={() => setShowStructures((v) => !v)} disabled={!activePropertyId} />
+                  <LayerToggle label="Pathways" color="#8B6914" active={showPathways} onToggle={() => setShowPathways((v) => !v)} disabled={!activePropertyId} />
+              </div>
+            </div>
         {/* ── LAYER 6: STRUCTURES ── */}
         <SidebarSection label="Layer 6 — Structures">
           {!activePropertyId ? (
@@ -3800,7 +3705,6 @@ export default function MapPage() {
             </div>
           )}
         </SidebarSection>
-
         {/* ── LAYER 7: ACCESS & PATHWAYS ── */}
         <SidebarSection label="Layer 7 — Access & Pathways">
           {!activePropertyId ? (
@@ -3943,7 +3847,210 @@ export default function MapPage() {
             </div>
           )}
         </SidebarSection>
+          </div>
+        )}
 
+        {/* ── WIZARD STEP 4: SECTORS & ZONES ── */}
+        {wizardStep === 4 && (
+          <div className="flex-1 overflow-y-auto min-h-0">
+            {/* Step 4 — layer visibility */}
+            <div className="px-4 pt-3 pb-2.5 border-b" style={{ borderColor: "hsl(94, 30%, 16%)" }}>
+              <div className="text-[8px] uppercase tracking-widest mb-2" style={{ color: "hsl(42, 15%, 38%)" }}>Layer Visibility</div>
+              <div className="space-y-1.5">
+                  <LayerToggle label="Sectors" color="#d4a800" active={showSectors} onToggle={() => setShowSectors((v) => !v)} disabled={!activePropertyId} />
+                  <LayerToggle label="Solar Arcs" color="#FBBF24" active={showSolarArcs} onToggle={() => setShowSolarArcs((v) => !v)} disabled={!activePropertyId || !sectorCenter} />
+                  <LayerToggle label="Zone Mapping" color="#CA8A04" active={showZones} onToggle={() => setShowZones((v) => !v)} disabled={!activePropertyId} />
+                  <LayerToggle label="Sensory Vectors" color="#a855f7" active={showSensoryVectors} onToggle={() => setShowSensoryVectors((v) => !v)} disabled={!activePropertyId} />
+              </div>
+            </div>
+        {/* ── LAYER 3: SECTOR ANALYSIS ── */}
+        <SidebarSection label="Layer 3 — Sector Analysis">
+          <>
+          {!activePropertyId ? (
+            <p className="text-[11px]" style={{ color: "hsl(42, 15%, 50%)" }}>Select a property to add sector overlays.</p>
+          ) : role !== "designer" ? (
+            <div>
+              {sectors.length === 0 ? (
+                <p className="text-[11px]" style={{ color: "hsl(42, 15%, 50%)" }}>No sector overlays mapped yet.</p>
+              ) : (
+                <div className="space-y-1 max-h-44 overflow-y-auto">
+                  {sectors.map((s) => {
+                    const st = SECTOR_TYPES.find((t) => t.value === s.sectorType) ?? SECTOR_TYPES[0];
+                    return (
+                      <div key={s.id} className="flex items-center gap-2 px-2 py-1.5 rounded" style={{ background: "hsl(94, 35%, 14%)" }}>
+                        <span className="text-sm">{st.emoji}</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[11px] font-medium truncate" style={{ color: "hsl(42, 28%, 85%)" }}>{s.label || st.label}</div>
+                          <div className="text-[10px]" style={{ color: "hsl(42, 15%, 50%)" }}>{s.radiusKm}km · {s.startAngle}°→{s.endAngle}°</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          ) : sectorCenter ? (
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between px-2 py-1.5 rounded" style={{ background: "hsl(94, 35%, 14%)", border: "1px solid hsl(94, 30%, 22%)" }}>
+                <span className="text-[11px]" style={{ color: "hsl(42, 28%, 80%)" }}>
+                  Zone 0 fixed · {sectorCenter.lat.toFixed(4)}, {sectorCenter.lng.toFixed(4)}
+                </span>
+                <button
+                  onClick={() => setDropSectorCenterMode(true)}
+                  className="text-[10px] px-1.5 py-0.5 rounded ml-2 flex-shrink-0"
+                  style={{ color: "hsl(42, 28%, 70%)", border: "1px solid hsl(94, 30%, 28%)" }}
+                >
+                  Move
+                </button>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-medium mb-1 block" style={{ color: "hsl(42, 15%, 55%)" }}>Sector Type</label>
+                <select
+                  className="w-full text-xs px-2 py-1.5 rounded border outline-none"
+                  style={{ background: "hsl(94, 35%, 17%)", borderColor: "hsl(94, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
+                  value={sectorDraft.sectorType}
+                  onChange={(e) => setSectorDraft((d) => ({ ...d, sectorType: e.target.value }))}
+                >
+                  {SECTOR_TYPES.map((t) => <option key={t.value} value={t.value}>{t.emoji} {t.label}</option>)}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-medium mb-1 block" style={{ color: "hsl(42, 15%, 55%)" }}>Label (optional)</label>
+                <input
+                  className="w-full text-xs px-2.5 py-1.5 rounded border outline-none"
+                  style={{ background: "hsl(94, 35%, 17%)", borderColor: "hsl(94, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
+                  placeholder="e.g. NW Prevailing Wind"
+                  value={sectorDraft.label}
+                  onChange={(e) => setSectorDraft((d) => ({ ...d, label: e.target.value }))}
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] font-medium mb-1 flex justify-between" style={{ color: "hsl(42, 15%, 55%)" }}>
+                  <span>Radius</span><span style={{ color: "hsl(42, 28%, 80%)" }}>{sectorDraft.radiusKm} km</span>
+                </label>
+                <input type="range" min="0.05" max="50" step="0.05"
+                  className="w-full h-1.5 rounded appearance-none"
+                  style={{ accentColor: "#84cc16" }}
+                  value={sectorDraft.radiusKm}
+                  onChange={(e) => setSectorDraft((d) => ({ ...d, radiusKm: parseFloat(e.target.value) }))}
+                />
+              </div>
+
+              <div>
+                <p className="text-[9px] mb-1.5" style={{ color: "hsl(42, 15%, 50%)" }}>
+                  Drag the handles on the map to set angles
+                </p>
+                <div className="grid grid-cols-2 gap-2 text-center">
+                  <div className="rounded px-2 py-1.5" style={{ background: "hsl(94,35%,14%)", border: "1.5px solid #84cc16" }}>
+                    <div className="text-[9px] mb-0.5" style={{ color: "hsl(42,15%,55%)" }}>Start</div>
+                    <div className="text-xs font-medium" style={{ color: "#84cc16" }}>{sectorDraft.startAngle}°</div>
+                  </div>
+                  <div className="rounded px-2 py-1.5" style={{ background: "hsl(94,35%,14%)", border: "1.5px solid #f97316" }}>
+                    <div className="text-[9px] mb-0.5" style={{ color: "hsl(42,15%,55%)" }}>End</div>
+                    <div className="text-xs font-medium" style={{ color: "#f97316" }}>{sectorDraft.endAngle}°</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-1.5 pt-1">
+                <button
+                  onClick={handleSaveSector}
+                  disabled={createSector.isPending || updateSector.isPending}
+                  className="flex-1 text-xs py-1.5 rounded font-medium"
+                  style={{ background: "hsl(84, 38%, 42%)", color: "#fff" }}
+                >
+                  {(createSector.isPending || updateSector.isPending) ? "Saving…" : editingSectorId ? "Update Sector" : "Save Sector"}
+                </button>
+                <button onClick={handleCancelSectorDraft} className="px-3 text-xs py-1.5 rounded" style={{ color: "hsl(42, 15%, 55%)" }}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-2.5">
+              <button
+                onClick={() => setDropSectorCenterMode(true)}
+                className="w-full text-xs px-3 py-2 rounded font-medium transition-colors"
+                style={{
+                  background: dropSectorCenterMode ? "hsl(220, 60%, 30%)" : "hsl(94, 35%, 17%)",
+                  border: "1px solid hsl(94, 30%, 22%)",
+                  color: dropSectorCenterMode ? "#fff" : "hsl(42, 28%, 88%)",
+                }}
+              >
+                {dropSectorCenterMode ? "Click on map to place Zone 0 center…" : "Place Sector Center (Zone 0)"}
+              </button>
+
+              {sectors.length > 0 && (
+                <div>
+                  <div className="text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: "hsl(42, 15%, 50%)" }}>
+                    {sectors.length} {sectors.length === 1 ? "Sector" : "Sectors"}
+                  </div>
+                  <div className="space-y-1 max-h-40 overflow-y-auto">
+                    {sectors.map((s) => {
+                      const st = SECTOR_TYPES.find((t) => t.value === s.sectorType) ?? SECTOR_TYPES[0];
+                      return (
+                        <div key={s.id} className="flex items-center gap-2 px-2 py-1.5 rounded" style={{ background: "hsl(94, 35%, 14%)" }}>
+                          <span className="text-sm">{st.emoji}</span>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-[11px] font-medium truncate" style={{ color: "hsl(42, 28%, 85%)" }}>{s.label || st.label}</div>
+                            <div className="text-[10px]" style={{ color: "hsl(42, 15%, 50%)" }}>{s.radiusKm}km · {s.startAngle}°→{s.endAngle}°</div>
+                          </div>
+                          <button onClick={() => handleDeleteSector(s.id)} className="text-[10px] flex-shrink-0" style={{ color: "hsl(0, 55%, 50%)" }}>×</button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Solar Arcs legend + radius — shown whenever sector center is placed ── */}
+          {sectorCenter && activePropertyId && (
+            <div className="mt-2.5 pt-2.5 space-y-2" style={{ borderTop: "1px solid hsl(94, 30%, 20%)" }}>
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "hsl(42, 28%, 65%)" }}>
+                  Solar Arcs
+                </span>
+                <button
+                  onClick={() => setShowSolarArcs((v) => !v)}
+                  className="text-[10px] px-2 py-0.5 rounded"
+                  style={{
+                    background: showSolarArcs ? "hsl(43, 75%, 30%)" : "hsl(94, 35%, 17%)",
+                    border: "1px solid hsl(94, 30%, 26%)",
+                    color: showSolarArcs ? "#FBBF24" : "hsl(42, 15%, 55%)",
+                  }}
+                >
+                  {showSolarArcs ? "Visible" : "Hidden"}
+                </button>
+              </div>
+              {[
+                { key: "summer", label: "Summer Sun", fillColor: "rgba(245,175,25,0.35)", borderColor: "#C8A43C" },
+                { key: "winter", label: "Winter Sun",  fillColor: "rgba(148,185,220,0.35)", borderColor: "#8BAFC8" },
+              ].map(({ key, label, fillColor, borderColor }) => (
+                <div key={key} className="flex items-center gap-2">
+                  <span style={{
+                    display: "inline-block",
+                    width: 20,
+                    height: 12,
+                    background: fillColor,
+                    border: `1.5px solid ${borderColor}`,
+                    borderRadius: 3,
+                    flexShrink: 0,
+                  }} />
+                  <span className="text-[10px]" style={{ color: "hsl(42, 15%, 65%)" }}>{label}</span>
+                </div>
+              ))}
+              <p className="text-[10px]" style={{ color: "hsl(42, 15%, 45%)" }}>
+                Arcs scale with the Radius slider above. Radius represents the sun's reach from Zone 0.
+              </p>
+            </div>
+          )}
+          </>
+        </SidebarSection>
         {/* ── LAYER 8: ZONE MAPPING ── */}
         <SidebarSection label="Layer 8 — Zone Mapping">
           {!activePropertyId ? (
@@ -4084,7 +4191,6 @@ export default function MapPage() {
             </div>
           )}
         </SidebarSection>
-
         {/* ── LAYER 9: SENSORY VECTORS ── */}
         <SidebarSection label="Layer 9 — Sensory Vectors">
           {!activePropertyId ? (
@@ -4254,51 +4360,58 @@ export default function MapPage() {
             </div>
           )}
         </SidebarSection>
+          </div>
+        )}
 
         </> /* end native-mode sections */
         )}
 
         <div className="flex-1" />
 
-        {/* ── WORKFLOW NAVIGATION ── */}
+        {/* ── STEP NAVIGATION ── */}
         <div className="shrink-0 px-3 py-3 border-t" style={{ borderColor: "hsl(94, 35%, 18%)" }}>
-          <div className="text-[9px] uppercase tracking-widest mb-2 px-0.5" style={{ color: "hsl(42, 15%, 35%)" }}>
-            Workflow
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            {[
-              { label: "Intake",    path: "/intake"    },
-              { label: "Map",       path: "/workspace" },
-              { label: "Analysis",  path: "/analysis"  },
-              { label: "Dossier",   path: "/dossier"   },
-            ].map(({ label, path }) => {
-              const isActive = path === "/workspace";
-              return (
+          {inputMode === "native" ? (
+            <div className="flex gap-2">
+              <button
+                onClick={() => setWizardStep((s) => Math.max(1, s - 1))}
+                disabled={wizardStep === 1}
+                className="flex-1 py-2 text-[11px] font-semibold rounded transition-all"
+                style={{
+                  background: wizardStep === 1 ? "transparent" : "hsl(94,25%,15%)",
+                  border: "1px solid hsl(94,28%,22%)",
+                  color: wizardStep === 1 ? "hsl(42,15%,28%)" : "hsl(42,20%,65%)",
+                  cursor: wizardStep === 1 ? "default" : "pointer",
+                }}
+              >
+                ← Back
+              </button>
+              {wizardStep < 4 ? (
                 <button
-                  key={path}
-                  onClick={() => navigate(path)}
-                  style={{
-                    display: "flex", alignItems: "center", gap: 8,
-                    padding: "5px 8px", borderRadius: 7, border: "none", cursor: "pointer",
-                    background: isActive ? "hsl(94,35%,17%)" : "transparent",
-                    color: isActive ? "hsl(94,55%,72%)" : "hsl(42,20%,55%)",
-                    fontSize: 11, fontWeight: isActive ? 600 : 400, fontFamily: "inherit",
-                    textAlign: "left",
-                  }}
+                  onClick={() => setWizardStep((s) => s + 1)}
+                  className="flex-1 py-2 text-[11px] font-semibold rounded transition-all"
+                  style={{ background: "hsl(84,38%,35%)", color: "#fff", border: "1px solid hsl(84,38%,42%)", cursor: "pointer" }}
                 >
-                  <span style={{ opacity: isActive ? 1 : 0.6, fontSize: 9, fontWeight: 700, fontFamily: "monospace" }}>{isActive ? "●" : "○"}</span>
-                  {label}
+                  Continue →
                 </button>
-              );
-            })}
-          </div>
-          <button
-            onClick={() => navigate("/analysis")}
-            className="mt-2 w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-[11px] font-semibold transition-all"
-            style={{ background: "linear-gradient(135deg, hsl(94,25%,11%), hsl(94,28%,14%))", color: "hsl(94, 40%, 70%)", border: "1px solid hsl(94, 28%, 22%)" }}
-          >
-            <span>⚡</span> Next: Run AI Analysis →
-          </button>
+              ) : (
+                <button
+                  onClick={() => navigate("/analysis")}
+                  className="flex-1 flex items-center justify-center gap-1.5 py-2 text-[11px] font-semibold rounded transition-all"
+                  style={{ background: "linear-gradient(135deg, hsl(94,25%,11%), hsl(94,28%,14%))", color: "hsl(94,40%,70%)", border: "1px solid hsl(94,28%,22%)" }}
+                >
+                  <span>⚡</span> Run AI Analysis →
+                </button>
+              )}
+            </div>
+          ) : (
+            <button
+              onClick={() => navigate("/analysis")}
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded text-[11px] font-semibold"
+              style={{ background: "linear-gradient(135deg, hsl(94,25%,11%), hsl(94,28%,14%))", color: "hsl(94,40%,70%)", border: "1px solid hsl(94,28%,22%)" }}
+            >
+              <span>⚡</span> Next: Run AI Analysis →
+            </button>
+          )}
         </div>
       </aside>
 
