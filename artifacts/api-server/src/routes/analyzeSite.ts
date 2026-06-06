@@ -459,7 +459,7 @@ router.post(
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
       model: "gemini-2.5-flash",
-      generationConfig: { responseMimeType: "application/json", maxOutputTokens: 8192 },
+      generationConfig: { responseMimeType: "application/json", maxOutputTokens: 65536 },
     });
 
     let rawJson: string;
@@ -478,6 +478,30 @@ router.post(
       return;
     }
 
+    // ── Attempt to repair truncated JSON (closes unclosed strings/objects/arrays) ─
+    function repairJson(raw: string): string {
+      // Walk char-by-char tracking string context and open-bracket stack
+      const stack: string[] = [];
+      let inString = false;
+      let i = 0;
+      for (; i < raw.length; i++) {
+        const ch = raw[i];
+        if (inString) {
+          if (ch === "\\" && i + 1 < raw.length) { i++; continue; } // skip escaped char
+          if (ch === '"') inString = false;
+        } else {
+          if (ch === '"')       { inString = true; }
+          else if (ch === "{")  { stack.push("}"); }
+          else if (ch === "[")  { stack.push("]"); }
+          else if (ch === "}" || ch === "]") { if (stack.length > 0) stack.pop(); }
+        }
+      }
+      let repaired = raw;
+      if (inString) repaired += '"';          // close an open string
+      while (stack.length > 0) repaired += stack.pop()!; // close open objects/arrays
+      return repaired;
+    }
+
     interface PlantRec { name: string; latinName: string; layer: string; purpose: string; zones: string; notes: string; }
     interface DesignElement { type: string; name: string; description: string; rationale: string; placement: string; priority: string; }
     interface ImplementationPhase { phase: number; title: string; duration: string; elements: string[]; rationale: string; }
@@ -489,12 +513,22 @@ router.post(
       PatternStrategy: { recommendedPattern: string; rationale: string; application: string } | undefined;
       DesignRecommendations: DesignRecs | undefined;
     };
+    let wasRepaired = false;
     try {
       parsed = JSON.parse(rawJson);
     } catch {
-      req.log.error({ rawJson }, "Gemini returned invalid JSON");
-      res.status(500).json({ error: "AI returned malformed JSON", raw: rawJson });
-      return;
+      // First parse failed — try structural repair (handles LLM truncation)
+      try {
+        const repairedJson = repairJson(rawJson);
+        parsed = JSON.parse(repairedJson);
+        wasRepaired = true;
+        rawJson = repairedJson; // persist the repaired version
+        req.log.warn({ propertyId, truncatedLen: rawJson.length }, "Gemini JSON was truncated — repaired and parsed successfully");
+      } catch {
+        req.log.error({ rawJson: rawJson.slice(0, 500) }, "Gemini returned invalid JSON — repair failed");
+        res.status(500).json({ error: "AI returned malformed JSON — please try again." });
+        return;
+      }
     }
 
     const generatedAt = new Date();
