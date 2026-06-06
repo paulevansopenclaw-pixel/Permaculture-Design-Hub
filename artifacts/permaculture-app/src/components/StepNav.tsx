@@ -1,6 +1,6 @@
 import { useLocation } from "wouter";
 import { useAppStore } from "@/store/useAppStore";
-import { ClipboardList, Map, BarChart3, Layers, FolderOpen } from "lucide-react";
+import { ClipboardList, Map, BarChart3, Layers, FolderOpen, BookMarked } from "lucide-react";
 
 const GREEN = "#4a6b2e";
 const MID   = "#6b5f4e";
@@ -11,7 +11,8 @@ const LAYERS = [
   { path: "/workspace", label: "Map",      Icon: Map           },
   { path: "/analysis",  label: "Analysis", Icon: BarChart3     },
   { path: "/plans",     label: "Plans",    Icon: Layers        },
-  { path: "/dossier",   label: "Dossier",  Icon: FolderOpen    },
+  { path: "/dossier",        label: "Dossier",       Icon: FolderOpen  },
+  { path: "/master-design", label: "Master Design", Icon: BookMarked  },
 ];
 
 export function StepNav({ className = "" }: { className?: string }) {

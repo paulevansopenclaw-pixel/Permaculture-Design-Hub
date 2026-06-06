@@ -11,6 +11,7 @@ import IntakePage from "@/pages/IntakePage";
 import AnalysisPage from "@/pages/AnalysisPage";
 import PlansPage from "@/pages/PlansPage";
 import DossierPage from "@/pages/DossierPage";
+import MasterDesignPage from "@/pages/MasterDesignPage";
 import PresentationPage from "@/pages/PresentationPage";
 import ClientPortalPage from "@/pages/ClientPortalPage";
 import { useAuth } from "@workspace/replit-auth-web";
@@ -46,6 +47,7 @@ function Router() {
       <Route path="/analysis" component={AnalysisPage} />
       <Route path="/plans" component={PlansPage} />
       <Route path="/dossier" component={DossierPage} />
+      <Route path="/master-design" component={MasterDesignPage} />
       <Route path="/presentation/:id" component={PresentationPage} />
       <Route component={NotFound} />
     </Switch>
