@@ -433,6 +433,8 @@ export default function MapPage() {
   const [overpassCandidates, setOverpassCandidates] = useState<GeoJSON.Polygon[]>([]);
   const [overpassSelectedIdx, setOverpassSelectedIdx] = useState(0);
   const [isFetchingParcel, setIsFetchingParcel] = useState(false);
+  const [overpassAlternatives, setOverpassAlternatives] = useState<GeoJSON.Polygon[]>([]);
+  const [boundaryEditVersion, setBoundaryEditVersion] = useState(0);
   const [geoImportError, setGeoImportError] = useState<string | null>(null);
   const [isBoundaryDrawing, setIsBoundaryDrawing] = useState(false);
   const [showKeylineModal, setShowKeylineModal] = useState(false);
@@ -537,6 +539,8 @@ export default function MapPage() {
   sectorsRef.current = sectors;
   const activePropertyRef = useRef(activeProperty);
   activePropertyRef.current = activeProperty;
+  const pendingBoundaryRef = useRef<GeoJSON.Polygon | null>(null);
+  pendingBoundaryRef.current = pendingBoundary;
   const bulkReplaceZones = useBulkReplaceZones();
   const deleteZone = useDeleteZone();
 
@@ -1490,6 +1494,8 @@ export default function MapPage() {
   }, [pendingZoneEdits, activePropertyId]);
 
   // ─── BOUNDARY EDIT MODE (vertex-drag reshaping) ──────────────────────────
+  // Sources: pendingBoundaryRef (auto-fetched or drawn) first, else saved boundary.
+  // boundaryEditVersion forces re-init when the user switches alternatives.
   useEffect(() => {
     const map = mapRef.current;
     const editGroup = boundaryEditGroupRef.current;
@@ -1503,7 +1509,8 @@ export default function MapPage() {
       return;
     }
     editGroup.clearLayers();
-    const rawGeo = activePropertyRef.current?.boundaryGeojson;
+    // Prefer pending (unsaved) boundary so auto-fetched polygons are editable immediately
+    const rawGeo = pendingBoundaryRef.current ?? activePropertyRef.current?.boundaryGeojson;
     if (!rawGeo) { setEditBoundaryMode(false); return; }
     try {
       const geo = typeof rawGeo === "string" ? JSON.parse(rawGeo) : rawGeo;
@@ -1526,7 +1533,7 @@ export default function MapPage() {
       editGroup.clearLayers();
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editBoundaryMode, mapLoaded]);
+  }, [editBoundaryMode, mapLoaded, boundaryEditVersion]);
 
   // ─── FOOTPRINT EDIT MODE (vertex-drag reshaping) ─────────────────────────
   useEffect(() => {
@@ -2417,12 +2424,44 @@ export default function MapPage() {
     setSearchResults([]);
     setOverpassCandidates([]);
     setOverpassSelectedIdx(0);
+    setOverpassAlternatives([]);
+    setEditBoundaryMode(false);
     setIsFetchingParcel(true);
     fetchParcelBoundary(lat, lng).then((polygons) => {
       setIsFetchingParcel(false);
-      setOverpassCandidates(polygons);
-      setOverpassSelectedIdx(0);
+      if (polygons.length > 0) {
+        const best = polygons[0];
+        const ha = turf.area(turf.feature(best)) / 10_000;
+        setPendingBoundary(best);
+        setPendingAreaHa(ha);
+        setPendingAreaAc(ha * 2.47105);
+        if (polygons.length > 1) setOverpassAlternatives(polygons);
+        setBoundaryEditVersion((v) => v + 1);
+        setEditBoundaryMode(true);
+        try {
+          const tempLayer = L.geoJSON(best as any);
+          map.fitBounds(tempLayer.getBounds(), { padding: [60, 60] });
+        } catch { /* no-op */ }
+      }
+      // no polygons → empty state, draw fallback shows in sidebar
     });
+  }
+
+  // ─── SWITCH OVERPASS ALTERNATIVE ─────────────────────────────────────────
+  function handleSwitchAlternative(poly: GeoJSON.Polygon) {
+    const ha = turf.area(turf.feature(poly)) / 10_000;
+    setPendingBoundary(poly);
+    setPendingAreaHa(ha);
+    setPendingAreaAc(ha * 2.47105);
+    setBoundaryEditVersion((v) => v + 1); // retriggers edit effect
+    setEditBoundaryMode(true);
+    const map = mapRef.current;
+    if (map) {
+      try {
+        const tempLayer = L.geoJSON(poly as any);
+        map.fitBounds(tempLayer.getBounds(), { padding: [60, 60] });
+      } catch { /* no-op */ }
+    }
   }
 
   // ─── IMPORT OVERPASS PARCEL BOUNDARY ─────────────────────────────────────
@@ -2490,6 +2529,8 @@ export default function MapPage() {
           setPendingBoundary(null);
           setPendingAreaHa(null);
           setPendingAreaAc(null);
+          setOverpassAlternatives([]);
+          setEditBoundaryMode(false);
           drawnItemsRef.current?.clearLayers();
           refetchProperty();
         },
@@ -2875,12 +2916,15 @@ export default function MapPage() {
           {isFetchingParcel && (
             <p className="text-[10px] mt-1.5 animate-pulse" style={{ color: "#3b82f6" }}>Searching for parcel boundary…</p>
           )}
-          {!isFetchingParcel && overpassCandidates.length > 0 && (
-            <p className="text-[10px] mt-1.5" style={{ color: "#60a5fa" }}>
-              ● {overpassCandidates.length} parcel option{overpassCandidates.length > 1 ? "s" : ""} found — shown in blue. Select a property below then import.
+          {!isFetchingParcel && pendingBoundary && overpassAlternatives.length > 0 && (
+            <p className="text-[10px] mt-1.5" style={{ color: "#4ade80" }}>
+              ✓ Parcel boundary auto-fetched{overpassAlternatives.length > 1 ? ` (${overpassAlternatives.length} options)` : ""} — drag vertices to adjust.
             </p>
           )}
-          {!isFetchingParcel && searchQuery && overpassCandidates.length === 0 && !showDropdown && (
+          {!isFetchingParcel && pendingBoundary && overpassAlternatives.length === 0 && !editBoundaryMode && searchQuery && !showDropdown && (
+            <p className="text-[10px] mt-1.5" style={{ color: "#4ade80" }}>✓ Parcel boundary found — drag vertices to adjust.</p>
+          )}
+          {!isFetchingParcel && !pendingBoundary && searchQuery && overpassAlternatives.length === 0 && overpassCandidates.length === 0 && !showDropdown && (
             <p className="text-[10px] mt-1.5" style={{ color: "hsl(42, 15%, 45%)" }}>No parcel data found — upload a GeoJSON file or draw manually.</p>
           )}
         </div>
@@ -2972,11 +3016,56 @@ export default function MapPage() {
             <p className="text-[11px]" style={{ color: "hsl(42, 15%, 50%)" }}>Select a property to manage its boundary.</p>
           ) : role === "designer" ? (
             <div className="space-y-2.5">
-              {/* ── OSM candidate picker ── */}
-              {overpassCandidates.length > 0 && (
+              {/* ── Auto-fetched parcel status + alternatives picker ── */}
+              {overpassAlternatives.length > 0 && (
+                <div className="rounded p-2.5 space-y-2" style={{ background: "hsl(140, 30%, 8%)", border: "1px solid hsl(140, 40%, 22%)" }}>
+                  <div className="flex items-center gap-1.5">
+                    <span style={{ color: "#4ade80" }}>✓</span>
+                    <p className="text-[10px] font-semibold" style={{ color: "#4ade80" }}>
+                      Boundary auto-fetched — vertices are live
+                    </p>
+                  </div>
+                  <p className="text-[9px]" style={{ color: "hsl(42, 15%, 50%)" }}>
+                    Drag the corner handles on the map to refine. {overpassAlternatives.length > 1 ? "Multiple parcels found — tap to switch:" : ""}
+                  </p>
+                  {overpassAlternatives.length > 1 && (
+                    <div className="space-y-1">
+                      {overpassAlternatives.map((poly, idx) => {
+                        const ha = turf.area(turf.feature(poly)) / 10_000;
+                        const isCurrent = pendingBoundary != null &&
+                          Math.abs(turf.area(turf.feature(pendingBoundary)) - turf.area(turf.feature(poly))) < 1;
+                        return (
+                          <button
+                            key={idx}
+                            onClick={() => handleSwitchAlternative(poly)}
+                            className="w-full text-left px-2 py-1.5 rounded text-[10px] transition-colors"
+                            style={{
+                              background: isCurrent ? "hsl(140, 35%, 16%)" : "hsl(140, 20%, 9%)",
+                              border: isCurrent ? "1px solid hsl(140, 50%, 32%)" : "1px solid hsl(140, 25%, 18%)",
+                              color: isCurrent ? "#86efac" : "hsl(42, 15%, 55%)",
+                            }}
+                          >
+                            {isCurrent ? "▶ " : ""}Option {idx + 1} — {ha < 0.01 ? (ha * 10000).toFixed(0) + " m²" : ha.toFixed(2) + " ha"}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                  <button
+                    onClick={() => { setOverpassAlternatives([]); setPendingBoundary(null); setPendingAreaHa(null); setPendingAreaAc(null); setEditBoundaryMode(false); }}
+                    className="w-full text-xs px-3 py-1.5 rounded transition-colors"
+                    style={{ background: "transparent", color: "hsl(42, 15%, 50%)", border: "1px solid hsl(94, 30%, 22%)" }}
+                  >
+                    Dismiss — use file upload or draw manually
+                  </button>
+                </div>
+              )}
+
+              {/* ── Legacy OSM candidate picker (manual import flow) ── */}
+              {overpassCandidates.length > 0 && overpassAlternatives.length === 0 && (
                 <div className="rounded p-2.5 space-y-2" style={{ background: "hsl(220, 60%, 10%)", border: "1px solid hsl(220, 50%, 28%)" }}>
                   <p className="text-[10px] font-semibold" style={{ color: "#60a5fa" }}>
-                    {overpassCandidates.length} parcel option{overpassCandidates.length > 1 ? "s" : ""} from map data (blue outline on map)
+                    {overpassCandidates.length} parcel option{overpassCandidates.length > 1 ? "s" : ""} from map data
                   </p>
                   {overpassCandidates.length > 1 && (
                     <div className="space-y-1">
