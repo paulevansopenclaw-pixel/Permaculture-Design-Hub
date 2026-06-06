@@ -220,11 +220,22 @@ router.post(
 
     const photos = (d.ideaPhotos ?? []).slice(0, MAX_IDEA_PHOTOS);
     // Mark uploaded idea photos public-read so the authenticated designer can view them.
+    // Only promote objects whose stored Content-Type is an allowed image type — this
+    // prevents an attacker from uploading HTML/JS and then making it publicly readable
+    // from the application's own origin via the enquiry flow.
     const ENQUIRY_UPLOAD_RE = /^\/objects\/uploads\/[0-9a-fA-F-]{36}$/;
     const publicPhotos: string[] = [];
     for (const p of photos) {
       if (typeof p !== "string" || !ENQUIRY_UPLOAD_RE.test(p)) continue;
       try {
+        const storedContentType = await objectStorageService.getObjectEntityStoredContentType(p);
+        if (!storedContentType || !ALLOWED_IMAGE_TYPES.includes(storedContentType)) {
+          req.log.warn(
+            { objectPath: p, storedContentType },
+            "Rejected enquiry photo: stored Content-Type is not an allowed image type",
+          );
+          continue;
+        }
         const normalized = await objectStorageService.trySetObjectEntityAclPolicy(p, {
           owner: "",
           visibility: "public",

@@ -12,6 +12,19 @@ import { canAccessObject, ObjectPermission } from "../lib/objectAcl";
 const router: IRouter = Router();
 const objectStorageService = new ObjectStorageService();
 
+// Mirror of the allowlist in public.ts — only these MIME types may be served
+// with their stored Content-Type from the user-upload path. Anything else is
+// downgraded to a safe, non-executable type so a script-capable file that
+// somehow bypassed the ACL-promotion check still cannot run in the browser.
+const ALLOWED_IMAGE_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+  "image/heic",
+  "image/heif",
+]);
+
 /**
  * POST /storage/uploads/request-url
  *
@@ -135,6 +148,22 @@ router.get("/storage/objects/*path", async (req: Request, res: Response) => {
 
     res.status(response.status);
     response.headers.forEach((value, key) => res.setHeader(key, value));
+
+    // Belt-and-suspenders: regardless of what Content-Type the uploader stored,
+    // clamp it to an allowed image type for objects coming from the uploads prefix.
+    // This prevents a script-capable file from being executed in the browser even
+    // if it somehow made it past the ACL-promotion validation in the enquiry route.
+    if (objectPath.startsWith("/objects/uploads/")) {
+      const servedType = res.getHeader("Content-Type") as string | undefined;
+      if (!servedType || !ALLOWED_IMAGE_TYPES.has(servedType.split(";")[0].trim())) {
+        res.setHeader("Content-Type", "application/octet-stream");
+        res.setHeader("Content-Disposition", "attachment");
+      }
+    }
+
+    // Instruct browsers never to sniff the content type, ensuring our override
+    // above is respected even when the browser would otherwise guess differently.
+    res.setHeader("X-Content-Type-Options", "nosniff");
 
     if (response.body) {
       const nodeStream = Readable.fromWeb(response.body as ReadableStream<Uint8Array>);

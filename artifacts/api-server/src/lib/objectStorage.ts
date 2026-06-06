@@ -189,6 +189,20 @@ export class ObjectStorageService {
     return normalizedPath;
   }
 
+  /**
+   * Returns the Content-Type stored in GCS object metadata, or null if the
+   * object does not exist or has no metadata. Does NOT download the object body.
+   */
+  async getObjectEntityStoredContentType(objectPath: string): Promise<string | null> {
+    try {
+      const file = await this.getObjectEntityFile(objectPath);
+      const [metadata] = await file.getMetadata();
+      return (metadata.contentType as string) || null;
+    } catch {
+      return null;
+    }
+  }
+
   async canAccessObjectEntity({
     userId,
     objectFile,
