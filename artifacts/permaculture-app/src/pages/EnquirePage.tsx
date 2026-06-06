@@ -807,6 +807,43 @@ export default function EnquirePage() {
 
         {/* step 4 handled by early-return above */}
       </main>
+
+      {/* Lightbox */}
+      {lightboxSrc && (
+        <div
+          onClick={() => setLightboxSrc(null)}
+          style={{
+            position: "fixed", inset: 0, zIndex: 1000,
+            background: "rgba(26,28,24,0.92)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            cursor: "zoom-out",
+            animation: "pop-in 0.2s ease-out",
+          }}
+        >
+          <img
+            src={lightboxSrc}
+            alt="Vision board preview"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              maxWidth: "88vw", maxHeight: "88vh",
+              objectFit: "contain",
+              boxShadow: "0 40px 100px rgba(0,0,0,0.6)",
+              cursor: "default",
+            }}
+          />
+          <button
+            onClick={() => setLightboxSrc(null)}
+            aria-label="Close preview"
+            style={{
+              position: "absolute", top: 20, right: 24,
+              background: "none", border: "1px solid rgba(252,249,242,0.3)",
+              color: "#fcf9f2", width: 36, height: 36,
+              fontSize: 20, lineHeight: 1, cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}
+          >×</button>
+        </div>
+      )}
     </div>
   );
 }
@@ -859,28 +896,45 @@ function LockedPhase({
   );
 }
 
-function ProgressRail({ step }: { step: number }) {
+function ProgressRail({ step, onStepClick }: { step: number; onStepClick?: (s: number) => void }) {
   const labels = ["Basics", "Survey", "Vision", "Review"];
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 0, marginBottom: 48 }}>
-      {labels.map((label, i) => (
-        <div key={label} style={{ display: "flex", alignItems: "center", flex: i < labels.length - 1 ? 1 : "none" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <div style={{
-              width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center",
-              border: "1px solid #2c3525",
-              background: i <= step ? "#2c3525" : "transparent",
-              color: i <= step ? "#fcf9f2" : "#4a5d3f",
-              fontFamily: "'IBM Plex Mono', monospace", fontSize: 11,
-            }}>{i + 1}</div>
-            <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.1em", color: "#4a5d3f" }}
-              className="hidden sm:inline">{label}</span>
+      {labels.map((label, i) => {
+        const clickable = i < step && !!onStepClick;
+        return (
+          <div key={label} style={{ display: "flex", alignItems: "center", flex: i < labels.length - 1 ? 1 : "none" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div
+                onClick={() => clickable && onStepClick(i)}
+                style={{
+                  width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center",
+                  border: "1px solid #2c3525",
+                  background: i <= step ? "#2c3525" : "transparent",
+                  color: i <= step ? "#fcf9f2" : "#4a5d3f",
+                  fontFamily: "'IBM Plex Mono', monospace", fontSize: 11,
+                  cursor: clickable ? "pointer" : "default",
+                  transition: "opacity 0.15s",
+                }}
+                onMouseEnter={(e) => { if (clickable) e.currentTarget.style.opacity = "0.75"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.opacity = "1"; }}
+              >{i + 1}</div>
+              <span
+                onClick={() => clickable && onStepClick(i)}
+                style={{
+                  fontFamily: "'IBM Plex Mono', monospace", fontSize: 10,
+                  textTransform: "uppercase", letterSpacing: "0.1em", color: "#4a5d3f",
+                  cursor: clickable ? "pointer" : "default",
+                }}
+                className="hidden sm:inline"
+              >{label}</span>
+            </div>
+            {i < labels.length - 1 && (
+              <div style={{ flex: 1, height: 1, background: i < step ? "#2c3525" : "rgba(44,53,37,0.2)", margin: "0 8px" }} />
+            )}
           </div>
-          {i < labels.length - 1 && (
-            <div style={{ flex: 1, height: 1, background: i < step ? "#2c3525" : "rgba(44,53,37,0.2)", margin: "0 8px" }} />
-          )}
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -894,11 +948,11 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-function ReviewRow({ label, value }: { label: string; value: string }) {
+function ReviewRow({ label, value, valueStyle }: { label: string; value: string; valueStyle?: React.CSSProperties }) {
   return (
     <div style={{ display: "flex", gap: 16, paddingBottom: 12, marginBottom: 12, borderBottom: "1px solid rgba(44,53,37,0.08)" }}>
       <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.1em", color: "#4a5d3f", minWidth: 100, flexShrink: 0 }}>{label}</span>
-      <span style={{ fontSize: 15, color: "#1a1c18", lineHeight: 1.5 }}>{value}</span>
+      <span style={{ fontSize: 15, color: "#1a1c18", lineHeight: 1.5, ...valueStyle }}>{value}</span>
     </div>
   );
 }
