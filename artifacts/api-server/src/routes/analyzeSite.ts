@@ -67,6 +67,118 @@ function roughCentroid(geojson: unknown): { lat: number; lng: number } | null {
   } catch { return null; }
 }
 
+// ─── JSON sanitization & repair pipeline ──────────────────────────────────────
+
+/**
+ * Stage 1 — Sanitize: strips markdown fences, trailing commas, and unescaped
+ * control characters inside string literals. Safe to run on any raw LLM output.
+ */
+function sanitizeJson(raw: string): string {
+  let s = raw.trim();
+
+  // Strip leading/trailing markdown code fences  (```json … ``` or ``` … ```)
+  s = s.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim();
+
+  // Remove trailing commas before } or ]  — LLMs emit these constantly
+  s = s.replace(/,(\s*[}\]])/g, "$1");
+
+  // Fix unescaped literal newlines / CR / tabs that appear INSIDE string literals.
+  // Walk char-by-char so we only touch characters inside JSON strings.
+  const chars: string[] = [];
+  let inStr = false;
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (inStr) {
+      if (ch === "\\") {
+        chars.push(ch);
+        if (i + 1 < s.length) chars.push(s[++i]);
+        continue;
+      }
+      if (ch === '"') { inStr = false; chars.push(ch); continue; }
+      if (ch === "\n") { chars.push("\\n"); continue; }
+      if (ch === "\r") { chars.push("\\r"); continue; }
+      if (ch === "\t") { chars.push("\\t"); continue; }
+    } else {
+      if (ch === '"') inStr = true;
+    }
+    chars.push(ch);
+  }
+  return chars.join("");
+}
+
+/**
+ * Stage 2 — Repair: closes any unclosed strings/objects/arrays left behind by
+ * LLM token-limit truncation. Must run AFTER sanitizeJson.
+ */
+function repairJson(raw: string): string {
+  const stack: string[] = [];
+  let inString = false;
+  for (let i = 0; i < raw.length; i++) {
+    const ch = raw[i];
+    if (inString) {
+      if (ch === "\\" && i + 1 < raw.length) { i++; continue; }
+      if (ch === '"') inString = false;
+    } else {
+      if (ch === '"')                    { inString = true; }
+      else if (ch === "{")               { stack.push("}"); }
+      else if (ch === "[")               { stack.push("]"); }
+      else if (ch === "}" || ch === "]") { if (stack.length > 0) stack.pop(); }
+    }
+  }
+  let out = raw;
+  if (inString) out += '"';
+  while (stack.length > 0) out += stack.pop()!;
+  return out;
+}
+
+/**
+ * Stage 3 — Partial extractor: regex-scans raw text for the known top-level
+ * keys and bracket-matches nested objects. Returns whatever is readable so the
+ * caller always gets a usable object instead of throwing.
+ */
+function extractPartialAnalysis(raw: string): {
+  WaterStrategy: unknown; SunAndEnergy: unknown; LandAndBiodiversity: unknown;
+  ClimateResilience: unknown; InfrastructureCritique: unknown;
+  PatternStrategy: unknown; DesignRecommendations: unknown;
+} {
+  function extractStr(key: string): string {
+    const m = raw.match(new RegExp(`"${key}"\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)"`, "s"));
+    if (!m) return "";
+    return m[1].replace(/\\n/g, "\n").replace(/\\"/g, '"').replace(/\\t/g, "\t");
+  }
+
+  function extractObj(key: string): unknown {
+    const sm = raw.match(new RegExp(`"${key}"\\s*:\\s*(\\{|\\[)`));
+    if (!sm || sm.index === undefined) return null;
+    const openIdx = sm.index + sm[0].length - 1;
+    const open = raw[openIdx];
+    const close = open === "{" ? "}" : "]";
+    let depth = 0, inStr2 = false, end = openIdx;
+    for (let i = openIdx; i < raw.length; i++) {
+      const ch = raw[i];
+      if (inStr2) {
+        if (ch === "\\") { i++; continue; }
+        if (ch === '"') inStr2 = false;
+      } else {
+        if (ch === '"') inStr2 = true;
+        else if (ch === open)  depth++;
+        else if (ch === close) { depth--; if (depth === 0) { end = i; break; } }
+      }
+    }
+    try { return JSON.parse(raw.slice(openIdx, end + 1)); } catch { return null; }
+  }
+
+  return {
+    WaterStrategy:          extractStr("WaterStrategy"),
+    SunAndEnergy:           extractStr("SunAndEnergy"),
+    LandAndBiodiversity:    extractStr("LandAndBiodiversity"),
+    ClimateResilience:      extractStr("ClimateResilience"),
+    InfrastructureCritique: extractStr("InfrastructureCritique"),
+    PatternStrategy:        extractObj("PatternStrategy"),
+    DesignRecommendations:  extractObj("DesignRecommendations"),
+  };
+}
+
 // ─── Live climate fetch (Open-Meteo + NASA POWER) ─────────────────────────────
 
 interface LiveClimate {
@@ -478,30 +590,6 @@ router.post(
       return;
     }
 
-    // ── Attempt to repair truncated JSON (closes unclosed strings/objects/arrays) ─
-    function repairJson(raw: string): string {
-      // Walk char-by-char tracking string context and open-bracket stack
-      const stack: string[] = [];
-      let inString = false;
-      let i = 0;
-      for (; i < raw.length; i++) {
-        const ch = raw[i];
-        if (inString) {
-          if (ch === "\\" && i + 1 < raw.length) { i++; continue; } // skip escaped char
-          if (ch === '"') inString = false;
-        } else {
-          if (ch === '"')       { inString = true; }
-          else if (ch === "{")  { stack.push("}"); }
-          else if (ch === "[")  { stack.push("]"); }
-          else if (ch === "}" || ch === "]") { if (stack.length > 0) stack.pop(); }
-        }
-      }
-      let repaired = raw;
-      if (inString) repaired += '"';          // close an open string
-      while (stack.length > 0) repaired += stack.pop()!; // close open objects/arrays
-      return repaired;
-    }
-
     interface PlantRec { name: string; latinName: string; layer: string; purpose: string; zones: string; notes: string; }
     interface DesignElement { type: string; name: string; description: string; rationale: string; placement: string; priority: string; }
     interface ImplementationPhase { phase: number; title: string; duration: string; elements: string[]; rationale: string; }
@@ -514,20 +602,33 @@ router.post(
       DesignRecommendations: DesignRecs | undefined;
     };
     let wasRepaired = false;
+
+    // ── 3-stage parse pipeline ────────────────────────────────────────────────
+    // Stage 1: strip markdown fences, trailing commas, bare control chars in strings
+    const sanitized = sanitizeJson(rawJson);
     try {
-      parsed = JSON.parse(rawJson);
+      parsed = JSON.parse(sanitized);
     } catch {
-      // First parse failed — try structural repair (handles LLM truncation)
+      // Stage 2: structural repair — close brackets/strings truncated at token limit
       try {
-        const repairedJson = repairJson(rawJson);
-        parsed = JSON.parse(repairedJson);
+        const repaired = repairJson(sanitized);
+        parsed = JSON.parse(repaired);
         wasRepaired = true;
-        rawJson = repairedJson; // persist the repaired version
-        req.log.warn({ propertyId, truncatedLen: rawJson.length }, "Gemini JSON was truncated — repaired and parsed successfully");
+        rawJson = repaired;
+        req.log.warn(
+          { propertyId, sanitizedLen: sanitized.length, repairedLen: repaired.length },
+          "Gemini JSON sanitized+repaired successfully",
+        );
       } catch {
-        req.log.error({ rawJson: rawJson.slice(0, 500) }, "Gemini returned invalid JSON — repair failed");
-        res.status(500).json({ error: "AI returned malformed JSON — please try again." });
-        return;
+        // Stage 3: regex partial extractor — recovers whatever fields are readable,
+        // ensuring a clean object is always returned instead of a 500 error.
+        req.log.error(
+          { rawSnippet: rawJson.slice(0, 300) },
+          "Gemini JSON all-repair failed — falling back to partial field extraction",
+        );
+        parsed = extractPartialAnalysis(sanitized) as typeof parsed;
+        wasRepaired = true;
+        rawJson = JSON.stringify(parsed);
       }
     }
 
