@@ -194,6 +194,15 @@ const STRUCTURE_TYPES = [
   { value: "other",      label: "Other",       emoji: "📍" },
 ];
 
+function escHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 function structureIcon(type: string, label: string, mode: "icon+label" | "icon-only" | "text-inside" | "dot" = "icon+label") {
   const entry = STRUCTURE_TYPES.find((t) => t.value === type) ?? STRUCTURE_TYPES[STRUCTURE_TYPES.length - 1];
   const maxLabel = label.length > 12 ? label.slice(0, 12) + "…" : label;
@@ -227,7 +236,7 @@ function structureIcon(type: string, label: string, mode: "icon+label" | "icon-o
         font-size:9px;font-weight:700;color:#fff;
         white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
         letter-spacing:0.02em;
-      ">${short}</div>`,
+      ">${escHtml(short)}</div>`,
       iconSize: [72, 26],
       iconAnchor: [36, 13],
       popupAnchor: [0, -16],
@@ -269,7 +278,7 @@ function structureIcon(type: string, label: string, mode: "icon+label" | "icon-o
           white-space:nowrap;max-width:90px;
           overflow:hidden;text-overflow:ellipsis;
           box-shadow:0 1px 3px rgba(0,0,0,0.4);
-        ">${maxLabel}</div>
+        ">${escHtml(maxLabel)}</div>
       </div>`,
     iconSize: [34, 52],
     iconAnchor: [17, 34],
@@ -1055,8 +1064,8 @@ export default function MapPage() {
       el.style.cssText = "font-size:12px;padding:2px 4px;min-width:150px;max-width:220px;";
       el.innerHTML = `
         <div style="font-weight:600;margin-bottom:3px;color:#111;">${isBoundaryReq ? "Boundary Request" : "Feedback"}</div>
-        <div style="color:#333;line-height:1.4;margin-bottom:4px;">${displayText}</div>
-        <div style="font-size:10px;color:#888;">${comment.authorRole}</div>
+        <div style="color:#333;line-height:1.4;margin-bottom:4px;">${escHtml(displayText)}</div>
+        <div style="font-size:10px;color:#888;">${escHtml(comment.authorRole)}</div>
         ${role === "designer" ? `<button class="del-btn" style="margin-top:6px;padding:2px 8px;border:1px solid #c00;color:#c00;border-radius:3px;cursor:pointer;font-size:10px;background:none;">Delete</button>` : ""}
       `;
       el.querySelector(".del-btn")?.addEventListener("click", () => {
@@ -1180,14 +1189,14 @@ export default function MapPage() {
         });
         const marker = L.marker([lat, lng], { icon });
         const label = sv.label || sv.vectorType.replace(/_/g, " ");
-        marker.bindPopup(`<div style="font-size:12px;"><b>${label}</b><br/><span style="color:#666;font-size:10px;">${sv.vectorType}</span></div>`);
+        marker.bindPopup(`<div style="font-size:12px;"><b>${escHtml(label)}</b><br/><span style="color:#666;font-size:10px;">${escHtml(sv.vectorType)}</span></div>`);
         marker.addTo(map);
         sensoryVectorLayersRef.current.push(marker);
       } else if (geom?.type === "LineString") {
         const coords = (geom as GeoJSON.LineString).coordinates.map(([lng, lat]) => [lat, lng] as [number, number]);
         const line = L.polyline(coords, { color: cfg.color, weight: 3, dashArray: "8 5", opacity: 0.85 });
         const label = sv.label || sv.vectorType.replace(/_/g, " ");
-        line.bindPopup(`<div style="font-size:12px;"><b>${cfg.emoji} ${label}</b><br/><span style="color:#666;font-size:10px;">${sv.vectorType}</span></div>`);
+        line.bindPopup(`<div style="font-size:12px;"><b>${cfg.emoji} ${escHtml(label)}</b><br/><span style="color:#666;font-size:10px;">${escHtml(sv.vectorType)}</span></div>`);
         line.addTo(map);
         sensoryVectorLayersRef.current.push(line as unknown as L.Marker);
       }
@@ -1252,8 +1261,8 @@ export default function MapPage() {
       const el = document.createElement("div");
       el.style.cssText = "font-size:12px;padding:2px 4px;min-width:130px;max-width:200px;";
       el.innerHTML = `
-        <div style="font-weight:700;margin-bottom:2px;color:#111;">${s.label}</div>
-        <div style="font-size:10px;color:#555;margin-bottom:4px;text-transform:capitalize;">${STRUCTURE_TYPES.find(t => t.value === s.structureType)?.label ?? s.structureType}</div>
+        <div style="font-weight:700;margin-bottom:2px;color:#111;">${escHtml(s.label)}</div>
+        <div style="font-size:10px;color:#555;margin-bottom:4px;text-transform:capitalize;">${escHtml(STRUCTURE_TYPES.find(t => t.value === s.structureType)?.label ?? s.structureType)}</div>
         ${role === "designer" ? `<button class="del-btn" style="margin-top:4px;padding:2px 8px;border:1px solid #c00;color:#c00;border-radius:3px;cursor:pointer;font-size:10px;background:none;">Delete</button>` : ""}
       `;
       el.querySelector(".del-btn")?.addEventListener("click", () => {
@@ -1307,8 +1316,8 @@ export default function MapPage() {
         const popup = document.createElement("div");
         popup.style.cssText = "font-size:12px;padding:2px 4px;min-width:120px;max-width:200px;";
         popup.innerHTML = `
-          <div style="font-weight:700;color:#111;margin-bottom:2px;">${p.label}</div>
-          <div style="font-size:10px;color:#555;margin-bottom:4px;">${pt?.label ?? p.pathwayType}</div>
+          <div style="font-weight:700;color:#111;margin-bottom:2px;">${escHtml(p.label)}</div>
+          <div style="font-size:10px;color:#555;margin-bottom:4px;">${escHtml(pt?.label ?? p.pathwayType)}</div>
           ${role === "designer" ? `<button class="del-btn" style="margin-top:4px;padding:2px 8px;border:1px solid #c00;color:#c00;border-radius:3px;cursor:pointer;font-size:10px;background:none;">Delete</button>` : ""}
         `;
         layer.bindPopup(popup);
@@ -2124,8 +2133,8 @@ export default function MapPage() {
                 const el = document.createElement("div");
                 el.style.cssText = "font-size:12px;padding:4px 6px;min-width:140px;";
                 el.innerHTML = `
-                  <div style="font-weight:700;margin-bottom:3px;">${st.emoji} ${s.label || st.label}</div>
-                  <div style="font-size:10px;color:#666;margin-bottom:6px;">${st.label} · R=${s.radiusKm}km · ${s.startAngle}°→${s.endAngle}°</div>
+                  <div style="font-weight:700;margin-bottom:3px;">${st.emoji} ${escHtml(s.label || st.label)}</div>
+                  <div style="font-size:10px;color:#666;margin-bottom:6px;">${escHtml(st.label)} · R=${s.radiusKm}km · ${s.startAngle}°→${s.endAngle}°</div>
                   ${role === "designer" ? `<button class="delbtn" style="padding:2px 8px;border:1px solid #c00;color:#c00;border-radius:3px;cursor:pointer;font-size:10px;background:none;">Delete</button>` : ""}
                 `;
                 el.querySelector(".delbtn")?.addEventListener("click", () => { handleDeleteSector(s.id); map!.closePopup(); });
@@ -2362,9 +2371,9 @@ export default function MapPage() {
       const el = document.createElement("div");
       el.style.cssText = "font-size:11px;padding:2px 4px;min-width:150px;";
       el.innerHTML = `
-        <div style="font-weight:700;color:#0369a1;margin-bottom:3px;">💾 ${ds.name}</div>
+        <div style="font-weight:700;color:#0369a1;margin-bottom:3px;">💾 ${escHtml(ds.name)}</div>
         <div style="color:#444;margin-bottom:2px;">Elev: ${ds.elevationM.toFixed(1)} m · ${ds.lengthM.toLocaleString()} m</div>
-        <div style="color:#666;font-size:10px;text-transform:capitalize;">${ds.swaleType.replace(/_/g, " ")}</div>
+        <div style="color:#666;font-size:10px;text-transform:capitalize;">${escHtml(ds.swaleType.replace(/_/g, " "))}</div>
         ${role === "designer" ? `<button class="del-swale" style="margin-top:5px;padding:2px 8px;border:1px solid #c00;color:#c00;border-radius:3px;cursor:pointer;font-size:10px;background:none;">Delete</button>` : ""}`;
       el.querySelector(".del-swale")?.addEventListener("click", () => { handleDeleteSavedSwale(ds.id); layer.closePopup(); });
       layer.bindPopup(el).addTo(map);
