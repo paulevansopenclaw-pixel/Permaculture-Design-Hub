@@ -2885,81 +2885,6 @@ export default function MapPage() {
           )}
         </div>
 
-        {/* ── LAYER VISIBILITY ── */}
-        <SidebarSection label="Layer Visibility" defaultOpen>
-          <div className="space-y-2">
-            <LayerToggle label="Satellite Imagery" color="#4a9eff" active={showSatellite} onToggle={() => setShowSatellite((v) => !v)} />
-            <LayerToggle
-              label="Property Boundary"
-              color="#2D6A1A"
-              active={showBoundary}
-              onToggle={() => setShowBoundary((v) => !v)}
-              disabled={!activeProperty?.boundaryGeojson}
-            />
-            <LayerToggle
-              label="Terrain Contours"
-              color="#ef4444"
-              active={showContours}
-              onToggle={() => setShowContours((v) => !v)}
-              disabled={!activeProperty?.boundaryGeojson}
-            />
-            <LayerToggle
-              label="Sectors"
-              color="#d4a800"
-              active={showSectors}
-              onToggle={() => setShowSectors((v) => !v)}
-              disabled={!activePropertyId}
-            />
-            <LayerToggle
-              label="Solar Arcs"
-              color="#FBBF24"
-              active={showSolarArcs}
-              onToggle={() => setShowSolarArcs((v) => !v)}
-              disabled={!activePropertyId || !sectorCenter}
-            />
-            <LayerToggle
-              label="Water Analysis"
-              color="#0ea5e9"
-              active={showWater}
-              onToggle={() => setShowWater((v) => !v)}
-              disabled={!activePropertyId}
-            />
-            <LayerToggle
-              label="Structures"
-              color="#1e3a5f"
-              active={showStructures}
-              onToggle={() => setShowStructures((v) => !v)}
-              disabled={!activePropertyId}
-            />
-            <LayerToggle
-              label="Pathways"
-              color="#8B6914"
-              active={showPathways}
-              onToggle={() => setShowPathways((v) => !v)}
-              disabled={!activePropertyId}
-            />
-            <LayerToggle
-              label="Zone Mapping"
-              color="#CA8A04"
-              active={showZones}
-              onToggle={() => setShowZones((v) => !v)}
-              disabled={!activePropertyId}
-            />
-            <LayerToggle
-              label="Sensory Vectors"
-              color="#a855f7"
-              active={showSensoryVectors}
-              onToggle={() => setShowSensoryVectors((v) => !v)}
-              disabled={!activePropertyId}
-            />
-          </div>
-          {isGeneratingContours && (
-            <div className="flex items-center gap-2 mt-2.5">
-              <div className="w-3 h-3 border border-t-transparent rounded-full animate-spin" style={{ borderColor: "#ef4444" }} />
-              <span className="text-[10px]" style={{ color: "hsl(42, 15%, 55%)" }}>Fetching elevation tiles...</span>
-            </div>
-          )}
-        </SidebarSection>
 
         {/* ── WIZARD STEP INDICATOR ── */}
         {inputMode === "native" && (
@@ -3041,14 +2966,6 @@ export default function MapPage() {
         {/* ── WIZARD STEP 1: BASE & BOUNDARY ── */}
         {wizardStep === 1 && (
           <div className="flex-1 overflow-y-auto min-h-0">
-            {/* Step 1 — layer visibility */}
-            <div className="px-4 pt-3 pb-2.5 border-b" style={{ borderColor: "hsl(94, 30%, 16%)" }}>
-              <div className="text-[8px] uppercase tracking-widest mb-2" style={{ color: "hsl(42, 15%, 38%)" }}>Layer Visibility</div>
-              <div className="space-y-1.5">
-                  <LayerToggle label="Satellite Imagery" color="#4a9eff" active={showSatellite} onToggle={() => setShowSatellite((v) => !v)} />
-                  <LayerToggle label="Property Boundary" color="#2D6A1A" active={showBoundary} onToggle={() => setShowBoundary((v) => !v)} disabled={!activeProperty?.boundaryGeojson} />
-              </div>
-            </div>
         {/* ── LAYER 1: BOUNDARY ── */}
         <SidebarSection label="Layer 1 — Property Boundary" defaultOpen>
           {!activePropertyId ? (
@@ -3340,20 +3257,6 @@ export default function MapPage() {
         {/* ── WIZARD STEP 2: WATER & TOPOGRAPHY ── */}
         {wizardStep === 2 && (
           <div className="flex-1 overflow-y-auto min-h-0">
-            {/* Step 2 — layer visibility */}
-            <div className="px-4 pt-3 pb-2.5 border-b" style={{ borderColor: "hsl(94, 30%, 16%)" }}>
-              <div className="text-[8px] uppercase tracking-widest mb-2" style={{ color: "hsl(42, 15%, 38%)" }}>Layer Visibility</div>
-              <div className="space-y-1.5">
-                  <LayerToggle label="Terrain Contours" color="#ef4444" active={showContours} onToggle={() => setShowContours((v) => !v)} disabled={!activeProperty?.boundaryGeojson} />
-                  {isGeneratingContours && (
-                    <div className="flex items-center gap-1.5 pl-1">
-                      <div className="w-2.5 h-2.5 border border-t-transparent rounded-full animate-spin" style={{ borderColor: "#ef4444" }} />
-                      <span className="text-[9px]" style={{ color: "hsl(42,15%,55%)" }}>Fetching elevation tiles…</span>
-                    </div>
-                  )}
-                  <LayerToggle label="Water Analysis" color="#0ea5e9" active={showWater} onToggle={() => setShowWater((v) => !v)} disabled={!activePropertyId} />
-              </div>
-            </div>
         {/* ── LAYER 2: CONTOURS ── */}
         <SidebarSection label="Layer 2 — Terrain Contours">
           {!activeProperty?.boundaryGeojson ? (
@@ -3460,14 +3363,6 @@ export default function MapPage() {
         {/* ── WIZARD STEP 3: ACCESS & STRUCTURES ── */}
         {wizardStep === 3 && (
           <div className="flex-1 overflow-y-auto min-h-0">
-            {/* Step 3 — layer visibility */}
-            <div className="px-4 pt-3 pb-2.5 border-b" style={{ borderColor: "hsl(94, 30%, 16%)" }}>
-              <div className="text-[8px] uppercase tracking-widest mb-2" style={{ color: "hsl(42, 15%, 38%)" }}>Layer Visibility</div>
-              <div className="space-y-1.5">
-                  <LayerToggle label="Structures" color="#1e3a5f" active={showStructures} onToggle={() => setShowStructures((v) => !v)} disabled={!activePropertyId} />
-                  <LayerToggle label="Pathways" color="#8B6914" active={showPathways} onToggle={() => setShowPathways((v) => !v)} disabled={!activePropertyId} />
-              </div>
-            </div>
         {/* ── LAYER 6: STRUCTURES ── */}
         <SidebarSection label="Layer 6 — Structures">
           {!activePropertyId ? (
@@ -3853,16 +3748,6 @@ export default function MapPage() {
         {/* ── WIZARD STEP 4: SECTORS & ZONES ── */}
         {wizardStep === 4 && (
           <div className="flex-1 overflow-y-auto min-h-0">
-            {/* Step 4 — layer visibility */}
-            <div className="px-4 pt-3 pb-2.5 border-b" style={{ borderColor: "hsl(94, 30%, 16%)" }}>
-              <div className="text-[8px] uppercase tracking-widest mb-2" style={{ color: "hsl(42, 15%, 38%)" }}>Layer Visibility</div>
-              <div className="space-y-1.5">
-                  <LayerToggle label="Sectors" color="#d4a800" active={showSectors} onToggle={() => setShowSectors((v) => !v)} disabled={!activePropertyId} />
-                  <LayerToggle label="Solar Arcs" color="#FBBF24" active={showSolarArcs} onToggle={() => setShowSolarArcs((v) => !v)} disabled={!activePropertyId || !sectorCenter} />
-                  <LayerToggle label="Zone Mapping" color="#CA8A04" active={showZones} onToggle={() => setShowZones((v) => !v)} disabled={!activePropertyId} />
-                  <LayerToggle label="Sensory Vectors" color="#a855f7" active={showSensoryVectors} onToggle={() => setShowSensoryVectors((v) => !v)} disabled={!activePropertyId} />
-              </div>
-            </div>
         {/* ── LAYER 3: SECTOR ANALYSIS ── */}
         <SidebarSection label="Layer 3 — Sector Analysis">
           <>
@@ -4415,41 +4300,74 @@ export default function MapPage() {
         </div>
       </aside>
 
-      {/* ── PENDING ELEMENT BANNER ── */}
-      {pendingMapElement && (
-        <div
-          className="absolute left-0 right-0 flex items-center gap-3 px-4 py-2.5 z-50"
-          style={{
-            top: 0,
-            background: "linear-gradient(90deg, #14524a, #1f6b7a)",
-            borderBottom: "2px solid #3b82f6",
-            boxShadow: "0 4px 20px rgba(29,78,216,0.5)",
-          }}
-        >
-          <span style={{ fontSize: 15 }}>📌</span>
-          <div className="flex-1 min-w-0">
-            <span className="text-[11px] font-bold text-white">Add to Map: </span>
-            <span className="text-[11px] text-blue-200 font-semibold">{pendingMapElement.name}</span>
-            <span className="text-[10px] text-blue-300 ml-2 hidden sm:inline">— {pendingMapElement.placement}</span>
-          </div>
-          <span className="text-[9px] uppercase tracking-widest text-blue-300 hidden md:block">
-            Drop a pin or draw a structure, then dismiss
-          </span>
-          <button
-            onClick={() => setPendingMapElement(null)}
-            className="text-[10px] font-bold px-2.5 py-1 rounded transition-colors"
-            style={{ background: "rgba(255,255,255,0.15)", color: "#fff", border: "1px solid rgba(255,255,255,0.25)" }}
-          >
-            ✕ Dismiss
-          </button>
-        </div>
-      )}
+      {/* ── RIGHT PANEL (layer toolbar + map) ── */}
+      <div className="flex-1 flex flex-col overflow-hidden">
 
-      {/* ── MAP ── */}
-      <div
-        className="flex-1 relative"
-        style={{ background: "hsl(94, 18%, 5%)", marginTop: pendingMapElement ? "48px" : 0, transition: "margin-top 0.2s ease" }}
-      >
+        {/* ── LAYER TOOLBAR ── */}
+        <div
+          className="shrink-0 flex items-center gap-2 px-3 border-b overflow-x-auto"
+          style={{ background: "hsl(94, 30%, 8%)", borderColor: "hsl(94, 28%, 14%)", height: "40px", minHeight: "40px" }}
+        >
+          {/* Base */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-[9px] uppercase tracking-widest pr-0.5 shrink-0" style={{ color: "hsl(42,15%,32%)" }}>Base</span>
+            <LayerBtn label="Satellite" color="#4a9eff" active={showSatellite} onToggle={() => setShowSatellite((v) => !v)} />
+            <LayerBtn label="Boundary" color="#2D6A1A" active={showBoundary} disabled={!activeProperty?.boundaryGeojson} onToggle={() => setShowBoundary((v) => !v)} />
+            <LayerBtn label="Contours" color="#ef4444" active={showContours} disabled={!activeProperty?.boundaryGeojson} loading={isGeneratingContours} onToggle={() => setShowContours((v) => !v)} />
+          </div>
+          <div className="w-px h-5 shrink-0" style={{ background: "hsl(94,28%,20%)" }} />
+          {/* Analysis */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-[9px] uppercase tracking-widest pr-0.5 shrink-0" style={{ color: "hsl(42,15%,32%)" }}>Analysis</span>
+            <LayerBtn label="Sectors" color="#d4a800" active={showSectors} disabled={!activePropertyId} onToggle={() => setShowSectors((v) => !v)} />
+            <LayerBtn label="Solar Arcs" color="#FBBF24" active={showSolarArcs} disabled={!activePropertyId || !sectorCenter} onToggle={() => setShowSolarArcs((v) => !v)} />
+            <LayerBtn label="Water" color="#0ea5e9" active={showWater} disabled={!activePropertyId} onToggle={() => setShowWater((v) => !v)} />
+          </div>
+          <div className="w-px h-5 shrink-0" style={{ background: "hsl(94,28%,20%)" }} />
+          {/* Design */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-[9px] uppercase tracking-widest pr-0.5 shrink-0" style={{ color: "hsl(42,15%,32%)" }}>Design</span>
+            <LayerBtn label="Structures" color="#4a7ab5" active={showStructures} disabled={!activePropertyId} onToggle={() => setShowStructures((v) => !v)} />
+            <LayerBtn label="Pathways" color="#8B6914" active={showPathways} disabled={!activePropertyId} onToggle={() => setShowPathways((v) => !v)} />
+            <LayerBtn label="Zones" color="#CA8A04" active={showZones} disabled={!activePropertyId} onToggle={() => setShowZones((v) => !v)} />
+            <LayerBtn label="Sensory" color="#a855f7" active={showSensoryVectors} disabled={!activePropertyId} onToggle={() => setShowSensoryVectors((v) => !v)} />
+          </div>
+        </div>
+
+        {/* ── PENDING ELEMENT BANNER ── */}
+        {pendingMapElement && (
+          <div
+            className="shrink-0 flex items-center gap-3 px-4 py-2.5"
+            style={{
+              background: "linear-gradient(90deg, #14524a, #1f6b7a)",
+              borderBottom: "2px solid #3b82f6",
+              boxShadow: "0 4px 20px rgba(29,78,216,0.5)",
+            }}
+          >
+            <span style={{ fontSize: 15 }}>📌</span>
+            <div className="flex-1 min-w-0">
+              <span className="text-[11px] font-bold text-white">Add to Map: </span>
+              <span className="text-[11px] text-blue-200 font-semibold">{pendingMapElement.name}</span>
+              <span className="text-[10px] text-blue-300 ml-2 hidden sm:inline">— {pendingMapElement.placement}</span>
+            </div>
+            <span className="text-[9px] uppercase tracking-widest text-blue-300 hidden md:block">
+              Drop a pin or draw a structure, then dismiss
+            </span>
+            <button
+              onClick={() => setPendingMapElement(null)}
+              className="text-[10px] font-bold px-2.5 py-1 rounded transition-colors"
+              style={{ background: "rgba(255,255,255,0.15)", color: "#fff", border: "1px solid rgba(255,255,255,0.25)" }}
+            >
+              ✕ Dismiss
+            </button>
+          </div>
+        )}
+
+        {/* ── MAP ── */}
+        <div
+          className="flex-1 relative"
+          style={{ background: "hsl(94, 18%, 5%)" }}
+        >
 
         {/* ── 16:9 CANVAS HOST — full-bleed in native mode, centred+locked in upload mode ── */}
         <div
@@ -4700,6 +4618,7 @@ export default function MapPage() {
             </div>
           </div>
         )}
+        </div>
       </div>
 
       {/* ── KEYLINE REPORT MODAL ── */}
@@ -5304,6 +5223,49 @@ function ClientBoundaryRequest({
         </button>
       </div>
     </div>
+  );
+}
+
+function LayerBtn({
+  label,
+  color,
+  active,
+  onToggle,
+  disabled = false,
+  loading = false,
+}: {
+  label: string;
+  color: string;
+  active: boolean;
+  onToggle: () => void;
+  disabled?: boolean;
+  loading?: boolean;
+}) {
+  return (
+    <button
+      onClick={disabled ? undefined : onToggle}
+      className="flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] font-medium whitespace-nowrap transition-all"
+      style={{
+        opacity: disabled ? 0.35 : 1,
+        cursor: disabled ? "not-allowed" : "pointer",
+        background: active ? "hsl(84,38%,20%)" : "rgba(0,0,0,0.3)",
+        border: active ? "1px solid hsl(84,42%,38%)" : "1px solid hsl(94,28%,18%)",
+        color: active ? "hsl(42,28%,90%)" : "hsl(42,15%,46%)",
+      }}
+    >
+      {loading ? (
+        <div
+          className="w-2 h-2 rounded-full border border-t-transparent animate-spin flex-shrink-0"
+          style={{ borderColor: color }}
+        />
+      ) : (
+        <div
+          className="w-2 h-2 rounded-full flex-shrink-0"
+          style={{ background: active ? color : "hsl(94,28%,24%)" }}
+        />
+      )}
+      {label}
+    </button>
   );
 }
 
