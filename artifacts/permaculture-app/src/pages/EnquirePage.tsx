@@ -101,6 +101,9 @@ export default function EnquirePage() {
   // Submit
   const [submitError, setSubmitError] = useState<string | null>(null);
 
+  // Lightbox
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+
   const contactValid =
     name.trim().length > 0 &&
     /.+@.+\..+/.test(email.trim()) &&
@@ -418,6 +421,9 @@ export default function EnquirePage() {
         .shimmer { background:linear-gradient(90deg,#e8e4da 25%,#f0ece2 50%,#e8e4da 75%);background-size:200% 100%;animation:shimmer 1.6s ease-in-out infinite; }
         @keyframes pop-in { 0%{opacity:0;transform:scale(0.93)}100%{opacity:1;transform:scale(1)} }
         .pop-in { animation:pop-in 0.3s ease-out forwards; }
+        @keyframes cultivate-dot { 0%,80%,100%{opacity:0.25;transform:translateY(0)}40%{opacity:1;transform:translateY(-3px)} }
+        .cdot { display:inline-block; animation:cultivate-dot 1.4s ease-in-out infinite; }
+        .cdot:nth-child(2){animation-delay:0.2s} .cdot:nth-child(3){animation-delay:0.4s}
       `}} />
 
       {/* Header */}
@@ -430,7 +436,7 @@ export default function EnquirePage() {
       </header>
 
       <main className="max-w-2xl mx-auto px-6 py-12 md:py-16">
-        {step < 4 && <ProgressRail step={Math.min(step, 3)} />}
+        {step < 4 && <ProgressRail step={Math.min(step, 3)} onStepClick={(s) => setStep(s)} />}
 
         {/* ── 0: Basics ──────────────────────────────────────────────────── */}
         {step === 0 && (
@@ -446,7 +452,7 @@ export default function EnquirePage() {
               <Field label="Email"><input className="pa-input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="jane@example.com" /></Field>
               <Field label="Property address"><input className="pa-input" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="123 Ridgeline Rd, Bellingen NSW" /></Field>
               <Field label="Rough size (optional)"><input className="pa-input" value={roughSize} onChange={(e) => setRoughSize(e.target.value)} placeholder="e.g. 5 acres, half a hectare, a suburban block" /></Field>
-              <Field label="Your dream for the land (optional)"><textarea className="pa-input" rows={4} value={message} onChange={(e) => setMessage(e.target.value)} placeholder="What do you imagine when you picture this place thriving?" /></Field>
+              <Field label="Your dream for the land (optional)"><textarea className="pa-input" rows={4} spellCheck={true} value={message} onChange={(e) => setMessage(e.target.value)} placeholder="What do you imagine when you picture this place thriving?" /></Field>
             </div>
             <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 40 }}>
               <PrimaryBtn disabled={!contactValid} onClick={() => setStep(1)}>Continue</PrimaryBtn>
@@ -744,7 +750,7 @@ export default function EnquirePage() {
 
             {/* Summary card */}
             <div style={{ border: "1px solid rgba(44,53,37,0.2)", padding: "28px 28px 24px", marginBottom: 32, background: "#fffdf9" }}>
-              <ReviewRow label="Name" value={name} />
+              <ReviewRow label="Name" value={name} valueStyle={{ textTransform: "capitalize" }} />
               <ReviewRow label="Email" value={email} />
               <ReviewRow label="Property" value={address + (roughSize ? ` · ${roughSize}` : "")} />
               {primaryGoal && <ReviewRow label="Primary goal" value={primaryGoal} />}
@@ -760,7 +766,16 @@ export default function EnquirePage() {
                   </span>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 8 }}>
                     {reviewThumbs.map((t, i) => (
-                      <img key={i} src={t.src} alt={t.label} style={{ width: "100%", aspectRatio: "1/1", objectFit: "cover" }} />
+                      <img
+                        key={i}
+                        src={t.src}
+                        alt={t.label}
+                        title="Click to preview"
+                        onClick={() => setLightboxSrc(t.src)}
+                        style={{ width: "100%", aspectRatio: "1/1", objectFit: "cover", cursor: "zoom-in", transition: "opacity 0.15s" }}
+                        onMouseEnter={(e) => { e.currentTarget.style.opacity = "0.85"; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.opacity = "1"; }}
+                      />
                     ))}
                   </div>
                   <p style={{ fontSize: 12, color: "rgba(44,53,37,0.55)", marginTop: 10, lineHeight: 1.5 }}>
@@ -779,7 +794,12 @@ export default function EnquirePage() {
             <div style={{ display: "flex", justifyContent: "space-between" }}>
               <GhostBtn onClick={() => setStep(2)}>Edit</GhostBtn>
               <PrimaryBtn disabled={createEnquiry.isPending} onClick={handleSubmit}>
-                {createEnquiry.isPending ? "Sending…" : "Send my enquiry"}
+                {createEnquiry.isPending ? (
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                    Cultivating your profile
+                    <span><span className="cdot">.</span><span className="cdot">.</span><span className="cdot">.</span></span>
+                  </span>
+                ) : "Send my enquiry"}
               </PrimaryBtn>
             </div>
           </section>
