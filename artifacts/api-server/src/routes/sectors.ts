@@ -9,6 +9,7 @@ import {
   UpdateSectorBody,
   DeleteSectorParams,
 } from "@workspace/api-zod";
+import { requirePropertyOwner } from "../lib/propertyOwnerCheck";
 
 const router: IRouter = Router();
 
@@ -17,6 +18,7 @@ router.get(
   async (req, res): Promise<void> => {
     const params = ListSectorsParams.safeParse(req.params);
     if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
+    if (!await requirePropertyOwner(req, res, params.data.propertyId)) return;
     const rows = await db
       .select()
       .from(sectorsTable)
@@ -31,6 +33,7 @@ router.post(
   async (req, res): Promise<void> => {
     const params = CreateSectorParams.safeParse(req.params);
     if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
+    if (!await requirePropertyOwner(req, res, params.data.propertyId)) return;
     const parsed = CreateSectorBody.safeParse(req.body);
     if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
     const [sector] = await db
@@ -46,6 +49,7 @@ router.patch(
   async (req, res): Promise<void> => {
     const params = UpdateSectorParams.safeParse(req.params);
     if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
+    if (!await requirePropertyOwner(req, res, params.data.propertyId)) return;
     const parsed = UpdateSectorBody.safeParse(req.body);
     if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
     const [updated] = await db
@@ -63,6 +67,7 @@ router.delete(
   async (req, res): Promise<void> => {
     const params = DeleteSectorParams.safeParse(req.params);
     if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
+    if (!await requirePropertyOwner(req, res, params.data.propertyId)) return;
     await db
       .delete(sectorsTable)
       .where(and(eq(sectorsTable.id, params.data.sectorId), eq(sectorsTable.propertyId, params.data.propertyId)));

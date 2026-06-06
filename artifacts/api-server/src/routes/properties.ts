@@ -15,15 +15,16 @@ const router: IRouter = Router();
 
 router.get("/properties", async (req, res): Promise<void> => {
   if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const whereClause = req.user.isStaff
+    ? or(
+        eq(propertiesTable.ownerId, req.user.id),
+        and(isNull(propertiesTable.ownerId), eq(propertiesTable.status, "enquiry")),
+      )
+    : eq(propertiesTable.ownerId, req.user.id);
   const rows = await db
     .select()
     .from(propertiesTable)
-    .where(
-      or(
-        eq(propertiesTable.ownerId, req.user.id),
-        and(isNull(propertiesTable.ownerId), eq(propertiesTable.status, "enquiry")),
-      ),
-    )
+    .where(whereClause)
     .orderBy(propertiesTable.createdAt);
   res.json(rows.map((p) => ({
     ...p,
@@ -89,6 +90,7 @@ router.delete("/properties/:id", async (req, res): Promise<void> => {
 
 router.post("/properties/:id/claim", async (req, res): Promise<void> => {
   if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
+  if (!req.user.isStaff) { res.status(403).json({ error: "Forbidden" }); return; }
   const params = ClaimPropertyParams.safeParse(req.params);
   if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
   const [claimed] = await db

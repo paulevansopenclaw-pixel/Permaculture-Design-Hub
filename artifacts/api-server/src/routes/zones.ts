@@ -7,6 +7,7 @@ import {
   BulkReplaceZonesBody,
   DeleteZoneParams,
 } from "@workspace/api-zod";
+import { requirePropertyOwner } from "../lib/propertyOwnerCheck";
 
 const router: IRouter = Router();
 
@@ -15,6 +16,7 @@ router.get(
   async (req, res): Promise<void> => {
     const params = ListZonesParams.safeParse(req.params);
     if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
+    if (!await requirePropertyOwner(req, res, params.data.propertyId)) return;
     const rows = await db
       .select()
       .from(zonesTable)
@@ -29,6 +31,7 @@ router.put(
   async (req, res): Promise<void> => {
     const params = BulkReplaceZonesParams.safeParse(req.params);
     if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
+    if (!await requirePropertyOwner(req, res, params.data.propertyId)) return;
     const body = BulkReplaceZonesBody.safeParse(req.body);
     if (!body.success) { res.status(400).json({ error: body.error.message }); return; }
     await db.delete(zonesTable).where(eq(zonesTable.propertyId, params.data.propertyId));
@@ -46,6 +49,7 @@ router.delete(
   async (req, res): Promise<void> => {
     const params = DeleteZoneParams.safeParse(req.params);
     if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
+    if (!await requirePropertyOwner(req, res, params.data.propertyId)) return;
     await db
       .delete(zonesTable)
       .where(

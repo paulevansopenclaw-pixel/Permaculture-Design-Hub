@@ -6,6 +6,7 @@ import {
   UpsertClientBriefParams,
   UpsertClientBriefBody,
 } from "@workspace/api-zod";
+import { requirePropertyOwner } from "../lib/propertyOwnerCheck";
 
 const router: IRouter = Router();
 
@@ -19,6 +20,7 @@ router.get(
   async (req, res): Promise<void> => {
     const params = GetClientBriefParams.safeParse(req.params);
     if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
+    if (!await requirePropertyOwner(req, res, params.data.propertyId)) return;
     const [row] = await db
       .select()
       .from(clientBriefsTable)
@@ -37,6 +39,7 @@ router.put(
   async (req, res): Promise<void> => {
     const params = UpsertClientBriefParams.safeParse(req.params);
     if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
+    if (!await requirePropertyOwner(req, res, params.data.propertyId)) return;
     const parsed = UpsertClientBriefBody.safeParse(req.body);
     if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
 

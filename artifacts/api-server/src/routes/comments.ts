@@ -7,6 +7,7 @@ import {
   CreateCommentBody,
   DeleteCommentParams,
 } from "@workspace/api-zod";
+import { requirePropertyOwner } from "../lib/propertyOwnerCheck";
 
 const router: IRouter = Router();
 
@@ -18,6 +19,7 @@ router.get(
       res.status(400).json({ error: params.error.message });
       return;
     }
+    if (!await requirePropertyOwner(req, res, params.data.propertyId)) return;
     const rows = await db
       .select()
       .from(commentsTable)
@@ -35,6 +37,7 @@ router.post(
       res.status(400).json({ error: params.error.message });
       return;
     }
+    if (!await requirePropertyOwner(req, res, params.data.propertyId)) return;
     const parsed = CreateCommentBody.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({ error: parsed.error.message });
@@ -59,6 +62,7 @@ router.delete(
       res.status(400).json({ error: params.error.message });
       return;
     }
+    if (!await requirePropertyOwner(req, res, params.data.propertyId)) return;
     await db
       .delete(commentsTable)
       .where(

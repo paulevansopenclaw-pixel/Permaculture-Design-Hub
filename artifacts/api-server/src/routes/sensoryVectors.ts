@@ -7,6 +7,7 @@ import {
   CreateSensoryVectorBody,
   DeleteSensoryVectorParams,
 } from "@workspace/api-zod";
+import { requirePropertyOwner } from "../lib/propertyOwnerCheck";
 
 const router: IRouter = Router();
 
@@ -15,6 +16,7 @@ router.get(
   async (req, res): Promise<void> => {
     const params = ListSensoryVectorsParams.safeParse(req.params);
     if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
+    if (!await requirePropertyOwner(req, res, params.data.propertyId)) return;
     const rows = await db
       .select()
       .from(sensoryVectorsTable)
@@ -29,6 +31,7 @@ router.post(
   async (req, res): Promise<void> => {
     const params = CreateSensoryVectorParams.safeParse(req.params);
     if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
+    if (!await requirePropertyOwner(req, res, params.data.propertyId)) return;
     const body = CreateSensoryVectorBody.safeParse(req.body);
     if (!body.success) { res.status(400).json({ error: body.error.message }); return; }
     const [row] = await db
@@ -50,6 +53,7 @@ router.delete(
   async (req, res): Promise<void> => {
     const params = DeleteSensoryVectorParams.safeParse(req.params);
     if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
+    if (!await requirePropertyOwner(req, res, params.data.propertyId)) return;
     await db
       .delete(sensoryVectorsTable)
       .where(and(

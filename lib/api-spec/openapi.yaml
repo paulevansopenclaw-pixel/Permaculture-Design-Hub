@@ -1943,7 +1943,7 @@ components:
 
     AuthUser:
       type: object
-      required: [id, email, firstName, lastName, profileImageUrl]
+      required: [id, email, firstName, lastName, profileImageUrl, isStaff]
       properties:
         id:
           type: string
@@ -1956,6 +1956,8 @@ components:
           type: [string, 'null']
         profileImageUrl:
           type: [string, 'null']
+        isStaff:
+          type: boolean
     AuthUserEnvelope:
       type: object
       required: [user]

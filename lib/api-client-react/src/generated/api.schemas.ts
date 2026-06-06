@@ -500,6 +500,7 @@ export interface AuthUser {
   lastName: string | null;
   /** @nullable */
   profileImageUrl: string | null;
+  isStaff: boolean;
 }
 
 export interface AuthUserEnvelope {

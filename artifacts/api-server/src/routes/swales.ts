@@ -7,6 +7,7 @@ import {
   CreateDesignedSwaleBody,
   DeleteDesignedSwaleParams,
 } from "@workspace/api-zod";
+import { requirePropertyOwner } from "../lib/propertyOwnerCheck";
 
 const router: IRouter = Router();
 
@@ -15,6 +16,7 @@ router.get(
   async (req, res): Promise<void> => {
     const params = ListDesignedSwalesParams.safeParse(req.params);
     if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
+    if (!await requirePropertyOwner(req, res, params.data.propertyId)) return;
     const rows = await db
       .select()
       .from(designedSwalesTable)
@@ -29,6 +31,7 @@ router.post(
   async (req, res): Promise<void> => {
     const params = CreateDesignedSwaleParams.safeParse(req.params);
     if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
+    if (!await requirePropertyOwner(req, res, params.data.propertyId)) return;
     const parsed = CreateDesignedSwaleBody.safeParse(req.body);
     if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
     const [row] = await db
@@ -44,6 +47,7 @@ router.delete(
   async (req, res): Promise<void> => {
     const params = DeleteDesignedSwaleParams.safeParse(req.params);
     if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
+    if (!await requirePropertyOwner(req, res, params.data.propertyId)) return;
     await db
       .delete(designedSwalesTable)
       .where(and(
