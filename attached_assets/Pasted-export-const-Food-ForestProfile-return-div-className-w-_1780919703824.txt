@@ -1,0 +1,54 @@
+export const Food ForestProfile = () => {
+  return (
+    <div className="w-full bg-white p-6 rounded-lg border border-neutral-200">
+      <h3 className="text-lg font-medium text-neutral-800 mb-4">Vertical Layer Profile</h3>
+      
+      <svg viewBox="0 0 800 400" className="w-full h-auto text-neutral-700">
+        {/* Sky / Background Grid */}
+        <line x1="0" y1="350" x2="800" y2="350" stroke="#ccc" strokeDasharray="4,4" />
+        
+        {/* Swale Mound & Earthworks Profile */}
+        <path 
+          d="M 0 350 Q 200 350, 350 350 Q 450 280, 500 350 T 800 350" 
+          fill="none" 
+          stroke="#4A3B32" 
+          strokeWidth="4" 
+        />
+        <text x="440" y="270" className="text-xs fill-neutral-400 font-mono">Swale Mound</text>
+
+        {/* 1. CANOPY LAYER (Large Tree Silhouette) */}
+        <g transform="translate(100, 120)">
+          {/* Trunk */}
+          <path d="M 45 120 L 45 230 L 55 230 L 55 120 Z" fill="#2C3E50" opacity="0.8" />
+          {/* Crown Silhouette */}
+          <path d="M 50 10 C 10 10, 0 50, 10 80 C 20 100, 80 100, 90 80 C 100 50, 90 10, 50 10 Z" fill="#2C3E50" opacity="0.15" />
+          <text x="25" y="0" className="text-xs font-semibold fill-neutral-600">Canopy (Chestnut)</text>
+        </g>
+
+        {/* 2. UNDERSTORY LAYER (Medium Fruit Tree Silhouette) */}
+        <g transform="translate(240, 180)">
+          {/* Trunk */}
+          <path d="M 27 80 L 27 170 L 33 170 L 33 80 Z" fill="#2C3E50" opacity="0.8" />
+          {/* Shrubby/Oval Crown */}
+          <path d="M 30 10 Q 0 20, 5 50 Q 10 80, 30 75 Q 50 80, 55 50 Q 60 20, 30 10 Z" fill="#27AE60" opacity="0.2" />
+          <text x="10" y="0" className="text-xs font-semibold fill-neutral-600">Understory (Apple)</text>
+        </g>
+
+        {/* 3. SHRUB LAYER (Berry Bushes on Mound Slope) */}
+        <g transform="translate(420, 260)">
+          {/* Multi-stem silhouette */}
+          <path d="M 10 90 Q 0 40, 25 30 Q 50 20, 45 60 Q 70 50, 50 90 Z" fill="#2E7D32" opacity="0.25" />
+          <text x="0" y="15" className="text-xs font-semibold fill-neutral-600">Shrub (Currant)</text>
+        </g>
+
+        {/* 4. HERBACEOUS & GROUNDCOVER LAYER (Textured low-level silhouettes) */}
+        <g transform="translate(560, 310)">
+          {/* Tuft / Fern-like silhouettes */}
+          <path d="M 0 40 Q 10 10, 15 40 Q 25 15, 30 40 Q 40 20, 45 40" fill="none" stroke="#1B5E20" strokeWidth="2" />
+          <text x="50" y="35" className="text-xs font-semibold fill-neutral-600">Herbaceous (Comfrey)</text>
+        </g>
+
+        {/* 5. RHIZOSPHERE (Root systems below the ground line) */}
+        <g transform="translate(130, 360)">
+          {/* Deep taproot path */}
+          <path d="M 2
