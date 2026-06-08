@@ -191,10 +191,25 @@ function UnifiedMapCanvas({ geo, zones, structs, swales, paths, layerCounts }: U
     map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), "bottom-right");
     map.addControl(new mapboxgl.AttributionControl({ compact: true }), "bottom-right");
 
-    map.on("load", () => {
-      map.addSource("design", { type: "geojson", data: fc });
+    map.on("error", (e) => {
+      console.warn("[UnifiedMap] error:", e.error?.message ?? e);
+    });
 
-      map.addLayer({ id: "zones-fill", type: "fill", source: "design",
+    map.on("load", () => {
+      try {
+        map.addSource("design", { type: "geojson", data: fc });
+      } catch (e) {
+        console.warn("[UnifiedMap] source failed:", e);
+        return;
+      }
+
+      // Helper — individual layer failures must not crash the whole canvas
+      const safeLayer = (def: Parameters<typeof map.addLayer>[0]) => {
+        try { map.addLayer(def); }
+        catch (e) { console.warn("[UnifiedMap] layer skipped:", (def as { id: string }).id, e); }
+      };
+
+      safeLayer({ id: "zones-fill", type: "fill", source: "design",
         filter: ["==", ["get", "layer_type"], "zone"],
         paint: {
           "fill-color": ["match", ["get", "zone_number"], 1,"#FDE68A", 2,"#9DC08B", 3,"#7AAF68", 4,"#D4A27A", 5,"#94A3B8", "#cccccc"],
@@ -202,7 +217,7 @@ function UnifiedMapCanvas({ geo, zones, structs, swales, paths, layerCounts }: U
         },
       });
 
-      map.addLayer({ id: "zones-outline", type: "line", source: "design",
+      safeLayer({ id: "zones-outline", type: "line", source: "design",
         filter: ["==", ["get", "layer_type"], "zone"],
         paint: {
           "line-color": ["match", ["get", "zone_number"], 1,"#CA8A04", 2,"#4A7C3F", 3,"#3B6B30", 4,"#92400E", 5,"#475569", "#888888"],
@@ -210,22 +225,22 @@ function UnifiedMapCanvas({ geo, zones, structs, swales, paths, layerCounts }: U
         },
       });
 
-      map.addLayer({ id: "boundary-fill", type: "fill", source: "design",
+      safeLayer({ id: "boundary-fill", type: "fill", source: "design",
         filter: ["==", ["get", "layer_type"], "boundary"],
         paint: { "fill-color": "#ffffff", "fill-opacity": 0.03 },
       });
 
-      map.addLayer({ id: "boundary-outline", type: "line", source: "design",
+      safeLayer({ id: "boundary-outline", type: "line", source: "design",
         filter: ["==", ["get", "layer_type"], "boundary"],
         paint: { "line-color": "#fcf9f2", "line-width": 2.5, "line-opacity": 0.92 },
       });
 
-      map.addLayer({ id: "swales-line", type: "line", source: "design",
+      safeLayer({ id: "swales-line", type: "line", source: "design",
         filter: ["==", ["get", "layer_type"], "swale"],
         paint: { "line-color": "#38B2AC", "line-width": 2.5, "line-opacity": 0.9, "line-dasharray": [6, 3] },
       });
 
-      map.addLayer({ id: "pathways-line", type: "line", source: "design",
+      safeLayer({ id: "pathways-line", type: "line", source: "design",
         filter: ["==", ["get", "layer_type"], "pathway"],
         paint: {
           "line-color": ["match", ["get", "pathway_type"], "driveway","#C4A45A", "footpath","#D4B07A", "farm_track","#9B7A5A", "fenceline","#A0A0B8", "firebreak","#DC6656", "#C4A45A"],
@@ -233,12 +248,12 @@ function UnifiedMapCanvas({ geo, zones, structs, swales, paths, layerCounts }: U
         },
       });
 
-      map.addLayer({ id: "structures-circle", type: "circle", source: "design",
+      safeLayer({ id: "structures-circle", type: "circle", source: "design",
         filter: ["==", ["get", "layer_type"], "structure"],
         paint: { "circle-radius": 9, "circle-color": "#ffffff", "circle-opacity": 0.92, "circle-stroke-color": "#2c3525", "circle-stroke-width": 2 },
       });
 
-      map.addLayer({ id: "structures-label", type: "symbol", source: "design",
+      safeLayer({ id: "structures-label", type: "symbol", source: "design",
         filter: ["==", ["get", "layer_type"], "structure"],
         layout: {
           "text-field": ["get", "label"],
@@ -484,6 +499,156 @@ function SunDiagram({ lat, wind }: { lat?: number | null; wind?: string | null }
       <polygon points={`${f(nTx)},${f(nTy)} ${f(nL1x)},${f(nL1y)} ${f(nL2x)},${f(nL2y)}`} fill="#ef4444" />
       {compass.map(({ l, d }) => { const [lx, ly] = xy(d, r + 18); return <text key={l} x={f(lx)} y={f(ly)} fill={d % 90 === 0 ? INK : "#aaa"} fontSize={9} fontWeight="900" textAnchor="middle" dominantBaseline="middle" fontFamily="monospace">{l}</text>; })}
     </svg>
+  );
+}
+
+// ─── Food Forest Vertical Layer Profile ───────────────────────────────────────
+function FoodForestProfile() {
+  const W = 860, H = 310, GY = 202, S = 15;
+
+  const drawTree = (x: number, heightM: number, rx: number, ry: number, fill: string) => {
+    const tw = Math.max(4, rx * 0.14);
+    const cy = GY - heightM * S;
+    const top = cy + ry * 0.55;
+    return (
+      <g>
+        <rect x={x - tw / 2} y={top} width={tw} height={GY - top} fill={fill} opacity={0.88} />
+        <ellipse cx={x} cy={cy} rx={rx} ry={ry} fill={fill} opacity={0.74} />
+        <ellipse cx={x - rx * 0.22} cy={cy - ry * 0.28} rx={rx * 0.35} ry={ry * 0.28} fill="rgba(255,255,255,0.11)" />
+      </g>
+    );
+  };
+
+  const bermPath = `M 548,${GY} C 565,${GY} 585,${GY - 20} 618,${GY - 26} C 650,${GY - 32} 690,${GY - 32} 726,${GY - 22} C 762,${GY - 12} 800,${GY} ${W},${GY} L ${W},${H} L 548,${H} Z`;
+  const channelPath = `M 500,${GY} Q 524,${GY + 11} 548,${GY}`;
+
+  return (
+    <figure style={{ margin: 0 }}>
+      <div className="mono" style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "0.2em", color: TAN, marginBottom: 16 }}>
+        Vertical Layer Profile · Food Forest Guild
+      </div>
+      <div style={{ border: RULE, borderRadius: 6, overflow: "hidden", boxShadow: "0 2px 12px rgba(44,53,37,0.08)" }}>
+        <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: "auto", display: "block" }}>
+          <defs>
+            <linearGradient id="ffp-sky" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#c8dff0" />
+              <stop offset="100%" stopColor="#e0ddd0" />
+            </linearGradient>
+            <linearGradient id="ffp-soil" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#6b4c1e" />
+              <stop offset="100%" stopColor="#3a2408" />
+            </linearGradient>
+            <linearGradient id="ffp-berm" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#7a5c28" />
+              <stop offset="100%" stopColor="#4a3010" />
+            </linearGradient>
+          </defs>
+
+          {/* Sky */}
+          <rect x={0} y={0} width={W} height={GY} fill="url(#ffp-sky)" />
+          {/* Underground soil */}
+          <rect x={0} y={GY} width={W} height={H - GY} fill="url(#ffp-soil)" />
+          {/* Swale berm mound */}
+          <path d={bermPath} fill="url(#ffp-berm)" stroke="#3a2408" strokeWidth="0.8" strokeOpacity="0.35" />
+          {/* Swale channel */}
+          <path d={channelPath} fill="none" stroke="#4a90c4" strokeWidth="2.2" strokeOpacity="0.5" />
+          <ellipse cx={524} cy={GY + 7} rx={15} ry={4} fill="#4a90c4" opacity={0.2} />
+          {/* Ground line */}
+          <line x1={0} y1={GY} x2={W} y2={GY} stroke="#3a2408" strokeWidth="1.2" strokeOpacity="0.4" />
+
+          {/* ── Height ruler ── */}
+          <line x1={52} y1={GY - 8 * S - 6} x2={52} y2={GY + 2} stroke="#bbb" strokeWidth="0.6" />
+          {[0, 2, 4, 6, 8].map((m) => {
+            const y = GY - m * S;
+            return (
+              <g key={m}>
+                <line x1={48} y1={y} x2={56} y2={y} stroke="#bbb" strokeWidth="0.8" />
+                <text x={44} y={y + 0.5} textAnchor="end" dominantBaseline="middle" fill="#aaa" fontSize="7.5" fontFamily="'IBM Plex Mono', monospace">{m}m</text>
+              </g>
+            );
+          })}
+
+          {/* ── Plants ── */}
+          {drawTree(330, 8, 52, 44, "#3d2e1e")}
+          {drawTree(205, 4.5, 30, 26, "#3a5c2e")}
+          {drawTree(455, 4.2, 28, 24, "#3a5c2e")}
+          {/* Accumulator / comfrey (bushy low forms) */}
+          <ellipse cx={265} cy={GY - 21} rx={25} ry={18} fill="#6b8a45" opacity={0.72} />
+          <ellipse cx={265} cy={GY - 21} rx={14} ry={9} fill="rgba(255,255,255,0.09)" />
+          <ellipse cx={395} cy={GY - 19} rx={22} ry={16} fill="#6b8a45" opacity={0.72} />
+          {/* Insectary herbs */}
+          {[295, 363, 430].map((ix) => (
+            <g key={ix}>
+              <ellipse cx={ix} cy={GY - 9} rx={13} ry={9} fill="#b08650" opacity={0.65} />
+              <circle cx={ix} cy={GY - 16} r={3.5} fill="#e6c44a" opacity={0.72} />
+            </g>
+          ))}
+          {/* Berm comfrey */}
+          <ellipse cx={664} cy={GY - 48} rx={21} ry={15} fill="#6b8a45" opacity={0.62} />
+          {/* Berm ground cover */}
+          {[590, 625, 665, 705, 745].map((gx) => (
+            <ellipse key={gx} cx={gx} cy={GY - 28 + Math.abs(gx - 672) * 0.04} rx={9} ry={3.5} fill="#8b9e5f" opacity={0.48} />
+          ))}
+          {/* Guild ground cover */}
+          {[238, 263, 303, 355, 393, 428, 462, 488].map((gx) => (
+            <ellipse key={gx} cx={gx} cy={GY - 3} rx={9} ry={3.5} fill="#8b9e5f" opacity={0.5} />
+          ))}
+
+          {/* ── Underground roots ── */}
+          {/* Canopy deep tap root */}
+          <line x1={330} y1={GY} x2={330} y2={GY + 72} stroke="#8a6030" strokeWidth="2.5" strokeOpacity="0.6" />
+          <line x1={330} y1={GY + 38} x2={280} y2={GY + 62} stroke="#8a6030" strokeWidth="1.2" strokeOpacity="0.4" />
+          <line x1={330} y1={GY + 52} x2={390} y2={GY + 68} stroke="#8a6030" strokeWidth="1.2" strokeOpacity="0.4" />
+          <line x1={330} y1={GY + 22} x2={295} y2={GY + 38} stroke="#8a6030" strokeWidth="0.7" strokeOpacity="0.3" />
+          <line x1={330} y1={GY + 22} x2={368} y2={GY + 36} stroke="#8a6030" strokeWidth="0.7" strokeOpacity="0.3" />
+          {/* N-fixer roots + N₂ nodules */}
+          <line x1={205} y1={GY} x2={205} y2={GY + 54} stroke="#3a5c2e" strokeWidth="2" strokeOpacity="0.5" />
+          <line x1={205} y1={GY + 26} x2={168} y2={GY + 46} stroke="#3a5c2e" strokeWidth="1.1" strokeOpacity="0.4" />
+          <circle cx={174} cy={GY + 38} r={3.5} fill="#3a5c2e" opacity={0.55} />
+          <circle cx={196} cy={GY + 50} r={2.8} fill="#3a5c2e" opacity={0.5} />
+          <line x1={455} y1={GY} x2={455} y2={GY + 50} stroke="#3a5c2e" strokeWidth="2" strokeOpacity="0.5" />
+          <line x1={455} y1={GY + 24} x2={488} y2={GY + 44} stroke="#3a5c2e" strokeWidth="1.1" strokeOpacity="0.4" />
+          <circle cx={482} cy={GY + 36} r={3.5} fill="#3a5c2e" opacity={0.55} />
+          {/* Comfrey deep tap roots (dashed — mineral mining) */}
+          <line x1={265} y1={GY} x2={265} y2={GY + 84} stroke="#6b8a45" strokeWidth="1.5" strokeOpacity="0.52" strokeDasharray="3 3" />
+          <line x1={395} y1={GY} x2={395} y2={GY + 80} stroke="#6b8a45" strokeWidth="1.5" strokeOpacity="0.52" strokeDasharray="3 3" />
+
+          {/* ── Layer callouts ── */}
+          <line x1={330} y1={GY - 8 * S - 44} x2={400} y2={GY - 8 * S - 56} stroke="#3d2e1e" strokeWidth="0.7" strokeOpacity="0.45" />
+          <text x={403} y={GY - 8 * S - 59} fill="#3d2e1e" fontSize="8.5" fontFamily="'IBM Plex Mono', monospace" fontWeight="600" letterSpacing="0.06em">CANOPY</text>
+          <text x={403} y={GY - 8 * S - 48} fill="#3d2e1e" fontSize="6.5" fontFamily="'IBM Plex Mono', monospace" opacity={0.65}>6–10 m · Apple, Mulberry, Avocado</text>
+
+          <line x1={205 - 28} y1={GY - 4.5 * S} x2={205 - 52} y2={GY - 4.5 * S - 16} stroke="#3a5c2e" strokeWidth="0.7" strokeOpacity="0.45" />
+          <text x={205 - 55} y={GY - 4.5 * S - 20} textAnchor="end" fill="#3a5c2e" fontSize="8.5" fontFamily="'IBM Plex Mono', monospace" fontWeight="600" letterSpacing="0.06em">N-FIXER</text>
+          <text x={205 - 55} y={GY - 4.5 * S - 9} textAnchor="end" fill="#3a5c2e" fontSize="6.5" fontFamily="'IBM Plex Mono', monospace" opacity={0.65}>3–5 m · Tagasaste, Siberian Pea</text>
+
+          <line x1={265 - 24} y1={GY - 22} x2={265 - 50} y2={GY - 38} stroke="#6b8a45" strokeWidth="0.7" strokeOpacity="0.45" />
+          <text x={265 - 53} y={GY - 42} textAnchor="end" fill="#6b8a45" fontSize="8.5" fontFamily="'IBM Plex Mono', monospace" fontWeight="600" letterSpacing="0.06em">ACCUMULATOR</text>
+          <text x={265 - 53} y={GY - 31} textAnchor="end" fill="#6b8a45" fontSize="6.5" fontFamily="'IBM Plex Mono', monospace" opacity={0.65}>1–2 m · Comfrey, Dandelion, Chicory</text>
+
+          <line x1={430} y1={GY - 17} x2={468} y2={GY - 38} stroke="#b08650" strokeWidth="0.7" strokeOpacity="0.45" />
+          <text x={471} y={GY - 42} fill="#b08650" fontSize="8.5" fontFamily="'IBM Plex Mono', monospace" fontWeight="600" letterSpacing="0.06em">INSECTARY</text>
+          <text x={471} y={GY - 31} fill="#b08650" fontSize="6.5" fontFamily="'IBM Plex Mono', monospace" opacity={0.65}>0.5–1 m · Borage, Dill, Lavender</text>
+
+          <line x1={238} y1={GY - 3} x2={220} y2={GY - 24} stroke="#8b9e5f" strokeWidth="0.7" strokeOpacity="0.45" />
+          <text x={217} y={GY - 28} textAnchor="end" fill="#8b9e5f" fontSize="7.5" fontFamily="'IBM Plex Mono', monospace" fontWeight="600">GROUNDCOVER</text>
+          <text x={217} y={GY - 17} textAnchor="end" fill="#8b9e5f" fontSize="6.5" fontFamily="'IBM Plex Mono', monospace" opacity={0.65}>Clover, Strawberry</text>
+
+          <text x={672} y={GY - 56} textAnchor="middle" fill="#c8a870" fontSize="7.5" fontFamily="'IBM Plex Mono', monospace" fontWeight="600" letterSpacing="0.1em">SWALE BERM</text>
+          <text x={672} y={GY - 45} textAnchor="middle" fill="#c8a870" fontSize="6.5" fontFamily="'IBM Plex Mono', monospace" opacity={0.72}>~1.5 m raised mound</text>
+
+          {/* ── Underground legend ── */}
+          <text x={330} y={GY + 55} textAnchor="middle" fill="rgba(252,249,242,0.38)" fontSize="7.5" fontFamily="'IBM Plex Mono', monospace" letterSpacing="0.14em">RHIZOSPHERE</text>
+          <circle cx={188} cy={GY + 88} r={3} fill="rgba(58,92,46,0.65)" />
+          <text x={194} y={GY + 91} fill="rgba(252,249,242,0.34)" fontSize="6.5" fontFamily="'IBM Plex Mono', monospace">N₂ fixation nodules</text>
+          <line x1={330} y1={GY + 85} x2={330} y2={GY + 96} stroke="rgba(107,138,69,0.55)" strokeWidth="1.5" strokeDasharray="2 2" />
+          <text x={336} y={GY + 93} fill="rgba(252,249,242,0.34)" fontSize="6.5" fontFamily="'IBM Plex Mono', monospace">deep tap root (mineral mining)</text>
+        </svg>
+      </div>
+      <p className="mono" style={{ margin: "10px 0 0", fontSize: 9, color: "#aaa", textTransform: "uppercase", letterSpacing: "0.12em" }}>
+        Side-on cross-section · Canopy to rhizosphere relative to swale berm · Illustrative, not to scale
+      </p>
+    </figure>
   );
 }
 
@@ -1016,6 +1181,11 @@ export default function MasterDesignPage() {
                     </div>
                   ))}
                 </div>
+              </div>
+
+              {/* Food Forest Vertical Layer Profile */}
+              <div style={{ marginTop: 52 }}>
+                <FoodForestProfile />
               </div>
             </div>
           </section>
