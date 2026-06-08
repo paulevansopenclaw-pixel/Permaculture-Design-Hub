@@ -13,6 +13,8 @@ export const structuresTable = pgTable("structures", {
   // Water tank fields (only populated when structureType === "tank")
   volumeLiters: real("volume_liters"),
   attachedToBuilding: text("attached_to_building"),
+  tags: text("tags"),
+  ecologicalNotes: text("ecological_notes"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

@@ -11,6 +11,8 @@ export const designedSwalesTable = pgTable("designed_swales", {
   lengthM: real("length_m").notNull(),
   swaleType: text("swale_type").notNull().default("custom"),
   notes: text("notes").notNull().default(""),
+  tags: text("tags"),
+  ecologicalNotes: text("ecological_notes"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

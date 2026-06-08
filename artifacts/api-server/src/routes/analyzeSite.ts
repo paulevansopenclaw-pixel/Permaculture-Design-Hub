@@ -13,6 +13,17 @@ import {
 } from "@workspace/db";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
+interface SpatialRecommendation {
+  id: string;
+  label: string;
+  ecologicalFunction: string;
+  priority: "critical" | "high" | "medium";
+  bearingRange: [number, number];
+  radiusFraction: number;
+  suggestedZones?: number[];
+  rationale: string;
+}
+
 const router: IRouter = Router();
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -140,6 +151,7 @@ function extractPartialAnalysis(raw: string): {
   WaterStrategy: unknown; SunAndEnergy: unknown; LandAndBiodiversity: unknown;
   ClimateResilience: unknown; InfrastructureCritique: unknown;
   PatternStrategy: unknown; DesignRecommendations: unknown;
+  SpatialRecommendations: unknown;
 } {
   function extractStr(key: string): string {
     const m = raw.match(new RegExp(`"${key}"\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)"`, "s"));
@@ -176,6 +188,7 @@ function extractPartialAnalysis(raw: string): {
     InfrastructureCritique: extractStr("InfrastructureCritique"),
     PatternStrategy:        extractObj("PatternStrategy"),
     DesignRecommendations:  extractObj("DesignRecommendations"),
+    SpatialRecommendations: extractObj("SpatialRecommendations"),
   };
 }
 
@@ -454,6 +467,15 @@ BASED ON ALL OF THE ABOVE, RETURN A JSON OBJECT WITH THE EXACT FOLLOWING STRUCTU
    - "plants": An array of 15–25 plant objects, each with: "name" (common name), "latinName" (binomial), "layer" (one of: Canopy, Understory, Shrub, Herbaceous, Ground Cover, Vine, Root), "purpose" (primary function: food/calories, nitrogen-fixation, windbreak, medicine, habitat corridor, erosion control, etc.), "zones" (permaculture zone placement e.g. "Zone 1–2"), "notes" (spacing, planting time, any site-specific caveats). Cover all seven canopy layers. Include caloric staples, nitrogen-fixers, dynamic accumulators, windbreak species, and at least 3 medicinal plants. Choose species native or well-adapted to the property's geographic region.
    - "designElements": An array of 8–12 design element objects, each with: "type" (e.g. Swale, Dam, Windbreak Belt, Keyhole Bed, Compost System, Greenhouse, Chicken Tractor Circuit, Food Forest Guild, Living Fence, Rainwater Tank), "name" (a short descriptive name), "description" (what it is and how it functions), "rationale" (why this element is critical for THIS site given its specific climate, soil, or challenges), "placement" (specific: cardinal direction, zone, or relationship to existing structures/swales from the Infrastructure data), "priority" (High, Medium, or Low — based on urgency and resilience impact).
    - "implementationPhases": An array of 3–5 phase objects covering Year 1 through Year 3+, each with: "phase" (integer), "title" (e.g. "Foundation Earthworks"), "duration" (e.g. "Months 1–3"), "elements" (array of element names or plant groups to install in this phase), "rationale" (why this sequence — explain the dependency logic, e.g. water infrastructure before food forest).
+8. "SpatialRecommendations": An array of 3–6 spatially-explicit design interventions derived from the vulnerabilities, climate data, and sector analysis above. Each object must be physically locatable on this property using compass bearings and relative distance. Each object must contain EXACTLY these keys:
+   - "id": a unique kebab-case slug (e.g. "west-shelterbelt", "north-food-forest", "swale-cascade-south")
+   - "label": human-readable short name (e.g. "Western Windbreak Shelterbelt", "Northern Food Forest Guild")
+   - "ecologicalFunction": exactly one of: "windbreak", "swale", "food-forest", "habitat-corridor", "water-harvesting", "other"
+   - "priority": exactly one of: "critical", "high", "medium" — based on urgency and resilience impact
+   - "bearingRange": an array of exactly two numbers [startDegrees, endDegrees] representing the compass sector where this intervention should be placed (clockwise from North: 0=N, 90=E, 180=S, 270=W). Example: a western windbreak = [247, 293]. The range should be 30–90 degrees wide.
+   - "radiusFraction": a decimal 0.3–0.95 representing how far from the property centroid this feature should be placed, as a fraction of the property diagonal. Use 0.3–0.5 for central features, 0.6–0.8 for mid-boundary, 0.85–0.95 for perimeter features.
+   - "suggestedZones": an array of 1–3 permaculture zone integers (1–5) where this intervention is most appropriate
+   - "rationale": exactly one sentence explaining why this compass sector and distance is optimal for this ecological function on this specific site
 Ensure the response is raw, valid JSON only.`;
 }
 
@@ -555,6 +577,7 @@ router.post(
             InfrastructureCritique: cachedParsed.InfrastructureCritique ?? "",
             PatternStrategy:        cachedParsed.PatternStrategy        ?? null,
             DesignRecommendations:  cachedParsed.DesignRecommendations  ?? null,
+            spatialRecommendations: cachedParsed.SpatialRecommendations ?? null,
             autoCreatedWindSector: false,
             generatedAt: brief.aiAnalysisGeneratedAt,
             climateSource: "cached",
@@ -600,6 +623,7 @@ router.post(
       ClimateResilience: unknown; InfrastructureCritique: unknown;
       PatternStrategy: { recommendedPattern: string; rationale: string; application: string } | undefined;
       DesignRecommendations: DesignRecs | undefined;
+      SpatialRecommendations: SpatialRecommendation[] | undefined;
     };
     let wasRepaired = false;
 
@@ -633,10 +657,20 @@ router.post(
     }
 
     const generatedAt = new Date();
-    await db
-      .update(clientBriefsTable)
-      .set({ aiAnalysisReport: rawJson, aiAnalysisGeneratedAt: generatedAt, updatedAt: generatedAt })
-      .where(eq(clientBriefsTable.propertyId, propertyId));
+    const spatialRecsJson = parsed.SpatialRecommendations?.length
+      ? JSON.stringify(parsed.SpatialRecommendations)
+      : null;
+
+    await Promise.all([
+      db.update(clientBriefsTable)
+        .set({ aiAnalysisReport: rawJson, aiAnalysisGeneratedAt: generatedAt, updatedAt: generatedAt })
+        .where(eq(clientBriefsTable.propertyId, propertyId)),
+      spatialRecsJson
+        ? db.update(propertiesTable)
+            .set({ spatialRecommendations: spatialRecsJson })
+            .where(eq(propertiesTable.id, propertyId))
+        : Promise.resolve(),
+    ]);
 
     // ── Auto-create (or replace) damaging wind sector ────────────────────────
     let autoCreatedWindSector = false;
@@ -682,6 +716,7 @@ router.post(
       InfrastructureCritique:   parsed.InfrastructureCritique   ?? "",
       PatternStrategy:          parsed.PatternStrategy          ?? null,
       DesignRecommendations:    parsed.DesignRecommendations    ?? null,
+      spatialRecommendations:   parsed.SpatialRecommendations   ?? null,
       autoCreatedWindSector,
       generatedAt: generatedAt.toISOString(),
       climateSource: climate.source,

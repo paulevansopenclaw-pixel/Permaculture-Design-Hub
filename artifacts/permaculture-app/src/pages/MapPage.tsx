@@ -36,14 +36,17 @@ import {
   useListDesignedSwales,
   useCreateDesignedSwale,
   useDeleteDesignedSwale,
+  useUpdateDesignedSwale,
   getListDesignedSwalesQueryKey,
   useListPathways,
   useCreatePathway,
   useDeletePathway,
+  useUpdatePathway,
   getListPathwaysQueryKey,
   useListZones,
   useBulkReplaceZones,
   useDeleteZone,
+  useUpdateZone,
   getListZonesQueryKey,
   useListSensoryVectors,
   useCreateSensoryVector,
@@ -54,6 +57,7 @@ import {
   useRunWaterBudget,
   type WaterBudgetReport,
 } from "@workspace/api-client-react";
+import EcologicalTagPanel from "@/components/EcologicalTagPanel";
 import { useAppStore, type Role } from "@/store/useAppStore";
 import { generateContours } from "@/lib/contourEngine";
 import { analyzeWaterPaths, type WaterAnalysisResult, type AnalyzedSwale } from "@/lib/keylineEngine";
@@ -352,6 +356,7 @@ export default function MapPage() {
   const sensoryVectorLayersRef = useRef<(L.Marker | L.Polyline)[]>([]);
   const pendingSensoryLinePreviewRef = useRef<L.Polyline | null>(null);
   const sensoryLineHandlerRef = useRef<any>(null);
+  const ghostLayerRef = useRef<L.GeoJSON | null>(null);
   const sensoryLineDrawActiveRef = useRef(false);
   const freehandDrawerRef = useRef<FreehandDrawer | null>(null);
   const boundaryEditGroupRef = useRef<L.FeatureGroup | null>(null);
@@ -451,6 +456,14 @@ export default function MapPage() {
   const [isRunningWaterBudget, setIsRunningWaterBudget] = useState(false);
   const [waterBudgetError, setWaterBudgetError] = useState<string | null>(null);
   const [legendCollapsed, setLegendCollapsed] = useState(false);
+  const [showGhostLayers, setShowGhostLayers] = useState(true);
+  const [selectedTagFeature, setSelectedTagFeature] = useState<{
+    type: "swale" | "zone" | "pathway";
+    id: string;
+    label: string;
+    tags: string[];
+  } | null>(null);
+  const [isSavingTags, setIsSavingTags] = useState(false);
   const [freehandMode, setFreehandMode] = useState(false);
   const [editBoundaryMode, setEditBoundaryMode] = useState(false);
   const [editFootprintMode, setEditFootprintMode] = useState(false);
@@ -499,6 +512,9 @@ export default function MapPage() {
   const createStructure = useCreateStructure();
   const updateStructure = useUpdateStructure();
   const deleteStructure = useDeleteStructure();
+  const updateDesignedSwale = useUpdateDesignedSwale();
+  const updateZone = useUpdateZone();
+  const updatePathway = useUpdatePathway();
 
   const { data: sectors = [] } = useListSectors(activePropertyId ?? "", {
     query: {
@@ -877,6 +893,68 @@ export default function MapPage() {
       .catch(console.error)
       .finally(() => setIsGeneratingContours(false));
   }, [showContours, activeProperty?.id, activeProperty?.boundaryGeojson, mapLoaded, mapboxToken]);
+
+  // ─── GHOST RECOMMENDATION LAYERS ─────────────────────────────────────────
+  useEffect(() => {
+    const map = mapRef.current;
+    if (ghostLayerRef.current) { map?.removeLayer(ghostLayerRef.current); ghostLayerRef.current = null; }
+    if (!map || !mapLoaded || !showGhostLayers) return;
+    const recs = activeProperty?.spatialRecommendations;
+    const boundary = activeProperty?.boundaryGeojson;
+    if (!recs || recs.length === 0 || !boundary) return;
+
+    try {
+      const centroid = turf.centroid(boundary as unknown as turf.AllGeoJSON);
+      const bbox = turf.bbox(boundary as unknown as turf.AllGeoJSON);
+      const diagDeg = Math.sqrt(Math.pow(bbox[2] - bbox[0], 2) + Math.pow(bbox[3] - bbox[1], 2));
+      const diagKm = diagDeg * 111;
+
+      const PRIORITY_COLORS: Record<string, { fill: string; stroke: string }> = {
+        critical: { fill: "rgba(194,120,30,0.09)", stroke: "rgba(194,120,30,0.7)" },
+        high:     { fill: "rgba(74,107,46,0.09)",  stroke: "rgba(74,107,46,0.7)" },
+        medium:   { fill: "rgba(60,90,130,0.09)",  stroke: "rgba(60,90,130,0.7)" },
+      };
+
+      const features: GeoJSON.Feature[] = [];
+      for (const rec of recs) {
+        try {
+          const radiusKm = Math.max(0.05, rec.radiusFraction * diagKm * 0.5);
+          const [start, end] = rec.bearingRange as [number, number];
+          const wedge = turf.sector(centroid, radiusKm, start, end, { units: "kilometers", steps: 48 });
+          wedge.properties = {
+            id: rec.id,
+            label: rec.label,
+            priority: rec.priority,
+            rationale: rec.rationale,
+            fn: rec.ecologicalFunction,
+          };
+          features.push(wedge);
+        } catch { /* skip malformed rec */ }
+      }
+      if (!features.length) return;
+
+      const fc: GeoJSON.FeatureCollection = { type: "FeatureCollection", features };
+      const layer = L.geoJSON(fc as any, {
+        style: (feature) => {
+          const p = feature?.properties?.priority as string ?? "medium";
+          const c = PRIORITY_COLORS[p] ?? PRIORITY_COLORS.medium;
+          return { fillColor: c.fill, fillOpacity: 1, color: c.stroke, weight: 1.5, opacity: 0.85, dashArray: "4 4" };
+        },
+        onEachFeature: (feature, lyr) => {
+          const p = feature.properties ?? {};
+          lyr.bindTooltip(
+            `<div style="font-size:11px;font-weight:700;color:#C4875A;margin-bottom:2px;">${escHtml(p.label)}</div>` +
+            `<div style="font-size:9px;color:#aaa;text-transform:capitalize;">${escHtml(p.priority)} · ${escHtml(p.fn?.replace(/-/g, " ") ?? "")}</div>` +
+            `<div style="font-size:9px;color:#bbb;margin-top:3px;max-width:200px;">${escHtml(p.rationale)}</div>`,
+            { sticky: true },
+          );
+        },
+      });
+      layer.addTo(map);
+      ghostLayerRef.current = layer;
+    } catch { /* ignore turf errors */ }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeProperty?.id, activeProperty?.spatialRecommendations, mapLoaded, showGhostLayers]);
 
   // ─── 3D TERRAIN OVERLAY ───────────────────────────────────────────────────
   useEffect(() => {
@@ -1322,6 +1400,14 @@ export default function MapPage() {
         `;
         layer.bindPopup(popup);
         popup.querySelector(".del-btn")?.addEventListener("click", () => { handleDeletePathway(p.id); layer.closePopup(); });
+        if (role === "designer") {
+          layer.on("click", () => setSelectedTagFeature({
+            type: "pathway",
+            id: p.id,
+            label: p.label,
+            tags: (p as any).tags ? (p as any).tags.split(",").filter(Boolean) : [],
+          }));
+        }
         layer.addTo(map);
         pathwayLayersRef.current.push(layer);
       } catch { /* skip malformed GeoJSON */ }
@@ -1362,6 +1448,17 @@ export default function MapPage() {
           setPendingPin({ lng: e.latlng.lng, lat: e.latlng.lat });
           setPinText(`[${style.label}] `);
           setDropPinMode(false);
+        });
+      }
+      // Designer mode: clicking a zone opens the ecological tag panel
+      if (role === "designer") {
+        layer.on("click", () => {
+          setSelectedTagFeature({
+            type: "zone",
+            id: z.id,
+            label: style.label,
+            tags: (z as any).tags ? (z as any).tags.split(",").filter(Boolean) : [],
+          });
         });
       }
       layer.addTo(map);
@@ -2376,6 +2473,14 @@ export default function MapPage() {
         <div style="color:#666;font-size:10px;text-transform:capitalize;">${escHtml(ds.swaleType.replace(/_/g, " "))}</div>
         ${role === "designer" ? `<button class="del-swale" style="margin-top:5px;padding:2px 8px;border:1px solid #c00;color:#c00;border-radius:3px;cursor:pointer;font-size:10px;background:none;">Delete</button>` : ""}`;
       el.querySelector(".del-swale")?.addEventListener("click", () => { handleDeleteSavedSwale(ds.id); layer.closePopup(); });
+      if (role === "designer") {
+        layer.on("click", () => setSelectedTagFeature({
+          type: "swale",
+          id: ds.id,
+          label: ds.name,
+          tags: (ds as any).tags ? (ds as any).tags.split(",").filter(Boolean) : [],
+        }));
+      }
       layer.bindPopup(el).addTo(map);
       savedSwaleLayersRef.current.push(layer);
     });
@@ -2733,6 +2838,38 @@ export default function MapPage() {
 
   const displayAreaHa = pendingAreaHa ?? activeProperty?.areaHectares;
   const displayAreaAc = pendingAreaAc ?? activeProperty?.areaAcres;
+
+  // ─── SAVE ECOLOGICAL TAGS ─────────────────────────────────────────────────
+  async function handleSaveTags(tags: string[]) {
+    if (!selectedTagFeature || !activePropertyId) return;
+    setIsSavingTags(true);
+    try {
+      if (selectedTagFeature.type === "zone") {
+        await updateZone.mutateAsync({
+          propertyId: activePropertyId,
+          zoneId: selectedTagFeature.id,
+          data: { tags },
+        });
+        queryClient.invalidateQueries({ queryKey: getListZonesQueryKey(activePropertyId) });
+      } else if (selectedTagFeature.type === "swale") {
+        await updateDesignedSwale.mutateAsync({
+          propertyId: activePropertyId,
+          swaleId: selectedTagFeature.id,
+          data: { tags },
+        });
+        queryClient.invalidateQueries({ queryKey: getListDesignedSwalesQueryKey(activePropertyId) });
+      } else if (selectedTagFeature.type === "pathway") {
+        await updatePathway.mutateAsync({
+          propertyId: activePropertyId,
+          pathwayId: selectedTagFeature.id,
+          data: { tags },
+        });
+        queryClient.invalidateQueries({ queryKey: getListPathwaysQueryKey(activePropertyId) });
+      }
+      setSelectedTagFeature((prev) => prev ? { ...prev, tags } : null);
+    } catch { /* ignore — user can retry */ }
+    setIsSavingTags(false);
+  }
 
   // ─── RENDER ───────────────────────────────────────────────────────────────
   return (
@@ -4396,6 +4533,41 @@ export default function MapPage() {
             </button>
           )}
         </div>
+
+        {/* ── GHOST LAYERS TOGGLE (designer only) ── */}
+        {role === "designer" && activeProperty?.spatialRecommendations && activeProperty.spatialRecommendations.length > 0 && (
+          <div className="px-3 py-2" style={{ borderTop: "1px solid hsl(94,35%,18%)", flexShrink: 0 }}>
+            <button
+              onClick={() => setShowGhostLayers((v) => !v)}
+              className="w-full flex items-center gap-2 text-[10px] font-semibold"
+              style={{
+                color: showGhostLayers ? "hsl(44,58%,62%)" : "hsl(42,15%,45%)",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                letterSpacing: "0.05em",
+                textTransform: "uppercase",
+                padding: 0,
+              }}
+            >
+              <span style={{ fontSize: 14 }}>◎</span>
+              {showGhostLayers ? "Hide" : "Show"} AI Suggestions ({activeProperty.spatialRecommendations.length})
+            </button>
+          </div>
+        )}
+
+        {/* ── ECOLOGICAL TAG PANEL ── */}
+        {selectedTagFeature && role === "designer" && (
+          <EcologicalTagPanel
+            featureType={selectedTagFeature.type}
+            featureId={selectedTagFeature.id}
+            featureLabel={selectedTagFeature.label}
+            currentTags={selectedTagFeature.tags}
+            onSave={handleSaveTags}
+            onClose={() => setSelectedTagFeature(null)}
+            isSaving={isSavingTags}
+          />
+        )}
       </aside>
 
       {/* ── RIGHT PANEL (layer toolbar + map) ── */}

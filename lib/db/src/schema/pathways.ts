@@ -8,6 +8,8 @@ export const pathwaysTable = pgTable("pathways", {
   label: text("label").notNull(),
   pathwayType: text("pathway_type").notNull().default("footpath"),
   lineGeojson: text("line_geojson").notNull(),
+  tags: text("tags"),
+  ecologicalNotes: text("ecological_notes"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

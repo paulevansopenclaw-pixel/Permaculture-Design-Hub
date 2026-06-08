@@ -14,6 +14,41 @@ export interface HealthStatus {
  */
 export type PropertyBoundaryGeojson = { [key: string]: unknown } | null;
 
+/**
+ * Urgency of this spatial action
+ */
+export type SpatialRecommendationPriority = typeof SpatialRecommendationPriority[keyof typeof SpatialRecommendationPriority];
+
+
+export const SpatialRecommendationPriority = {
+  critical: 'critical',
+  high: 'high',
+  medium: 'medium',
+} as const;
+
+export interface SpatialRecommendation {
+  /** Stable slug identifier e.g. "west-shelterbelt" */
+  id: string;
+  /** Human-readable name e.g. "Western Windbreak Shelterbelt" */
+  label: string;
+  /** windbreak | swale | food-forest | habitat-corridor | water-harvesting | other */
+  ecologicalFunction: string;
+  /** Urgency of this spatial action */
+  priority: SpatialRecommendationPriority;
+  /**
+     * Compass bearing range [start, end] in degrees clockwise from north
+     * @minItems 2
+     * @maxItems 2
+     */
+  bearingRange: number[];
+  /** Fraction of property diagonal to project the ghost layer (0.0–1.0) */
+  radiusFraction: number;
+  /** Permaculture zone numbers this recommendation applies to */
+  suggestedZones?: number[];
+  /** One-sentence reason for this spatial recommendation */
+  rationale: string;
+}
+
 export interface Property {
   id: string;
   name: string;
@@ -28,6 +63,8 @@ export interface Property {
   status?: string;
   /** Unlocked design tier for client portal (0=discovery only, 1=+site reading, 2=+the design, 3=+full dossier) */
   clientTier?: number;
+  /** AI-generated spatial action recommendations with geographic metadata */
+  spatialRecommendations?: SpatialRecommendation[] | null;
   createdAt: string;
 }
 
@@ -93,6 +130,10 @@ export interface Structure {
   volumeLiters?: number | null;
   /** Label of the building this tank collects from */
   attachedToBuilding?: string | null;
+  /** Ecological function tags e.g. ["windbreak", "food-forest"] */
+  tags?: string[] | null;
+  /** Designer's ecological annotation for this feature */
+  ecologicalNotes?: string | null;
   createdAt: string;
 }
 
@@ -105,6 +146,8 @@ export interface StructureInput {
   footprintGeojson?: string | null;
   volumeLiters?: number | null;
   attachedToBuilding?: string | null;
+  tags?: string[] | null;
+  ecologicalNotes?: string | null;
 }
 
 export interface StructureUpdate {
@@ -114,6 +157,8 @@ export interface StructureUpdate {
   footprintGeojson?: string | null;
   volumeLiters?: number | null;
   attachedToBuilding?: string | null;
+  tags?: string[] | null;
+  ecologicalNotes?: string | null;
 }
 
 export interface Sector {
@@ -176,12 +221,6 @@ export interface ComprehensivePlant {
   yearsToMaturity: number;
   /** Brief note on uses, benefits, or planting considerations */
   notes: string;
-}
-
-export interface SpatialRecommendation {
-  element: string;
-  placement: string;
-  rationale: string;
 }
 
 /**
@@ -257,6 +296,8 @@ export interface SiteAnalysisReport {
   PatternStrategy?: SiteAnalysisReportPatternStrategy;
   /** Final compiled design — plant palette, design elements, and implementation phases synthesised from all site data */
   DesignRecommendations?: SiteAnalysisReportDesignRecommendations;
+  /** Structured spatial action objects parsed from the AI response */
+  spatialRecommendations?: SpatialRecommendation[] | null;
   /** Whether climate data was fetched live or failed */
   climateSource?: string;
   /** True when the server automatically created a damaging-wind sector from the prevailing wind direction */
@@ -423,6 +464,10 @@ export interface Zone {
   propertyId: string;
   zoneNumber: number;
   zoneGeojson: string;
+  /** Ecological function tags e.g. ["food-forest", "habitat-corridor"] */
+  tags?: string[] | null;
+  /** Designer's ecological annotation for this zone */
+  ecologicalNotes?: string | null;
   createdAt: string;
 }
 
@@ -433,6 +478,13 @@ export interface ZoneInput {
      */
   zoneNumber: number;
   zoneGeojson: string;
+  tags?: string[] | null;
+  ecologicalNotes?: string | null;
+}
+
+export interface ZoneUpdate {
+  tags?: string[] | null;
+  ecologicalNotes?: string | null;
 }
 
 export interface Pathway {
@@ -441,6 +493,10 @@ export interface Pathway {
   label: string;
   pathwayType: string;
   lineGeojson: string;
+  /** Ecological function tags e.g. ["windbreak", "living-fence"] */
+  tags?: string[] | null;
+  /** Designer's ecological annotation for this pathway */
+  ecologicalNotes?: string | null;
   createdAt: string;
 }
 
@@ -449,6 +505,13 @@ export interface PathwayInput {
   label: string;
   pathwayType: string;
   lineGeojson: string;
+  tags?: string[] | null;
+  ecologicalNotes?: string | null;
+}
+
+export interface PathwayUpdate {
+  tags?: string[] | null;
+  ecologicalNotes?: string | null;
 }
 
 export interface DesignedSwale {
@@ -460,6 +523,10 @@ export interface DesignedSwale {
   lengthM: number;
   swaleType: string;
   notes: string;
+  /** Ecological function tags e.g. ["swale", "water-harvesting"] */
+  tags?: string[] | null;
+  /** Designer's ecological annotation for this swale */
+  ecologicalNotes?: string | null;
   createdAt: string;
 }
 
@@ -471,6 +538,13 @@ export interface DesignedSwaleInput {
   lengthM: number;
   swaleType: string;
   notes: string;
+  tags?: string[] | null;
+  ecologicalNotes?: string | null;
+}
+
+export interface DesignedSwaleUpdate {
+  tags?: string[] | null;
+  ecologicalNotes?: string | null;
 }
 
 export interface Comment {

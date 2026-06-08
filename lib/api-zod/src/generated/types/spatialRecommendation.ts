@@ -5,9 +5,27 @@
  * Collaborative Permaculture Design API
  * OpenAPI spec version: 0.1.0
  */
+import type { SpatialRecommendationPriority } from './spatialRecommendationPriority';
 
 export interface SpatialRecommendation {
-  element: string;
-  placement: string;
+  /** Stable slug identifier e.g. "west-shelterbelt" */
+  id: string;
+  /** Human-readable name e.g. "Western Windbreak Shelterbelt" */
+  label: string;
+  /** windbreak | swale | food-forest | habitat-corridor | water-harvesting | other */
+  ecologicalFunction: string;
+  /** Urgency of this spatial action */
+  priority: SpatialRecommendationPriority;
+  /**
+     * Compass bearing range [start, end] in degrees clockwise from north
+     * @minItems 2
+     * @maxItems 2
+     */
+  bearingRange: number[];
+  /** Fraction of property diagonal to project the ghost layer (0.0–1.0) */
+  radiusFraction: number;
+  /** Permaculture zone numbers this recommendation applies to */
+  suggestedZones?: number[];
+  /** One-sentence reason for this spatial recommendation */
   rationale: string;
 }

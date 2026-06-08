@@ -11,5 +11,9 @@ export interface Zone {
   propertyId: string;
   zoneNumber: number;
   zoneGeojson: string;
+  /** Ecological function tags e.g. ["food-forest", "habitat-corridor"] */
+  tags?: string[] | null;
+  /** Designer's ecological annotation for this zone */
+  ecologicalNotes?: string | null;
   createdAt: string;
 }

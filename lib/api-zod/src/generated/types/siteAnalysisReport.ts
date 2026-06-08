@@ -7,6 +7,7 @@
  */
 import type { SiteAnalysisReportDesignRecommendations } from './siteAnalysisReportDesignRecommendations';
 import type { SiteAnalysisReportPatternStrategy } from './siteAnalysisReportPatternStrategy';
+import type { SpatialRecommendation } from './spatialRecommendation';
 
 export interface SiteAnalysisReport {
   propertyId: string;
@@ -24,6 +25,8 @@ export interface SiteAnalysisReport {
   PatternStrategy?: SiteAnalysisReportPatternStrategy;
   /** Final compiled design — plant palette, design elements, and implementation phases synthesised from all site data */
   DesignRecommendations?: SiteAnalysisReportDesignRecommendations;
+  /** Structured spatial action objects parsed from the AI response */
+  spatialRecommendations?: SpatialRecommendation[] | null;
   /** Whether climate data was fetched live or failed */
   climateSource?: string;
   /** True when the server automatically created a damaging-wind sector from the prevailing wind direction */

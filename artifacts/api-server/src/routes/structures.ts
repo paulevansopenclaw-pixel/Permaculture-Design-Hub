@@ -45,9 +45,10 @@ router.post(
       res.status(400).json({ error: parsed.error.message });
       return;
     }
+    const { tags: stTags1, ...stRest1 } = parsed.data;
     const [structure] = await db
       .insert(structuresTable)
-      .values({ propertyId: params.data.propertyId, ...parsed.data })
+      .values({ propertyId: params.data.propertyId, ...stRest1, tags: Array.isArray(stTags1) ? stTags1.join(",") : stTags1 })
       .returning();
     res.status(201).json(structure);
   },
@@ -67,9 +68,10 @@ router.patch(
       res.status(400).json({ error: parsed.error.message });
       return;
     }
+    const { tags: stTags, ...stRest } = parsed.data;
     const [updated] = await db
       .update(structuresTable)
-      .set(parsed.data)
+      .set({ ...stRest, tags: Array.isArray(stTags) ? stTags.join(",") : stTags })
       .where(
         and(
           eq(structuresTable.id, params.data.structureId),

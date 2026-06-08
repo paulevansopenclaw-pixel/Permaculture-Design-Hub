@@ -6,6 +6,8 @@ import {
   BulkReplaceZonesParams,
   BulkReplaceZonesBody,
   DeleteZoneParams,
+  UpdateZoneParams,
+  UpdateZoneBody,
 } from "@workspace/api-zod";
 import { requirePropertyOwner } from "../lib/propertyOwnerCheck";
 
@@ -38,9 +40,35 @@ router.put(
     if (body.data.length === 0) { res.json([]); return; }
     const inserted = await db
       .insert(zonesTable)
-      .values(body.data.map((z) => ({ propertyId: params.data.propertyId, ...z })))
+      .values(body.data.map(({ tags, ...z }) => ({
+        propertyId: params.data.propertyId,
+        ...z,
+        tags: Array.isArray(tags) ? tags.join(",") : tags,
+      })))
       .returning();
     res.json(inserted);
+  },
+);
+
+router.patch(
+  "/properties/:propertyId/zones/:zoneId",
+  async (req, res): Promise<void> => {
+    const params = UpdateZoneParams.safeParse(req.params);
+    if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
+    if (!await requirePropertyOwner(req, res, params.data.propertyId)) return;
+    const parsed = UpdateZoneBody.safeParse(req.body);
+    if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+    const { tags: zTags, ...zRest } = parsed.data;
+    const [updated] = await db
+      .update(zonesTable)
+      .set({ ...zRest, tags: Array.isArray(zTags) ? zTags.join(",") : zTags })
+      .where(and(
+        eq(zonesTable.id, params.data.zoneId),
+        eq(zonesTable.propertyId, params.data.propertyId),
+      ))
+      .returning();
+    if (!updated) { res.status(404).json({ error: "Not found" }); return; }
+    res.json(updated);
   },
 );
 

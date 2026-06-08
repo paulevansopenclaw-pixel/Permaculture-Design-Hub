@@ -15,5 +15,9 @@ export interface DesignedSwale {
   lengthM: number;
   swaleType: string;
   notes: string;
+  /** Ecological function tags e.g. ["swale", "water-harvesting"] */
+  tags?: string[] | null;
+  /** Designer's ecological annotation for this swale */
+  ecologicalNotes?: string | null;
   createdAt: string;
 }

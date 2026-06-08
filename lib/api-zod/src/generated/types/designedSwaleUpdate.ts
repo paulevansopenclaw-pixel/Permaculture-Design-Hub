@@ -6,14 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface DesignedSwaleInput {
-  /** @minLength 1 */
-  name: string;
-  geojsonLinestring: string;
-  elevationM: number;
-  lengthM: number;
-  swaleType: string;
-  notes: string;
+export interface DesignedSwaleUpdate {
   tags?: string[] | null;
   ecologicalNotes?: string | null;
 }

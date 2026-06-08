@@ -18,5 +18,9 @@ export interface Structure {
   volumeLiters?: number | null;
   /** Label of the building this tank collects from */
   attachedToBuilding?: string | null;
+  /** Ecological function tags e.g. ["windbreak", "food-forest"] */
+  tags?: string[] | null;
+  /** Designer's ecological annotation for this feature */
+  ecologicalNotes?: string | null;
   createdAt: string;
 }

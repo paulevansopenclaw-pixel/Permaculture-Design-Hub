@@ -19,6 +19,11 @@ export const HealthCheckResponse = zod.object({
 /**
  * @summary List all properties
  */
+export const listPropertiesResponseSpatialRecommendationsItemBearingRangeMin = 2;
+export const listPropertiesResponseSpatialRecommendationsItemBearingRangeMax = 2;
+
+
+
 export const ListPropertiesResponseItem = zod.object({
   "id": zod.string(),
   "name": zod.string(),
@@ -30,6 +35,16 @@ export const ListPropertiesResponseItem = zod.object({
   "tileImage": zod.string().nullish(),
   "status": zod.string().optional(),
   "clientTier": zod.number().optional().describe('Unlocked design tier for client portal (0=discovery only, 1=+site reading, 2=+the design, 3=+full dossier)'),
+  "spatialRecommendations": zod.array(zod.object({
+  "id": zod.string().describe('Stable slug identifier e.g. \"west-shelterbelt\"'),
+  "label": zod.string().describe('Human-readable name e.g. \"Western Windbreak Shelterbelt\"'),
+  "ecologicalFunction": zod.string().describe('windbreak | swale | food-forest | habitat-corridor | water-harvesting | other'),
+  "priority": zod.enum(['critical', 'high', 'medium']).describe('Urgency of this spatial action'),
+  "bearingRange": zod.array(zod.number()).min(listPropertiesResponseSpatialRecommendationsItemBearingRangeMin).max(listPropertiesResponseSpatialRecommendationsItemBearingRangeMax).describe('Compass bearing range [start, end] in degrees clockwise from north'),
+  "radiusFraction": zod.number().describe('Fraction of property diagonal to project the ghost layer (0.0–1.0)'),
+  "suggestedZones": zod.array(zod.number()).optional().describe('Permaculture zone numbers this recommendation applies to'),
+  "rationale": zod.string().describe('One-sentence reason for this spatial recommendation')
+})).nullish().describe('AI-generated spatial action recommendations with geographic metadata'),
   "createdAt": zod.string()
 })
 export const ListPropertiesResponse = zod.array(ListPropertiesResponseItem)
@@ -59,6 +74,11 @@ export const GetPropertyParams = zod.object({
   "id": zod.coerce.string()
 })
 
+export const getPropertyResponseSpatialRecommendationsItemBearingRangeMin = 2;
+export const getPropertyResponseSpatialRecommendationsItemBearingRangeMax = 2;
+
+
+
 export const GetPropertyResponse = zod.object({
   "id": zod.string(),
   "name": zod.string(),
@@ -70,6 +90,16 @@ export const GetPropertyResponse = zod.object({
   "tileImage": zod.string().nullish(),
   "status": zod.string().optional(),
   "clientTier": zod.number().optional().describe('Unlocked design tier for client portal (0=discovery only, 1=+site reading, 2=+the design, 3=+full dossier)'),
+  "spatialRecommendations": zod.array(zod.object({
+  "id": zod.string().describe('Stable slug identifier e.g. \"west-shelterbelt\"'),
+  "label": zod.string().describe('Human-readable name e.g. \"Western Windbreak Shelterbelt\"'),
+  "ecologicalFunction": zod.string().describe('windbreak | swale | food-forest | habitat-corridor | water-harvesting | other'),
+  "priority": zod.enum(['critical', 'high', 'medium']).describe('Urgency of this spatial action'),
+  "bearingRange": zod.array(zod.number()).min(getPropertyResponseSpatialRecommendationsItemBearingRangeMin).max(getPropertyResponseSpatialRecommendationsItemBearingRangeMax).describe('Compass bearing range [start, end] in degrees clockwise from north'),
+  "radiusFraction": zod.number().describe('Fraction of property diagonal to project the ghost layer (0.0–1.0)'),
+  "suggestedZones": zod.array(zod.number()).optional().describe('Permaculture zone numbers this recommendation applies to'),
+  "rationale": zod.string().describe('One-sentence reason for this spatial recommendation')
+})).nullish().describe('AI-generated spatial action recommendations with geographic metadata'),
   "createdAt": zod.string()
 })
 
@@ -98,6 +128,11 @@ export const UpdatePropertyBody = zod.object({
   "clientTier": zod.number().min(updatePropertyBodyClientTierMin).max(updatePropertyBodyClientTierMax).optional()
 })
 
+export const updatePropertyResponseSpatialRecommendationsItemBearingRangeMin = 2;
+export const updatePropertyResponseSpatialRecommendationsItemBearingRangeMax = 2;
+
+
+
 export const UpdatePropertyResponse = zod.object({
   "id": zod.string(),
   "name": zod.string(),
@@ -109,6 +144,16 @@ export const UpdatePropertyResponse = zod.object({
   "tileImage": zod.string().nullish(),
   "status": zod.string().optional(),
   "clientTier": zod.number().optional().describe('Unlocked design tier for client portal (0=discovery only, 1=+site reading, 2=+the design, 3=+full dossier)'),
+  "spatialRecommendations": zod.array(zod.object({
+  "id": zod.string().describe('Stable slug identifier e.g. \"west-shelterbelt\"'),
+  "label": zod.string().describe('Human-readable name e.g. \"Western Windbreak Shelterbelt\"'),
+  "ecologicalFunction": zod.string().describe('windbreak | swale | food-forest | habitat-corridor | water-harvesting | other'),
+  "priority": zod.enum(['critical', 'high', 'medium']).describe('Urgency of this spatial action'),
+  "bearingRange": zod.array(zod.number()).min(updatePropertyResponseSpatialRecommendationsItemBearingRangeMin).max(updatePropertyResponseSpatialRecommendationsItemBearingRangeMax).describe('Compass bearing range [start, end] in degrees clockwise from north'),
+  "radiusFraction": zod.number().describe('Fraction of property diagonal to project the ghost layer (0.0–1.0)'),
+  "suggestedZones": zod.array(zod.number()).optional().describe('Permaculture zone numbers this recommendation applies to'),
+  "rationale": zod.string().describe('One-sentence reason for this spatial recommendation')
+})).nullish().describe('AI-generated spatial action recommendations with geographic metadata'),
   "createdAt": zod.string()
 })
 
@@ -128,6 +173,11 @@ export const ClaimPropertyParams = zod.object({
   "id": zod.coerce.string()
 })
 
+export const claimPropertyResponseSpatialRecommendationsItemBearingRangeMin = 2;
+export const claimPropertyResponseSpatialRecommendationsItemBearingRangeMax = 2;
+
+
+
 export const ClaimPropertyResponse = zod.object({
   "id": zod.string(),
   "name": zod.string(),
@@ -139,6 +189,16 @@ export const ClaimPropertyResponse = zod.object({
   "tileImage": zod.string().nullish(),
   "status": zod.string().optional(),
   "clientTier": zod.number().optional().describe('Unlocked design tier for client portal (0=discovery only, 1=+site reading, 2=+the design, 3=+full dossier)'),
+  "spatialRecommendations": zod.array(zod.object({
+  "id": zod.string().describe('Stable slug identifier e.g. \"west-shelterbelt\"'),
+  "label": zod.string().describe('Human-readable name e.g. \"Western Windbreak Shelterbelt\"'),
+  "ecologicalFunction": zod.string().describe('windbreak | swale | food-forest | habitat-corridor | water-harvesting | other'),
+  "priority": zod.enum(['critical', 'high', 'medium']).describe('Urgency of this spatial action'),
+  "bearingRange": zod.array(zod.number()).min(claimPropertyResponseSpatialRecommendationsItemBearingRangeMin).max(claimPropertyResponseSpatialRecommendationsItemBearingRangeMax).describe('Compass bearing range [start, end] in degrees clockwise from north'),
+  "radiusFraction": zod.number().describe('Fraction of property diagonal to project the ghost layer (0.0–1.0)'),
+  "suggestedZones": zod.array(zod.number()).optional().describe('Permaculture zone numbers this recommendation applies to'),
+  "rationale": zod.string().describe('One-sentence reason for this spatial recommendation')
+})).nullish().describe('AI-generated spatial action recommendations with geographic metadata'),
   "createdAt": zod.string()
 })
 
@@ -175,6 +235,8 @@ export const ListStructuresResponseItem = zod.object({
   "footprintGeojson": zod.string().nullish(),
   "volumeLiters": zod.number().nullish().describe('Storage volume in litres (populated for structureType=tank)'),
   "attachedToBuilding": zod.string().nullish().describe('Label of the building this tank collects from'),
+  "tags": zod.array(zod.string()).nullish().describe('Ecological function tags e.g. [\"windbreak\", \"food-forest\"]'),
+  "ecologicalNotes": zod.string().nullish().describe('Designer\'s ecological annotation for this feature'),
   "createdAt": zod.string()
 })
 export const ListStructuresResponse = zod.array(ListStructuresResponseItem)
@@ -197,7 +259,9 @@ export const CreateStructureBody = zod.object({
   "structureType": zod.string(),
   "footprintGeojson": zod.string().nullish(),
   "volumeLiters": zod.number().nullish(),
-  "attachedToBuilding": zod.string().nullish()
+  "attachedToBuilding": zod.string().nullish(),
+  "tags": zod.array(zod.string()).nullish(),
+  "ecologicalNotes": zod.string().nullish()
 })
 
 
@@ -217,7 +281,9 @@ export const UpdateStructureBody = zod.object({
   "structureType": zod.string().optional(),
   "footprintGeojson": zod.string().nullish(),
   "volumeLiters": zod.number().nullish(),
-  "attachedToBuilding": zod.string().nullish()
+  "attachedToBuilding": zod.string().nullish(),
+  "tags": zod.array(zod.string()).nullish(),
+  "ecologicalNotes": zod.string().nullish()
 })
 
 export const UpdateStructureResponse = zod.object({
@@ -230,6 +296,8 @@ export const UpdateStructureResponse = zod.object({
   "footprintGeojson": zod.string().nullish(),
   "volumeLiters": zod.number().nullish().describe('Storage volume in litres (populated for structureType=tank)'),
   "attachedToBuilding": zod.string().nullish().describe('Label of the building this tank collects from'),
+  "tags": zod.array(zod.string()).nullish().describe('Ecological function tags e.g. [\"windbreak\", \"food-forest\"]'),
+  "ecologicalNotes": zod.string().nullish().describe('Designer\'s ecological annotation for this feature'),
   "createdAt": zod.string()
 })
 
@@ -331,6 +399,11 @@ export const AnalyzeSiteParams = zod.object({
   "propertyId": zod.coerce.string()
 })
 
+export const analyzeSiteResponseSpatialRecommendationsItemBearingRangeMin = 2;
+export const analyzeSiteResponseSpatialRecommendationsItemBearingRangeMax = 2;
+
+
+
 export const AnalyzeSiteResponse = zod.object({
   "propertyId": zod.string(),
   "WaterStrategy": zod.unknown().describe('Water catchment, tank sizing, and swale\/drainage placement'),
@@ -369,6 +442,16 @@ export const AnalyzeSiteResponse = zod.object({
   "rationale": zod.string().optional()
 })).optional()
 }).optional().describe('Final compiled design — plant palette, design elements, and implementation phases synthesised from all site data'),
+  "spatialRecommendations": zod.array(zod.object({
+  "id": zod.string().describe('Stable slug identifier e.g. \"west-shelterbelt\"'),
+  "label": zod.string().describe('Human-readable name e.g. \"Western Windbreak Shelterbelt\"'),
+  "ecologicalFunction": zod.string().describe('windbreak | swale | food-forest | habitat-corridor | water-harvesting | other'),
+  "priority": zod.enum(['critical', 'high', 'medium']).describe('Urgency of this spatial action'),
+  "bearingRange": zod.array(zod.number()).min(analyzeSiteResponseSpatialRecommendationsItemBearingRangeMin).max(analyzeSiteResponseSpatialRecommendationsItemBearingRangeMax).describe('Compass bearing range [start, end] in degrees clockwise from north'),
+  "radiusFraction": zod.number().describe('Fraction of property diagonal to project the ghost layer (0.0–1.0)'),
+  "suggestedZones": zod.array(zod.number()).optional().describe('Permaculture zone numbers this recommendation applies to'),
+  "rationale": zod.string().describe('One-sentence reason for this spatial recommendation')
+})).nullish().describe('Structured spatial action objects parsed from the AI response'),
   "climateSource": zod.string().optional().describe('Whether climate data was fetched live or failed'),
   "autoCreatedWindSector": zod.boolean().optional().describe('True when the server automatically created a damaging-wind sector from the prevailing wind direction'),
   "generatedAt": zod.string(),
@@ -579,6 +662,8 @@ export const ListPathwaysResponseItem = zod.object({
   "label": zod.string(),
   "pathwayType": zod.string(),
   "lineGeojson": zod.string(),
+  "tags": zod.array(zod.string()).nullish().describe('Ecological function tags e.g. [\"windbreak\", \"living-fence\"]'),
+  "ecologicalNotes": zod.string().nullish().describe('Designer\'s ecological annotation for this pathway'),
   "createdAt": zod.string()
 })
 export const ListPathwaysResponse = zod.array(ListPathwaysResponseItem)
@@ -597,7 +682,34 @@ export const CreatePathwayParams = zod.object({
 export const CreatePathwayBody = zod.object({
   "label": zod.string().min(1),
   "pathwayType": zod.string(),
-  "lineGeojson": zod.string()
+  "lineGeojson": zod.string(),
+  "tags": zod.array(zod.string()).nullish(),
+  "ecologicalNotes": zod.string().nullish()
+})
+
+
+/**
+ * @summary Update ecological tags and notes on a pathway
+ */
+export const UpdatePathwayParams = zod.object({
+  "propertyId": zod.coerce.string(),
+  "pathwayId": zod.coerce.string()
+})
+
+export const UpdatePathwayBody = zod.object({
+  "tags": zod.array(zod.string()).nullish(),
+  "ecologicalNotes": zod.string().nullish()
+})
+
+export const UpdatePathwayResponse = zod.object({
+  "id": zod.string(),
+  "propertyId": zod.string(),
+  "label": zod.string(),
+  "pathwayType": zod.string(),
+  "lineGeojson": zod.string(),
+  "tags": zod.array(zod.string()).nullish().describe('Ecological function tags e.g. [\"windbreak\", \"living-fence\"]'),
+  "ecologicalNotes": zod.string().nullish().describe('Designer\'s ecological annotation for this pathway'),
+  "createdAt": zod.string()
 })
 
 
@@ -626,6 +738,8 @@ export const ListDesignedSwalesResponseItem = zod.object({
   "lengthM": zod.number(),
   "swaleType": zod.string(),
   "notes": zod.string(),
+  "tags": zod.array(zod.string()).nullish().describe('Ecological function tags e.g. [\"swale\", \"water-harvesting\"]'),
+  "ecologicalNotes": zod.string().nullish().describe('Designer\'s ecological annotation for this swale'),
   "createdAt": zod.string()
 })
 export const ListDesignedSwalesResponse = zod.array(ListDesignedSwalesResponseItem)
@@ -647,7 +761,37 @@ export const CreateDesignedSwaleBody = zod.object({
   "elevationM": zod.number(),
   "lengthM": zod.number(),
   "swaleType": zod.string(),
-  "notes": zod.string()
+  "notes": zod.string(),
+  "tags": zod.array(zod.string()).nullish(),
+  "ecologicalNotes": zod.string().nullish()
+})
+
+
+/**
+ * @summary Update ecological tags and notes on a swale
+ */
+export const UpdateDesignedSwaleParams = zod.object({
+  "propertyId": zod.coerce.string(),
+  "swaleId": zod.coerce.string()
+})
+
+export const UpdateDesignedSwaleBody = zod.object({
+  "tags": zod.array(zod.string()).nullish(),
+  "ecologicalNotes": zod.string().nullish()
+})
+
+export const UpdateDesignedSwaleResponse = zod.object({
+  "id": zod.string(),
+  "propertyId": zod.string(),
+  "name": zod.string(),
+  "geojsonLinestring": zod.string(),
+  "elevationM": zod.number(),
+  "lengthM": zod.number(),
+  "swaleType": zod.string(),
+  "notes": zod.string(),
+  "tags": zod.array(zod.string()).nullish().describe('Ecological function tags e.g. [\"swale\", \"water-harvesting\"]'),
+  "ecologicalNotes": zod.string().nullish().describe('Designer\'s ecological annotation for this swale'),
+  "createdAt": zod.string()
 })
 
 
@@ -715,6 +859,8 @@ export const ListZonesResponseItem = zod.object({
   "propertyId": zod.string(),
   "zoneNumber": zod.number(),
   "zoneGeojson": zod.string(),
+  "tags": zod.array(zod.string()).nullish().describe('Ecological function tags e.g. [\"food-forest\", \"habitat-corridor\"]'),
+  "ecologicalNotes": zod.string().nullish().describe('Designer\'s ecological annotation for this zone'),
   "createdAt": zod.string()
 })
 export const ListZonesResponse = zod.array(ListZonesResponseItem)
@@ -733,7 +879,9 @@ export const bulkReplaceZonesBodyZoneNumberMax = 5;
 
 export const BulkReplaceZonesBodyItem = zod.object({
   "zoneNumber": zod.number().min(1).max(bulkReplaceZonesBodyZoneNumberMax),
-  "zoneGeojson": zod.string()
+  "zoneGeojson": zod.string(),
+  "tags": zod.array(zod.string()).nullish(),
+  "ecologicalNotes": zod.string().nullish()
 })
 export const BulkReplaceZonesBody = zod.array(BulkReplaceZonesBodyItem)
 
@@ -742,9 +890,35 @@ export const BulkReplaceZonesResponseItem = zod.object({
   "propertyId": zod.string(),
   "zoneNumber": zod.number(),
   "zoneGeojson": zod.string(),
+  "tags": zod.array(zod.string()).nullish().describe('Ecological function tags e.g. [\"food-forest\", \"habitat-corridor\"]'),
+  "ecologicalNotes": zod.string().nullish().describe('Designer\'s ecological annotation for this zone'),
   "createdAt": zod.string()
 })
 export const BulkReplaceZonesResponse = zod.array(BulkReplaceZonesResponseItem)
+
+
+/**
+ * @summary Update ecological tags and notes on a zone
+ */
+export const UpdateZoneParams = zod.object({
+  "propertyId": zod.coerce.string(),
+  "zoneId": zod.coerce.string()
+})
+
+export const UpdateZoneBody = zod.object({
+  "tags": zod.array(zod.string()).nullish(),
+  "ecologicalNotes": zod.string().nullish()
+})
+
+export const UpdateZoneResponse = zod.object({
+  "id": zod.string(),
+  "propertyId": zod.string(),
+  "zoneNumber": zod.number(),
+  "zoneGeojson": zod.string(),
+  "tags": zod.array(zod.string()).nullish().describe('Ecological function tags e.g. [\"food-forest\", \"habitat-corridor\"]'),
+  "ecologicalNotes": zod.string().nullish().describe('Designer\'s ecological annotation for this zone'),
+  "createdAt": zod.string()
+})
 
 
 /**

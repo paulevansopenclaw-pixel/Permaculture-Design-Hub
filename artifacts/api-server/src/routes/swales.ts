@@ -6,6 +6,8 @@ import {
   CreateDesignedSwaleParams,
   CreateDesignedSwaleBody,
   DeleteDesignedSwaleParams,
+  UpdateDesignedSwaleParams,
+  UpdateDesignedSwaleBody,
 } from "@workspace/api-zod";
 import { requirePropertyOwner } from "../lib/propertyOwnerCheck";
 
@@ -34,11 +36,34 @@ router.post(
     if (!await requirePropertyOwner(req, res, params.data.propertyId)) return;
     const parsed = CreateDesignedSwaleBody.safeParse(req.body);
     if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+    const { tags, ...rest } = parsed.data;
     const [row] = await db
       .insert(designedSwalesTable)
-      .values({ propertyId: params.data.propertyId, ...parsed.data })
+      .values({ propertyId: params.data.propertyId, ...rest, tags: Array.isArray(tags) ? tags.join(",") : tags })
       .returning();
     res.status(201).json(row);
+  },
+);
+
+router.patch(
+  "/properties/:propertyId/swales/:swaleId",
+  async (req, res): Promise<void> => {
+    const params = UpdateDesignedSwaleParams.safeParse(req.params);
+    if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
+    if (!await requirePropertyOwner(req, res, params.data.propertyId)) return;
+    const parsed = UpdateDesignedSwaleBody.safeParse(req.body);
+    if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+    const { tags: swTags, ...swRest } = parsed.data;
+    const [updated] = await db
+      .update(designedSwalesTable)
+      .set({ ...swRest, tags: Array.isArray(swTags) ? swTags.join(",") : swTags })
+      .where(and(
+        eq(designedSwalesTable.id, params.data.swaleId),
+        eq(designedSwalesTable.propertyId, params.data.propertyId),
+      ))
+      .returning();
+    if (!updated) { res.status(404).json({ error: "Not found" }); return; }
+    res.json(updated);
   },
 );
 

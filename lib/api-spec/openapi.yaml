@@ -510,6 +510,37 @@ paths:
                 $ref: "#/components/schemas/Pathway"
 
   /properties/{propertyId}/pathways/{pathwayId}:
+    patch:
+      operationId: updatePathway
+      tags: [pathways]
+      summary: Update ecological tags and notes on a pathway
+      parameters:
+        - name: propertyId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: pathwayId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PathwayUpdate"
+      responses:
+        "200":
+          description: Updated pathway
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Pathway"
+        "404":
+          description: Not found
+
     delete:
       operationId: deletePathway
       tags: [pathways]
@@ -575,6 +606,37 @@ paths:
                 $ref: "#/components/schemas/DesignedSwale"
 
   /properties/{propertyId}/swales/{swaleId}:
+    patch:
+      operationId: updateDesignedSwale
+      tags: [swales]
+      summary: Update ecological tags and notes on a swale
+      parameters:
+        - name: propertyId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: swaleId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DesignedSwaleUpdate"
+      responses:
+        "200":
+          description: Updated swale
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DesignedSwale"
+        "404":
+          description: Not found
+
     delete:
       operationId: deleteDesignedSwale
       tags: [swales]
@@ -709,6 +771,37 @@ paths:
                   $ref: "#/components/schemas/Zone"
 
   /properties/{propertyId}/zones/{zoneId}:
+    patch:
+      operationId: updateZone
+      tags: [zones]
+      summary: Update ecological tags and notes on a zone
+      parameters:
+        - name: propertyId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: zoneId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ZoneUpdate"
+      responses:
+        "200":
+          description: Updated zone
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Zone"
+        "404":
+          description: Not found
+
     delete:
       operationId: deleteZone
       tags: [zones]
@@ -1184,6 +1277,12 @@ components:
         clientTier:
           type: integer
           description: Unlocked design tier for client portal (0=discovery only, 1=+site reading, 2=+the design, 3=+full dossier)
+        spatialRecommendations:
+          type: array
+          nullable: true
+          items:
+            $ref: "#/components/schemas/SpatialRecommendation"
+          description: AI-generated spatial action recommendations with geographic metadata
         createdAt:
           type: string
 
@@ -1262,6 +1361,16 @@ components:
           type: string
           nullable: true
           description: Label of the building this tank collects from
+        tags:
+          type: array
+          nullable: true
+          items:
+            type: string
+          description: Ecological function tags e.g. ["windbreak", "food-forest"]
+        ecologicalNotes:
+          type: string
+          nullable: true
+          description: Designer's ecological annotation for this feature
         createdAt:
           type: string
 
@@ -1287,6 +1396,14 @@ components:
         attachedToBuilding:
           type: string
           nullable: true
+        tags:
+          type: array
+          nullable: true
+          items:
+            type: string
+        ecologicalNotes:
+          type: string
+          nullable: true
 
     StructureUpdate:
       type: object
@@ -1303,6 +1420,14 @@ components:
           type: number
           nullable: true
         attachedToBuilding:
+          type: string
+          nullable: true
+        tags:
+          type: array
+          nullable: true
+          items:
+            type: string
+        ecologicalNotes:
           type: string
           nullable: true
 
@@ -1418,14 +1543,39 @@ components:
 
     SpatialRecommendation:
       type: object
-      required: [element, placement, rationale]
+      required: [id, label, ecologicalFunction, priority, bearingRange, radiusFraction, rationale]
       properties:
-        element:
+        id:
           type: string
-        placement:
+          description: Stable slug identifier e.g. "west-shelterbelt"
+        label:
           type: string
+          description: Human-readable name e.g. "Western Windbreak Shelterbelt"
+        ecologicalFunction:
+          type: string
+          description: "windbreak | swale | food-forest | habitat-corridor | water-harvesting | other"
+        priority:
+          type: string
+          enum: [critical, high, medium]
+          description: Urgency of this spatial action
+        bearingRange:
+          type: array
+          items:
+            type: number
+          minItems: 2
+          maxItems: 2
+          description: Compass bearing range [start, end] in degrees clockwise from north
+        radiusFraction:
+          type: number
+          description: Fraction of property diagonal to project the ghost layer (0.0–1.0)
+        suggestedZones:
+          type: array
+          items:
+            type: integer
+          description: Permaculture zone numbers this recommendation applies to
         rationale:
           type: string
+          description: One-sentence reason for this spatial recommendation
 
     SiteAnalysisReport:
       type: object
@@ -1495,6 +1645,12 @@ components:
                   duration:  { type: string, description: "e.g. Month 1–3" }
                   elements:  { type: array, items: { type: string } }
                   rationale: { type: string }
+        spatialRecommendations:
+          type: array
+          nullable: true
+          items:
+            $ref: "#/components/schemas/SpatialRecommendation"
+          description: Structured spatial action objects parsed from the AI response
         climateSource:
           type: string
           description: Whether climate data was fetched live or failed
@@ -1825,6 +1981,16 @@ components:
           type: integer
         zoneGeojson:
           type: string
+        tags:
+          type: array
+          nullable: true
+          items:
+            type: string
+          description: Ecological function tags e.g. ["food-forest", "habitat-corridor"]
+        ecologicalNotes:
+          type: string
+          nullable: true
+          description: Designer's ecological annotation for this zone
         createdAt:
           type: string
 
@@ -1838,6 +2004,26 @@ components:
           maximum: 5
         zoneGeojson:
           type: string
+        tags:
+          type: array
+          nullable: true
+          items:
+            type: string
+        ecologicalNotes:
+          type: string
+          nullable: true
+
+    ZoneUpdate:
+      type: object
+      properties:
+        tags:
+          type: array
+          nullable: true
+          items:
+            type: string
+        ecologicalNotes:
+          type: string
+          nullable: true
 
     Pathway:
       type: object
@@ -1853,6 +2039,16 @@ components:
           type: string
         lineGeojson:
           type: string
+        tags:
+          type: array
+          nullable: true
+          items:
+            type: string
+          description: Ecological function tags e.g. ["windbreak", "living-fence"]
+        ecologicalNotes:
+          type: string
+          nullable: true
+          description: Designer's ecological annotation for this pathway
         createdAt:
           type: string
 
@@ -1867,6 +2063,26 @@ components:
           type: string
         lineGeojson:
           type: string
+        tags:
+          type: array
+          nullable: true
+          items:
+            type: string
+        ecologicalNotes:
+          type: string
+          nullable: true
+
+    PathwayUpdate:
+      type: object
+      properties:
+        tags:
+          type: array
+          nullable: true
+          items:
+            type: string
+        ecologicalNotes:
+          type: string
+          nullable: true
 
     DesignedSwale:
       type: object
@@ -1888,6 +2104,16 @@ components:
           type: string
         notes:
           type: string
+        tags:
+          type: array
+          nullable: true
+          items:
+            type: string
+          description: Ecological function tags e.g. ["swale", "water-harvesting"]
+        ecologicalNotes:
+          type: string
+          nullable: true
+          description: Designer's ecological annotation for this swale
         createdAt:
           type: string
 
@@ -1908,6 +2134,26 @@ components:
           type: string
         notes:
           type: string
+        tags:
+          type: array
+          nullable: true
+          items:
+            type: string
+        ecologicalNotes:
+          type: string
+          nullable: true
+
+    DesignedSwaleUpdate:
+      type: object
+      properties:
+        tags:
+          type: array
+          nullable: true
+          items:
+            type: string
+        ecologicalNotes:
+          type: string
+          nullable: true
 
     Comment:
       type: object

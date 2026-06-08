@@ -13,6 +13,14 @@ import {
 
 const router: IRouter = Router();
 
+function serializeProperty(p: typeof propertiesTable.$inferSelect) {
+  return {
+    ...p,
+    boundaryGeojson: p.boundaryGeojson ? JSON.parse(p.boundaryGeojson) : null,
+    spatialRecommendations: p.spatialRecommendations ? JSON.parse(p.spatialRecommendations) : null,
+  };
+}
+
 router.get("/properties", async (req, res): Promise<void> => {
   if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
   // All authenticated users are designers in this studio — they see their own
@@ -26,10 +34,7 @@ router.get("/properties", async (req, res): Promise<void> => {
     .from(propertiesTable)
     .where(whereClause)
     .orderBy(propertiesTable.createdAt);
-  res.json(rows.map((p) => ({
-    ...p,
-    boundaryGeojson: p.boundaryGeojson ? JSON.parse(p.boundaryGeojson) : null,
-  })));
+  res.json(rows.map(serializeProperty));
 });
 
 router.post("/properties", async (req, res): Promise<void> => {
@@ -41,10 +46,7 @@ router.post("/properties", async (req, res): Promise<void> => {
     .insert(propertiesTable)
     .values({ ...rest, ownerId: req.user.id, boundaryGeojson: boundaryGeojson ? JSON.stringify(boundaryGeojson) : null })
     .returning();
-  res.status(201).json({
-    ...property,
-    boundaryGeojson: property.boundaryGeojson ? JSON.parse(property.boundaryGeojson) : null,
-  });
+  res.status(201).json(serializeProperty(property));
 });
 
 router.get("/properties/:id", async (req, res): Promise<void> => {
@@ -56,7 +58,7 @@ router.get("/properties/:id", async (req, res): Promise<void> => {
     .from(propertiesTable)
     .where(and(eq(propertiesTable.id, params.data.id), eq(propertiesTable.ownerId, req.user.id)));
   if (!property) { res.status(404).json({ error: "Property not found" }); return; }
-  res.json({ ...property, boundaryGeojson: property.boundaryGeojson ? JSON.parse(property.boundaryGeojson) : null });
+  res.json(serializeProperty(property));
 });
 
 router.put("/properties/:id", async (req, res): Promise<void> => {
@@ -76,7 +78,7 @@ router.put("/properties/:id", async (req, res): Promise<void> => {
     .where(and(eq(propertiesTable.id, params.data.id), eq(propertiesTable.ownerId, req.user.id)))
     .returning();
   if (!property) { res.status(404).json({ error: "Property not found" }); return; }
-  res.json({ ...property, boundaryGeojson: property.boundaryGeojson ? JSON.parse(property.boundaryGeojson) : null });
+  res.json(serializeProperty(property));
 });
 
 router.delete("/properties/:id", async (req, res): Promise<void> => {
@@ -97,17 +99,14 @@ router.post("/properties/:id/claim", async (req, res): Promise<void> => {
     .set({ ownerId: req.user.id, status: "active" })
     .where(and(eq(propertiesTable.id, params.data.id), isNull(propertiesTable.ownerId)))
     .returning();
-  if (claimed) {
-    res.json({ ...claimed, boundaryGeojson: claimed.boundaryGeojson ? JSON.parse(claimed.boundaryGeojson) : null });
-    return;
-  }
+  if (claimed) { res.json(serializeProperty(claimed)); return; }
   // Already claimed — return it if it belongs to this designer, else 404.
   const [existing] = await db
     .select()
     .from(propertiesTable)
     .where(and(eq(propertiesTable.id, params.data.id), eq(propertiesTable.ownerId, req.user.id)));
   if (!existing) { res.status(404).json({ error: "Property not found" }); return; }
-  res.json({ ...existing, boundaryGeojson: existing.boundaryGeojson ? JSON.parse(existing.boundaryGeojson) : null });
+  res.json(serializeProperty(existing));
 });
 
 router.get("/properties/:id/stats", async (req, res): Promise<void> => {

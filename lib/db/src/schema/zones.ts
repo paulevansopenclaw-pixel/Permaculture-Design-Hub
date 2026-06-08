@@ -7,6 +7,8 @@ export const zonesTable = pgTable("zones", {
   propertyId: text("property_id").notNull(),
   zoneNumber: integer("zone_number").notNull(),
   zoneGeojson: text("zone_geojson").notNull(),
+  tags: text("tags"),
+  ecologicalNotes: text("ecological_notes"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

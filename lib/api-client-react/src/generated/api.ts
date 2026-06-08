@@ -29,6 +29,7 @@ import type {
   ConceptRenderRequest,
   DesignedSwale,
   DesignedSwaleInput,
+  DesignedSwaleUpdate,
   EnquiryInput,
   EnquiryResponse,
   ErrorEnvelope,
@@ -39,6 +40,7 @@ import type {
   MobileTokenExchangeSuccess,
   Pathway,
   PathwayInput,
+  PathwayUpdate,
   PlanRenderItem,
   PlanRenderList,
   Property,
@@ -60,7 +62,8 @@ import type {
   VisionImagesResponse,
   WaterBudgetReport,
   Zone,
-  ZoneInput
+  ZoneInput,
+  ZoneUpdate
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -1694,6 +1697,80 @@ export const useCreatePathway = <TError = ErrorType<unknown>,
       return useMutation(getCreatePathwayMutationOptions(options));
     }
 
+export const getUpdatePathwayUrl = (propertyId: string,
+    pathwayId: string,) => {
+
+
+
+
+  return `/api/properties/${propertyId}/pathways/${pathwayId}`
+}
+
+/**
+ * @summary Update ecological tags and notes on a pathway
+ */
+export const updatePathway = async (propertyId: string,
+    pathwayId: string,
+    pathwayUpdate: PathwayUpdate, options?: RequestInit): Promise<Pathway> => {
+
+  return customFetch<Pathway>(getUpdatePathwayUrl(propertyId,pathwayId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      pathwayUpdate,)
+  }
+);}
+
+
+
+
+export const getUpdatePathwayMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updatePathway>>, TError,{propertyId: string;pathwayId: string;data: BodyType<PathwayUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updatePathway>>, TError,{propertyId: string;pathwayId: string;data: BodyType<PathwayUpdate>}, TContext> => {
+
+const mutationKey = ['updatePathway'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updatePathway>>, {propertyId: string;pathwayId: string;data: BodyType<PathwayUpdate>}> = (props) => {
+          const {propertyId,pathwayId,data} = props ?? {};
+
+          return  updatePathway(propertyId,pathwayId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdatePathwayMutationResult = NonNullable<Awaited<ReturnType<typeof updatePathway>>>
+    export type UpdatePathwayMutationBody = BodyType<PathwayUpdate>
+    export type UpdatePathwayMutationError = ErrorType<void>
+
+    /**
+ * @summary Update ecological tags and notes on a pathway
+ */
+export const useUpdatePathway = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updatePathway>>, TError,{propertyId: string;pathwayId: string;data: BodyType<PathwayUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updatePathway>>,
+        TError,
+        {propertyId: string;pathwayId: string;data: BodyType<PathwayUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdatePathwayMutationOptions(options));
+    }
+
 export const getDeletePathwayUrl = (propertyId: string,
     pathwayId: string,) => {
 
@@ -1913,6 +1990,80 @@ export const useCreateDesignedSwale = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getCreateDesignedSwaleMutationOptions(options));
+    }
+
+export const getUpdateDesignedSwaleUrl = (propertyId: string,
+    swaleId: string,) => {
+
+
+
+
+  return `/api/properties/${propertyId}/swales/${swaleId}`
+}
+
+/**
+ * @summary Update ecological tags and notes on a swale
+ */
+export const updateDesignedSwale = async (propertyId: string,
+    swaleId: string,
+    designedSwaleUpdate: DesignedSwaleUpdate, options?: RequestInit): Promise<DesignedSwale> => {
+
+  return customFetch<DesignedSwale>(getUpdateDesignedSwaleUrl(propertyId,swaleId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      designedSwaleUpdate,)
+  }
+);}
+
+
+
+
+export const getUpdateDesignedSwaleMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateDesignedSwale>>, TError,{propertyId: string;swaleId: string;data: BodyType<DesignedSwaleUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateDesignedSwale>>, TError,{propertyId: string;swaleId: string;data: BodyType<DesignedSwaleUpdate>}, TContext> => {
+
+const mutationKey = ['updateDesignedSwale'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateDesignedSwale>>, {propertyId: string;swaleId: string;data: BodyType<DesignedSwaleUpdate>}> = (props) => {
+          const {propertyId,swaleId,data} = props ?? {};
+
+          return  updateDesignedSwale(propertyId,swaleId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateDesignedSwaleMutationResult = NonNullable<Awaited<ReturnType<typeof updateDesignedSwale>>>
+    export type UpdateDesignedSwaleMutationBody = BodyType<DesignedSwaleUpdate>
+    export type UpdateDesignedSwaleMutationError = ErrorType<void>
+
+    /**
+ * @summary Update ecological tags and notes on a swale
+ */
+export const useUpdateDesignedSwale = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateDesignedSwale>>, TError,{propertyId: string;swaleId: string;data: BodyType<DesignedSwaleUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateDesignedSwale>>,
+        TError,
+        {propertyId: string;swaleId: string;data: BodyType<DesignedSwaleUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateDesignedSwaleMutationOptions(options));
     }
 
 export const getDeleteDesignedSwaleUrl = (propertyId: string,
@@ -2355,6 +2506,80 @@ export const useBulkReplaceZones = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getBulkReplaceZonesMutationOptions(options));
+    }
+
+export const getUpdateZoneUrl = (propertyId: string,
+    zoneId: string,) => {
+
+
+
+
+  return `/api/properties/${propertyId}/zones/${zoneId}`
+}
+
+/**
+ * @summary Update ecological tags and notes on a zone
+ */
+export const updateZone = async (propertyId: string,
+    zoneId: string,
+    zoneUpdate: ZoneUpdate, options?: RequestInit): Promise<Zone> => {
+
+  return customFetch<Zone>(getUpdateZoneUrl(propertyId,zoneId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      zoneUpdate,)
+  }
+);}
+
+
+
+
+export const getUpdateZoneMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateZone>>, TError,{propertyId: string;zoneId: string;data: BodyType<ZoneUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateZone>>, TError,{propertyId: string;zoneId: string;data: BodyType<ZoneUpdate>}, TContext> => {
+
+const mutationKey = ['updateZone'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateZone>>, {propertyId: string;zoneId: string;data: BodyType<ZoneUpdate>}> = (props) => {
+          const {propertyId,zoneId,data} = props ?? {};
+
+          return  updateZone(propertyId,zoneId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateZoneMutationResult = NonNullable<Awaited<ReturnType<typeof updateZone>>>
+    export type UpdateZoneMutationBody = BodyType<ZoneUpdate>
+    export type UpdateZoneMutationError = ErrorType<void>
+
+    /**
+ * @summary Update ecological tags and notes on a zone
+ */
+export const useUpdateZone = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateZone>>, TError,{propertyId: string;zoneId: string;data: BodyType<ZoneUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateZone>>,
+        TError,
+        {propertyId: string;zoneId: string;data: BodyType<ZoneUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateZoneMutationOptions(options));
     }
 
 export const getDeleteZoneUrl = (propertyId: string,

@@ -13,4 +13,6 @@ export interface ZoneInput {
      */
   zoneNumber: number;
   zoneGeojson: string;
+  tags?: string[] | null;
+  ecologicalNotes?: string | null;
 }

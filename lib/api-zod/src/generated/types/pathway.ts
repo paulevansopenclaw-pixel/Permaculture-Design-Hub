@@ -12,5 +12,9 @@ export interface Pathway {
   label: string;
   pathwayType: string;
   lineGeojson: string;
+  /** Ecological function tags e.g. ["windbreak", "living-fence"] */
+  tags?: string[] | null;
+  /** Designer's ecological annotation for this pathway */
+  ecologicalNotes?: string | null;
   createdAt: string;
 }

@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { PropertyBoundaryGeojson } from './propertyBoundaryGeojson';
+import type { SpatialRecommendation } from './spatialRecommendation';
 
 export interface Property {
   id: string;
@@ -21,5 +22,7 @@ export interface Property {
   status?: string;
   /** Unlocked design tier for client portal (0=discovery only, 1=+site reading, 2=+the design, 3=+full dossier) */
   clientTier?: number;
+  /** AI-generated spatial action recommendations with geographic metadata */
+  spatialRecommendations?: SpatialRecommendation[] | null;
   createdAt: string;
 }

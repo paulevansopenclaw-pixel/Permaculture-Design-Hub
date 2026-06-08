@@ -12,6 +12,7 @@ export const propertiesTable = pgTable("properties", {
   tileImage: text("tile_image"),
   status: text("status").notNull().default("active"),
   clientTier: integer("client_tier").notNull().default(0),
+  spatialRecommendations: text("spatial_recommendations"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

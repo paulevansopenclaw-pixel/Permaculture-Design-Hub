@@ -11,4 +11,6 @@ export interface PathwayInput {
   label: string;
   pathwayType: string;
   lineGeojson: string;
+  tags?: string[] | null;
+  ecologicalNotes?: string | null;
 }

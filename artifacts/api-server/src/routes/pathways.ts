@@ -6,6 +6,8 @@ import {
   CreatePathwayParams,
   CreatePathwayBody,
   DeletePathwayParams,
+  UpdatePathwayParams,
+  UpdatePathwayBody,
 } from "@workspace/api-zod";
 import { requirePropertyOwner } from "../lib/propertyOwnerCheck";
 
@@ -34,11 +36,34 @@ router.post(
     if (!await requirePropertyOwner(req, res, params.data.propertyId)) return;
     const parsed = CreatePathwayBody.safeParse(req.body);
     if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+    const { tags: pTags1, ...pRest1 } = parsed.data;
     const [pathway] = await db
       .insert(pathwaysTable)
-      .values({ propertyId: params.data.propertyId, ...parsed.data })
+      .values({ propertyId: params.data.propertyId, ...pRest1, tags: Array.isArray(pTags1) ? pTags1.join(",") : pTags1 })
       .returning();
     res.status(201).json(pathway);
+  },
+);
+
+router.patch(
+  "/properties/:propertyId/pathways/:pathwayId",
+  async (req, res): Promise<void> => {
+    const params = UpdatePathwayParams.safeParse(req.params);
+    if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
+    if (!await requirePropertyOwner(req, res, params.data.propertyId)) return;
+    const parsed = UpdatePathwayBody.safeParse(req.body);
+    if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+    const { tags: pTags2, ...pRest2 } = parsed.data;
+    const [updated] = await db
+      .update(pathwaysTable)
+      .set({ ...pRest2, tags: Array.isArray(pTags2) ? pTags2.join(",") : pTags2 })
+      .where(and(
+        eq(pathwaysTable.id, params.data.pathwayId),
+        eq(pathwaysTable.propertyId, params.data.propertyId),
+      ))
+      .returning();
+    if (!updated) { res.status(404).json({ error: "Not found" }); return; }
+    res.json(updated);
   },
 );
 
