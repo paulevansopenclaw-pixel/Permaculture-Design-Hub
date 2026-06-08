@@ -1,5 +1,8 @@
+import { useRef, useEffect, useMemo } from "react";
 import { useLocation } from "wouter";
 import * as turf from "@turf/turf";
+import mapboxgl from "mapbox-gl";
+import "mapbox-gl/dist/mapbox-gl.css";
 import patternMark from "@assets/pattern-mark.png";
 import {
   useGetProperty,
@@ -83,6 +86,260 @@ const GUILD_LAYERS = [
     notes: "Allow to flower. Fennel: keep 1.5 m from other herbs — allelopathic.",
   },
 ];
+
+// ─── Unified Map Canvas ───────────────────────────────────────────────────────
+const ZONE_MAP: Record<number, { stroke: string; fill: string; fillOpacity: number; label: string }> = {
+  1: { stroke: "#CA8A04", fill: "#FDE68A", fillOpacity: 0.35, label: "Zone 1 — Daily Use" },
+  2: { stroke: "#4A7C3F", fill: "#9DC08B", fillOpacity: 0.35, label: "Zone 2 — Semi-Daily" },
+  3: { stroke: "#3B6B30", fill: "#7AAF68", fillOpacity: 0.30, label: "Zone 3 — Farm/Pasture" },
+  4: { stroke: "#92400E", fill: "#D4A27A", fillOpacity: 0.30, label: "Zone 4 — Semi-Wild" },
+  5: { stroke: "#475569", fill: "#94A3B8", fillOpacity: 0.30, label: "Zone 5 — Wilderness" },
+};
+
+const PATHWAY_COLOR: Record<string, string> = {
+  driveway: "#C4A45A", footpath: "#C4975A", farm_track: "#9B7A5A",
+  fenceline: "#9B9BAA", firebreak: "#DC6656",
+};
+
+type ZRow = { id: string; zoneNumber: number; zoneGeojson: string };
+type SwRow = { id: string; geojsonLinestring: string; name?: string | null; swaleType?: string | null };
+type PwRow = { id: string; lineGeojson: string; pathwayType?: string | null; label?: string | null };
+type StRow = { id: string; lng: number; lat: number; structureType?: string | null; label?: string | null };
+
+function buildUnifiedFC(
+  geo: string | null | undefined,
+  zones: ZRow[], swales: SwRow[], paths: PwRow[], structs: StRow[],
+): { fc: GeoJSON.FeatureCollection; bounds: [[number, number], [number, number]] | null } {
+  const features: GeoJSON.Feature[] = [];
+  let minLng = Infinity, minLat = Infinity, maxLng = -Infinity, maxLat = -Infinity;
+
+  function track(lng: number, lat: number) {
+    if (lng < minLng) minLng = lng; if (lng > maxLng) maxLng = lng;
+    if (lat < minLat) minLat = lat; if (lat > maxLat) maxLat = lat;
+  }
+  function trackGeom(g: GeoJSON.Geometry) {
+    if (g.type === "Point") track(...(g.coordinates as [number, number]));
+    else if (g.type === "LineString") (g.coordinates as [number, number][]).forEach(c => track(...c));
+    else if (g.type === "Polygon") (g.coordinates[0] as [number, number][]).forEach(c => track(...c));
+    else if (g.type === "MultiPolygon") (g.coordinates as [number, number][][][]).forEach(r => r[0].forEach(c => track(...c)));
+  }
+
+  function parseGeo(raw: string): GeoJSON.Geometry | null {
+    try {
+      const p = JSON.parse(raw);
+      return p.type === "Feature" ? (p as GeoJSON.Feature).geometry : p;
+    } catch { return null; }
+  }
+
+  if (geo) {
+    const g = parseGeo(geo);
+    if (g) { features.push({ type: "Feature", geometry: g, properties: { layer_type: "boundary" } }); trackGeom(g); }
+  }
+  zones.forEach(z => {
+    const g = parseGeo(z.zoneGeojson);
+    if (g) { features.push({ type: "Feature", geometry: g, properties: { layer_type: "zone", zone_number: z.zoneNumber } }); trackGeom(g); }
+  });
+  swales.forEach(s => {
+    const g = parseGeo(s.geojsonLinestring);
+    if (g) { features.push({ type: "Feature", geometry: g, properties: { layer_type: "swale", name: s.name ?? "" } }); trackGeom(g); }
+  });
+  paths.forEach(p => {
+    const g = parseGeo(p.lineGeojson);
+    if (g) { features.push({ type: "Feature", geometry: g, properties: { layer_type: "pathway", pathway_type: p.pathwayType ?? "driveway" } }); trackGeom(g); }
+  });
+  structs.forEach(s => {
+    features.push({ type: "Feature", geometry: { type: "Point", coordinates: [s.lng, s.lat] }, properties: { layer_type: "structure", label: s.label ?? s.structureType ?? "Structure" } });
+    track(s.lng, s.lat);
+  });
+
+  const bounds: [[number, number], [number, number]] | null =
+    isFinite(minLng) ? [[minLng, minLat], [maxLng, maxLat]] : null;
+  return { fc: { type: "FeatureCollection", features }, bounds };
+}
+
+interface UnifiedMapCanvasProps {
+  geo: string | null | undefined;
+  zones: ZRow[]; structs: StRow[]; swales: SwRow[]; paths: PwRow[];
+  layerCounts: { zones: number; structures: number; swales: number; pathways: number };
+}
+
+function UnifiedMapCanvas({ geo, zones, structs, swales, paths, layerCounts }: UnifiedMapCanvasProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<mapboxgl.Map | null>(null);
+  const token = import.meta.env.VITE_MAPBOX_TOKEN as string | undefined;
+
+  const dataKey = useMemo(
+    () => `${geo ?? ""}|${zones.length}|${structs.length}|${swales.length}|${paths.length}`,
+    [geo, zones.length, structs.length, swales.length, paths.length],
+  );
+
+  useEffect(() => {
+    if (!token || !containerRef.current) return;
+    mapboxgl.accessToken = token;
+
+    const { fc, bounds } = buildUnifiedFC(geo, zones, swales, paths, structs);
+
+    const map = new mapboxgl.Map({
+      container: containerRef.current,
+      style: "mapbox://styles/mapbox/satellite-streets-v12",
+      bounds: bounds ?? [[-180, -85], [180, 85]],
+      fitBoundsOptions: { padding: 72, maxZoom: 17 },
+      attributionControl: false,
+      logoPosition: "bottom-right",
+    });
+    mapRef.current = map;
+    map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), "bottom-right");
+    map.addControl(new mapboxgl.AttributionControl({ compact: true }), "bottom-right");
+
+    map.on("load", () => {
+      map.addSource("design", { type: "geojson", data: fc });
+
+      map.addLayer({ id: "zones-fill", type: "fill", source: "design",
+        filter: ["==", ["get", "layer_type"], "zone"],
+        paint: {
+          "fill-color": ["match", ["get", "zone_number"], 1,"#FDE68A", 2,"#9DC08B", 3,"#7AAF68", 4,"#D4A27A", 5,"#94A3B8", "#cccccc"],
+          "fill-opacity": ["match", ["get", "zone_number"], 1,0.35, 2,0.35, 3,0.30, 4,0.30, 5,0.30, 0.25],
+        },
+      });
+
+      map.addLayer({ id: "zones-outline", type: "line", source: "design",
+        filter: ["==", ["get", "layer_type"], "zone"],
+        paint: {
+          "line-color": ["match", ["get", "zone_number"], 1,"#CA8A04", 2,"#4A7C3F", 3,"#3B6B30", 4,"#92400E", 5,"#475569", "#888888"],
+          "line-width": 1.5, "line-opacity": 0.8, "line-dasharray": [4, 2],
+        },
+      });
+
+      map.addLayer({ id: "boundary-fill", type: "fill", source: "design",
+        filter: ["==", ["get", "layer_type"], "boundary"],
+        paint: { "fill-color": "#ffffff", "fill-opacity": 0.03 },
+      });
+
+      map.addLayer({ id: "boundary-outline", type: "line", source: "design",
+        filter: ["==", ["get", "layer_type"], "boundary"],
+        paint: { "line-color": "#fcf9f2", "line-width": 2.5, "line-opacity": 0.92 },
+      });
+
+      map.addLayer({ id: "swales-line", type: "line", source: "design",
+        filter: ["==", ["get", "layer_type"], "swale"],
+        paint: { "line-color": "#38B2AC", "line-width": 2.5, "line-opacity": 0.9, "line-dasharray": [6, 3] },
+      });
+
+      map.addLayer({ id: "pathways-line", type: "line", source: "design",
+        filter: ["==", ["get", "layer_type"], "pathway"],
+        paint: {
+          "line-color": ["match", ["get", "pathway_type"], "driveway","#C4A45A", "footpath","#D4B07A", "farm_track","#9B7A5A", "fenceline","#A0A0B8", "firebreak","#DC6656", "#C4A45A"],
+          "line-width": 2.5, "line-opacity": 0.92,
+        },
+      });
+
+      map.addLayer({ id: "structures-circle", type: "circle", source: "design",
+        filter: ["==", ["get", "layer_type"], "structure"],
+        paint: { "circle-radius": 9, "circle-color": "#ffffff", "circle-opacity": 0.92, "circle-stroke-color": "#2c3525", "circle-stroke-width": 2 },
+      });
+
+      map.addLayer({ id: "structures-label", type: "symbol", source: "design",
+        filter: ["==", ["get", "layer_type"], "structure"],
+        layout: {
+          "text-field": ["get", "label"],
+          "text-size": 10,
+          "text-offset": [0, 1.4],
+          "text-anchor": "top",
+          "text-font": ["DIN Offc Pro Medium", "Arial Unicode MS Bold"],
+        },
+        paint: { "text-color": "#fcf9f2", "text-halo-color": "#1a1c18", "text-halo-width": 1.5 },
+      });
+    });
+
+    return () => { map.remove(); mapRef.current = null; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, dataKey]);
+
+  if (!token) {
+    return (
+      <div style={{ width: "100%", height: 540, background: "#f4f1eb", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, border: "1px solid rgba(74,93,63,0.18)", borderRadius: 2 }}>
+        <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 9, textTransform: "uppercase", letterSpacing: "0.14em", color: "#bbb" }}>Map unavailable — VITE_MAPBOX_TOKEN not set</span>
+      </div>
+    );
+  }
+
+  const TICK: React.CSSProperties = { position: "absolute", width: 14, height: 14, pointerEvents: "none" };
+  const TB = "1.5px solid rgba(252,249,242,0.5)";
+  const activeZones = Object.entries(ZONE_MAP).filter(([n]) => zones.some(z => z.zoneNumber === Number(n)));
+
+  return (
+    <div style={{ position: "relative", borderRadius: 2, overflow: "hidden", boxShadow: "0 4px 32px rgba(44,36,22,0.18), 0 0 0 1px rgba(74,93,63,0.22)", lineHeight: 0 }}>
+      <div ref={containerRef} style={{ width: "100%", height: 540 }} />
+
+      {/* Corner tick marks */}
+      <span style={{ ...TICK, top: 12, left: 12, borderTop: TB, borderLeft: TB }} />
+      <span style={{ ...TICK, top: 12, right: 12, borderTop: TB, borderRight: TB }} />
+      <span style={{ ...TICK, bottom: 12, left: 12, borderBottom: TB, borderLeft: TB }} />
+      <span style={{ ...TICK, bottom: 12, right: 12, borderBottom: TB, borderRight: TB }} />
+
+      {/* North arrow */}
+      <div style={{ position: "absolute", top: 14, left: 14, background: "rgba(24,18,12,0.78)", backdropFilter: "blur(6px)", border: "1px solid rgba(252,249,242,0.1)", borderRadius: 3, padding: "10px 9px 8px", display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
+        <svg width="18" height="30" viewBox="0 0 18 30">
+          <line x1="9" y1="2" x2="9" y2="28" stroke="rgba(252,249,242,0.15)" strokeWidth="0.6" />
+          <polygon points="9,0 13,14 9,11 5,14" fill="#fcf9f2" />
+          <polygon points="9,22 13,14 9,11 5,14" fill="rgba(252,249,242,0.2)" />
+          <circle cx="9" cy="14" r="2" fill="none" stroke="rgba(252,249,242,0.4)" strokeWidth="0.75" />
+        </svg>
+        <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 7, color: "rgba(252,249,242,0.8)", letterSpacing: "0.2em", lineHeight: 1 }}>N</span>
+      </div>
+
+      {/* Layer legend */}
+      <div style={{ position: "absolute", top: 14, right: 52, maxWidth: 190, background: "rgba(18,24,14,0.82)", backdropFilter: "blur(8px)", border: "1px solid rgba(252,249,242,0.08)", borderRadius: 4, padding: "10px 14px", display: "flex", flexDirection: "column", gap: 7 }}>
+        <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 7, textTransform: "uppercase", letterSpacing: "0.2em", color: "rgba(252,249,242,0.4)", marginBottom: 3 }}>Layers</div>
+
+        {/* Boundary */}
+        {geo && (
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <svg width="22" height="4"><line x1="0" y1="2" x2="22" y2="2" stroke="#fcf9f2" strokeWidth="2.5" /></svg>
+            <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 9, color: "rgba(252,249,242,0.7)" }}>Boundary</span>
+          </div>
+        )}
+
+        {/* Zones */}
+        {activeZones.map(([n, style]) => (
+          <div key={n} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ width: 22, height: 10, background: style.fill, border: `1.5px dashed ${style.stroke}`, opacity: 0.85, flexShrink: 0 }} />
+            <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 9, color: "rgba(252,249,242,0.7)" }}>{style.label}</span>
+          </div>
+        ))}
+
+        {/* Swales */}
+        {layerCounts.swales > 0 && (
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <svg width="22" height="6"><line x1="0" y1="3" x2="22" y2="3" stroke="#38B2AC" strokeWidth="2.5" strokeDasharray="6 3" /></svg>
+            <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 9, color: "rgba(252,249,242,0.7)" }}>Swales ({layerCounts.swales})</span>
+          </div>
+        )}
+
+        {/* Pathways */}
+        {layerCounts.pathways > 0 && (
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <svg width="22" height="4"><line x1="0" y1="2" x2="22" y2="2" stroke="#C4A45A" strokeWidth="2.5" /></svg>
+            <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 9, color: "rgba(252,249,242,0.7)" }}>Pathways ({layerCounts.pathways})</span>
+          </div>
+        )}
+
+        {/* Structures */}
+        {layerCounts.structures > 0 && (
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <svg width="22" height="18"><circle cx="11" cy="9" r="6" fill="#fff" stroke="#2c3525" strokeWidth="1.5" /></svg>
+            <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 9, color: "rgba(252,249,242,0.7)" }}>Structures ({layerCounts.structures})</span>
+          </div>
+        )}
+      </div>
+
+      {/* Studio watermark */}
+      <div style={{ position: "absolute", bottom: 14, left: 14, background: "rgba(18,24,14,0.72)", backdropFilter: "blur(6px)", border: "1px solid rgba(252,249,242,0.08)", borderRadius: 3, padding: "6px 12px" }}>
+        <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 7, color: "rgba(252,249,242,0.35)", textTransform: "uppercase", letterSpacing: "0.12em" }}>Pattern Studio · Unified Design Canvas</span>
+      </div>
+    </div>
+  );
+}
 
 // ─── Mapbox static helper ─────────────────────────────────────────────────────
 function staticMapUrl(
@@ -841,18 +1098,19 @@ export default function MasterDesignPage() {
                 </div>
               )}
 
-              {/* Maps */}
-              <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
-                <MapFrame
-                  url={satelliteThumbUrl}
-                  caption="Satellite overview — property boundary with zone overlay"
-                  fallback="Satellite view unavailable — add VITE_MAPBOX_TOKEN to enable"
+              {/* Unified interactive map canvas */}
+              <div style={{ marginBottom: 8 }}>
+                <UnifiedMapCanvas
+                  geo={geo}
+                  zones={(zones ?? []) as ZRow[]}
+                  structs={(structs ?? []) as StRow[]}
+                  swales={(swales ?? []) as SwRow[]}
+                  paths={(paths ?? []) as PwRow[]}
+                  layerCounts={layerCounts}
                 />
-                <MapFrame
-                  url={terrainUrl}
-                  caption="Terrain & contour — water flows perpendicular to contours from high to low"
-                  fallback="Terrain map unavailable — add VITE_MAPBOX_TOKEN to enable"
-                />
+                <p className="mono" style={{ margin: "10px 0 0", fontSize: 9, textTransform: "uppercase", letterSpacing: "0.14em", color: "#aaa" }}>
+                  Unified design canvas — all layers stacked · Drag to pan · Scroll to zoom
+                </p>
               </div>
 
               {/* AI Infrastructure critique — if available */}
