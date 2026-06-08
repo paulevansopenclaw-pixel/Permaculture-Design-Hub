@@ -41,11 +41,11 @@ const SECTOR_COLORS: Record<string, string> = {
   custom_view: "#C8971A",
 };
 const PATHWAY_COLORS: Record<string, string> = {
-  driveway: "#8B6914",
-  footpath: "#C4975A",
-  farm_track: "#6B4C2A",
-  fenceline: "#6B7280",
-  firebreak: "#DC2626",
+  driveway:   "#a07838",   // warm ochre — main access
+  footpath:   "#c49650",   // lighter ochre — pedestrian
+  farm_track: "#8a5c28",   // dark earth — service
+  fenceline:  "#7a6a58",   // warm gray — boundary
+  firebreak:  "#b84428",   // muted terracotta — fire
 };
 const SENSORY_COLORS: Record<string, string> = {
   road_noise: "#B85232",
@@ -158,8 +158,8 @@ export const PlanPlate = forwardRef<SVGSVGElement, PlanPlateProps>(function Plan
   if (visible.boundary) legend.push({ color: INK, label: "Property boundary" });
   if (visible.water) {
     legend.push({ color: "#2A7C8E", label: "Contour (1 m)" });
-    if (swales.length) legend.push({ color: "#0077CC", label: "Designed swale", dashed: true });
-    if (waterAnalysis?.damSite) legend.push({ color: "#0077CC", label: "Keyline Dam Site (Passive Water Catchment & Drought Buffering)" });
+    if (swales.length) legend.push({ color: "#1a6b7a", label: "Designed swale", dashed: true });
+    if (waterAnalysis?.damSite) legend.push({ color: "#1a6b7a", label: "Keyline Dam Site (Passive Water Catchment & Drought Buffering)" });
   }
   if (visible.zones) {
     const ZONE_LABELS: Record<number, string> = {
@@ -234,10 +234,10 @@ export const PlanPlate = forwardRef<SVGSVGElement, PlanPlateProps>(function Plan
       {/* ── BOUNDARY ── */}
       {visible.boundary && boundary && (
         <g>
-          <path d={proj.ringPath(boundary)} fill="rgba(107,95,78,0.06)" stroke={INK} strokeWidth="2.5" strokeLinejoin="round" />
+          <path d={proj.ringPath(boundary)} fill="rgba(107,95,78,0.05)" stroke={INK} strokeWidth="2" strokeLinejoin="round" />
           {boundary.slice(0, -1).map((pt, i) => {
             const [x, y] = proj.project(pt[0], pt[1]);
-            return <circle key={i} cx={x} cy={y} r={2.5} fill={INK} />;
+            return <circle key={i} cx={x} cy={y} r={2} fill={INK} />;
           })}
         </g>
       )}
@@ -283,8 +283,8 @@ export const PlanPlate = forwardRef<SVGSVGElement, PlanPlateProps>(function Plan
             const [lx, ly] = proj.project(llng, llat);
             return (
               <g key={s.id}>
-                <path d={d} fill={col} fillOpacity={0.16} stroke={col} strokeWidth="1.25" />
-                <text x={lx} y={ly} textAnchor="middle" fontSize="10" fontWeight={700} fill={col} stroke={PARCHMENT} strokeWidth="2.5" paintOrder="stroke">
+                <path d={d} fill={col} fillOpacity={0.07} stroke={col} strokeWidth="0.85" strokeDasharray="6 3" />
+                <text x={lx} y={ly} textAnchor="middle" fontSize="9.5" fontWeight={600} fill={col} stroke={PARCHMENT} strokeWidth="2" paintOrder="stroke">
                   {s.label || s.sectorType.replace(/_/g, " ")}
                 </text>
               </g>
@@ -346,8 +346,8 @@ export const PlanPlate = forwardRef<SVGSVGElement, PlanPlateProps>(function Plan
             const [mx, my] = proj.project(mid[0], mid[1]);
             return (
               <g key={sw.id}>
-                <path d={d} fill="none" stroke="#0077CC" strokeWidth="2.5" strokeDasharray="7 4" strokeLinecap="round" />
-                <text x={mx} y={my - 5} textAnchor="middle" fontSize="9" fontWeight={700} fill="#0055AA" stroke={PARCHMENT} strokeWidth="2.5" paintOrder="stroke">
+                <path d={d} fill="none" stroke="#1a6b7a" strokeWidth="1.5" strokeDasharray="10 4" strokeLinecap="round" />
+                <text x={mx} y={my - 5} textAnchor="middle" fontSize="8.5" fontWeight={600} fill="#0f4d58" stroke={PARCHMENT} strokeWidth="2" paintOrder="stroke">
                   {sw.name} · {sw.lengthM} m
                 </text>
               </g>
@@ -359,8 +359,8 @@ export const PlanPlate = forwardRef<SVGSVGElement, PlanPlateProps>(function Plan
               const [x, y] = proj.project(lng, lat);
               return (
                 <g>
-                  <path d={`M${x},${y - 9} L${x + 8},${y + 6} L${x - 8},${y + 6} Z`} fill="#0077CC" stroke="#fff" strokeWidth="1" />
-                  <text x={x + 11} y={y + 3} fontSize="9" fontWeight={700} fill="#0055AA" stroke={PARCHMENT} strokeWidth="2.5" paintOrder="stroke">
+                  <path d={`M${x},${y - 9} L${x + 8},${y + 6} L${x - 8},${y + 6} Z`} fill="#1a6b7a" stroke="#fff" strokeWidth="1" />
+                  <text x={x + 11} y={y + 3} fontSize="9" fontWeight={600} fill="#0f4d58" stroke={PARCHMENT} strokeWidth="2" paintOrder="stroke">
                     Dam site
                   </text>
                 </g>
@@ -381,7 +381,7 @@ export const PlanPlate = forwardRef<SVGSVGElement, PlanPlateProps>(function Plan
               const [x, y] = proj.project(pt[0], pt[1]);
               d += `${i === 0 ? "M" : "L"}${x.toFixed(2)},${y.toFixed(2)}`;
             });
-            return <path key={pw.id} d={d} fill="none" stroke={col} strokeWidth="2.5" strokeDasharray={pw.pathwayType === "fenceline" ? "1 4" : "8 5"} strokeLinecap="round" />;
+            return <path key={pw.id} d={d} fill="none" stroke={col} strokeWidth="1.25" strokeDasharray={pw.pathwayType === "fenceline" ? "1 5" : "9 5"} strokeLinecap="round" />;
           })}
           {structures.map((st) => {
             const footprint = st.footprintGeojson ? outerRing(st.footprintGeojson) : null;
@@ -399,27 +399,39 @@ export const PlanPlate = forwardRef<SVGSVGElement, PlanPlateProps>(function Plan
         </g>
       )}
 
-      {/* ── NORTH ARROW (top-right) ── */}
-      <g transform={`translate(${width - 86}, 92)`}>
-        <line x1="0" y1="26" x2="0" y2="-22" stroke={INK} strokeWidth="1.5" />
-        <path d="M0,-30 L7,-12 L0,-17 L-7,-12 Z" fill={INK} />
-        <text x="0" y="42" textAnchor="middle" fontSize="13" fontWeight={800} fill={INK}>
-          N
-        </text>
+      {/* ── NORTH ARROW (top-right) — elegant architectural style ── */}
+      <g transform={`translate(${width - 74}, 80)`}>
+        {/* Outer ring */}
+        <circle cx="0" cy="0" r="26" fill={PARCHMENT} stroke={RULE} strokeWidth="0.75" fillOpacity="0.94" />
+        {/* Thin cardinal lines */}
+        <line x1="0" y1="-24" x2="0" y2="24" stroke={INK} strokeWidth="0.4" strokeOpacity="0.2" />
+        <line x1="-24" y1="0" x2="24" y2="0" stroke={INK} strokeWidth="0.4" strokeOpacity="0.2" />
+        {/* Diagonal spurs */}
+        <line x1="-17" y1="-17" x2="17" y2="17" stroke={INK} strokeWidth="0.3" strokeOpacity="0.12" />
+        <line x1="17" y1="-17" x2="-17" y2="17" stroke={INK} strokeWidth="0.3" strokeOpacity="0.12" />
+        {/* North pointer — solid, tapered */}
+        <polygon points="0,-22 4,-4 0,-9 -4,-4" fill={INK} />
+        {/* South pointer — outlined only */}
+        <polygon points="0,22 4,4 0,9 -4,4" fill={PARCHMENT_2} stroke={INK} strokeWidth="0.75" />
+        {/* Centre ring */}
+        <circle cx="0" cy="0" r="3.5" fill={PARCHMENT} stroke={INK} strokeWidth="0.75" />
+        {/* N label above ring */}
+        <text x="0" y="-30" textAnchor="middle" fontSize="10" fontWeight={700} fill={INK} fontFamily="monospace" letterSpacing="0.06em">N</text>
       </g>
 
-      {/* ── GRAPHIC SCALE BAR (bottom-left) ── */}
-      <g transform={`translate(${PAD + 4}, ${height - 58})`}>
-        <rect x="0" y="0" width={scaleBar.pixels / 2} height="7" fill={INK} />
-        <rect x={scaleBar.pixels / 2} y="0" width={scaleBar.pixels / 2} height="7" fill="none" stroke={INK} strokeWidth="1" />
-        <line x1="0" y1="-3" x2="0" y2="10" stroke={INK} strokeWidth="1" />
-        <line x1={scaleBar.pixels} y1="-3" x2={scaleBar.pixels} y2="10" stroke={INK} strokeWidth="1" />
-        <text x="0" y="22" fontSize="9" fill={INK} fontFamily="monospace">
-          0
-        </text>
-        <text x={scaleBar.pixels} y="22" textAnchor="middle" fontSize="9" fill={INK} fontFamily="monospace">
-          {scaleBar.label}
-        </text>
+      {/* ── GRAPHIC SCALE BAR (bottom-left) — elegant thin style ── */}
+      <g transform={`translate(${PAD + 6}, ${height - 52})`}>
+        {/* Segmented bar: first half filled, second half open */}
+        <rect x="0" y="0" width={scaleBar.pixels / 2} height="5" fill={INK} fillOpacity="0.82" />
+        <rect x={scaleBar.pixels / 2} y="0" width={scaleBar.pixels / 2} height="5" fill="none" stroke={INK} strokeWidth="0.75" />
+        {/* End ticks */}
+        <line x1="0" y1="-2" x2="0" y2="7" stroke={INK} strokeWidth="0.75" />
+        <line x1={scaleBar.pixels} y1="-2" x2={scaleBar.pixels} y2="7" stroke={INK} strokeWidth="0.75" />
+        {/* Mid tick */}
+        <line x1={scaleBar.pixels / 2} y1="-1" x2={scaleBar.pixels / 2} y2="6" stroke={INK} strokeWidth="0.5" strokeOpacity="0.5" />
+        {/* Labels */}
+        <text x="0" y="18" fontSize="8" fill={INK} fontFamily="monospace" fillOpacity="0.7">0</text>
+        <text x={scaleBar.pixels} y="18" textAnchor="end" fontSize="8" fill={INK} fontFamily="monospace" fillOpacity="0.7">{scaleBar.label}</text>
       </g>
 
       {/* ── TITLE BLOCK (bottom-right) ── */}
@@ -431,25 +443,26 @@ export const PlanPlate = forwardRef<SVGSVGElement, PlanPlateProps>(function Plan
         const layerNames = activeLayers.map((k) => LAYER_TITLES[k]).join(" · ");
         return (
           <g transform={`translate(${tx}, ${ty})`}>
-            <rect x="0" y="0" width={tbW} height={tbH} fill="#fffdf8" stroke={INK} strokeWidth="1.5" />
-            <line x1="0" y1="30" x2={tbW} y2="30" stroke={RULE} strokeWidth="0.75" />
-            <line x1="0" y1="62" x2={tbW} y2="62" stroke={RULE} strokeWidth="0.75" />
-            <text x="12" y="20" fontSize="14" fontWeight={800} fill={INK} fontFamily="Georgia, serif">
+            <rect x="0" y="0" width={tbW} height={tbH} fill={PARCHMENT} stroke={INK} strokeWidth="0.75" />
+            <line x1="0" y1="30" x2={tbW} y2="30" stroke={INK} strokeWidth="0.5" strokeOpacity="0.3" />
+            <line x1="0" y1="62" x2={tbW} y2="62" stroke={INK} strokeWidth="0.5" strokeOpacity="0.3" />
+            {/* Property name — italic serif */}
+            <text x="12" y="21" fontSize="13" fontWeight={400} fill={INK} fontFamily="Georgia, serif" fontStyle="italic">
               {property.name}
             </text>
-            <text x={tbW - 12} y="20" textAnchor="end" fontSize="9" fill={RULE} fontFamily="monospace">
-              TERRAGUARD OS
+            <text x={tbW - 12} y="21" textAnchor="end" fontSize="7.5" fill={RULE} fontFamily="monospace" letterSpacing="0.08em">
+              PATTERN STUDIO
             </text>
-            <text x="12" y="50" fontSize="11" fontWeight={600} fill={INK}>
+            <text x="12" y="50" fontSize="10.5" fontWeight={500} fill={INK} fontFamily="monospace" letterSpacing="-0.01em">
               {layerNames || "Site Plan"}
             </text>
-            <text x="12" y="78" fontSize="9" fill={RULE} fontFamily="monospace">
+            <text x="12" y="78" fontSize="8.5" fill={RULE} fontFamily="monospace">
               {fmtArea(property)}
             </text>
-            <text x={tbW - 12} y="50" textAnchor="end" fontSize="9" fill={RULE} fontFamily="monospace">
+            <text x={tbW - 12} y="50" textAnchor="end" fontSize="8.5" fill={RULE} fontFamily="monospace">
               1:{repFraction.toLocaleString()} approx
             </text>
-            <text x={tbW - 12} y="78" textAnchor="end" fontSize="9" fill={RULE} fontFamily="monospace">
+            <text x={tbW - 12} y="78" textAnchor="end" fontSize="8.5" fill={RULE} fontFamily="monospace">
               {new Date().toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}
             </text>
           </g>

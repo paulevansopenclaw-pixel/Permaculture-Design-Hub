@@ -107,10 +107,10 @@ function staticMapUrl(
         ...simp,
         properties: {
           stroke: fill,
-          "stroke-width": 3,
-          "stroke-opacity": 1,
+          "stroke-width": 1.5,
+          "stroke-opacity": 0.9,
           fill,
-          "fill-opacity": 0.12,
+          "fill-opacity": 0.08,
         },
       }),
     );
@@ -290,21 +290,73 @@ function SpacingDiagram() {
 }
 
 function MapFrame({ url, caption, fallback }: { url: string | null; caption: string; fallback?: string }) {
+  const TICK_SZ = 12;
+  const TICK_OFF = 10;
+  const tickBase: React.CSSProperties = { position: "absolute", width: TICK_SZ, height: TICK_SZ, pointerEvents: "none" };
+  const C = "1px solid rgba(252,249,242,0.55)";
+
   if (!url) {
     return (
       <figure style={{ margin: 0 }}>
-        <div style={{ width: "100%", height: 200, border: RULE, background: LIGHT, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10 }}>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="1.5"><rect x="3" y="3" width="18" height="18" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21,15 16,10 5,21" /></svg>
-          <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 9, textTransform: "uppercase", letterSpacing: "0.12em", color: "#bbb" }}>{fallback ?? "Map unavailable"}</span>
+        <div style={{ width: "100%", height: 200, border: "1px solid rgba(74,93,63,0.18)", background: "#f4f1eb", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, borderRadius: 2 }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="1.25"><rect x="3" y="3" width="18" height="18" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21,15 16,10 5,21" /></svg>
+          <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 8, textTransform: "uppercase", letterSpacing: "0.14em", color: "#ccc" }}>{fallback ?? "Map unavailable"}</span>
         </div>
-        <figcaption style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 9, textTransform: "uppercase", letterSpacing: "0.14em", color: "#bbb", marginTop: 8 }}>{caption}</figcaption>
+        <figcaption style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 9, textTransform: "uppercase", letterSpacing: "0.14em", color: "#bbb", marginTop: 10 }}>{caption}</figcaption>
       </figure>
     );
   }
   return (
     <figure style={{ margin: 0 }}>
-      <img src={url} alt={caption} style={{ display: "block", width: "100%", border: RULE }} />
-      <figcaption style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 9, textTransform: "uppercase", letterSpacing: "0.14em", color: "#aaa", marginTop: 8 }}>{caption}</figcaption>
+      <div style={{
+        position: "relative", lineHeight: 0, borderRadius: 2, overflow: "hidden",
+        boxShadow: "0 4px 28px rgba(44,36,22,0.15), 0 0 0 1px rgba(74,93,63,0.2)",
+      }}>
+        <img src={url} alt={caption} style={{ display: "block", width: "100%" }} />
+
+        {/* Corner tick marks — architectural blueprint style */}
+        <span style={{ ...tickBase, top: TICK_OFF, left: TICK_OFF, borderTop: C, borderLeft: C }} />
+        <span style={{ ...tickBase, top: TICK_OFF, right: TICK_OFF, borderTop: C, borderRight: C }} />
+        <span style={{ ...tickBase, bottom: TICK_OFF, left: TICK_OFF, borderBottom: C, borderLeft: C }} />
+        <span style={{ ...tickBase, bottom: TICK_OFF, right: TICK_OFF, borderBottom: C, borderRight: C }} />
+
+        {/* North arrow panel — top-right */}
+        <div style={{
+          position: "absolute", top: 14, right: 14,
+          background: "rgba(24,18,12,0.76)", backdropFilter: "blur(6px)",
+          border: "1px solid rgba(252,249,242,0.1)", borderRadius: 3,
+          padding: "10px 9px 8px", display: "flex", flexDirection: "column", alignItems: "center", gap: 5,
+        }}>
+          <svg width="18" height="30" viewBox="0 0 18 30" style={{ display: "block" }}>
+            <line x1="9" y1="2" x2="9" y2="28" stroke="rgba(252,249,242,0.15)" strokeWidth="0.6" />
+            {/* North half — cream solid */}
+            <polygon points="9,0 13,14 9,11 5,14" fill="#fcf9f2" />
+            {/* South half — translucent */}
+            <polygon points="9,22 13,14 9,11 5,14" fill="rgba(252,249,242,0.2)" />
+            <circle cx="9" cy="14" r="2" fill="none" stroke="rgba(252,249,242,0.4)" strokeWidth="0.75" />
+          </svg>
+          <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 7, color: "rgba(252,249,242,0.8)", letterSpacing: "0.2em", lineHeight: 1 }}>N</span>
+        </div>
+
+        {/* Scale + label panel — bottom-left */}
+        <div style={{
+          position: "absolute", bottom: 12, left: 12,
+          background: "rgba(24,18,12,0.72)", backdropFilter: "blur(6px)",
+          border: "1px solid rgba(252,249,242,0.08)", borderRadius: 3,
+          padding: "8px 12px", display: "flex", flexDirection: "column", gap: 4,
+        }}>
+          {/* Minimalist scale bar */}
+          <div style={{ display: "flex", alignItems: "center" }}>
+            <div style={{ width: 1, height: 5, background: "rgba(252,249,242,0.55)" }} />
+            <div style={{ width: 40, height: 1, background: "rgba(252,249,242,0.55)" }} />
+            <div style={{ width: 1, height: 5, background: "rgba(252,249,242,0.55)" }} />
+          </div>
+          <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 7, color: "rgba(252,249,242,0.4)", letterSpacing: "0.1em" }}>Scale varies</span>
+          <div style={{ height: 1, background: "rgba(252,249,242,0.1)" }} />
+          <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 7, color: "rgba(252,249,242,0.35)", letterSpacing: "0.1em", textTransform: "uppercase" }}>Pattern Studio</span>
+        </div>
+      </div>
+      <figcaption style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 9, textTransform: "uppercase", letterSpacing: "0.14em", color: "#aaa", marginTop: 10 }}>{caption}</figcaption>
     </figure>
   );
 }
@@ -768,9 +820,9 @@ export default function MasterDesignPage() {
                   {[
                     { label: "Zones", count: layerCounts.zones, color: MID },
                     { label: "Structures", count: layerCounts.structures, color: FOREST },
-                    { label: "Swales", count: layerCounts.swales, color: "#3b6ea5" },
-                    { label: "Pathways", count: layerCounts.pathways, color: TAN },
-                    { label: "Sectors", count: layerCounts.sectors, color: "#7a9b60" },
+                    { label: "Swales", count: layerCounts.swales, color: "#1a6b7a" },
+                    { label: "Pathways", count: layerCounts.pathways, color: "#c09050" },
+                    { label: "Sectors", count: layerCounts.sectors, color: "#7a8a6a" },
                   ].filter(l => l.count > 0).map(({ label, count, color }) => (
                     <div
                       key={label}

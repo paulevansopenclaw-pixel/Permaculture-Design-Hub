@@ -15,12 +15,12 @@ const router: IRouter = Router();
 
 router.get("/properties", async (req, res): Promise<void> => {
   if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
-  const whereClause = req.user.isStaff
-    ? or(
-        eq(propertiesTable.ownerId, req.user.id),
-        and(isNull(propertiesTable.ownerId), eq(propertiesTable.status, "enquiry")),
-      )
-    : eq(propertiesTable.ownerId, req.user.id);
+  // All authenticated users are designers in this studio — they see their own
+  // properties plus any unclaimed enquiry leads in the shared inbox.
+  const whereClause = or(
+    eq(propertiesTable.ownerId, req.user.id),
+    and(isNull(propertiesTable.ownerId), eq(propertiesTable.status, "enquiry")),
+  );
   const rows = await db
     .select()
     .from(propertiesTable)
@@ -90,7 +90,6 @@ router.delete("/properties/:id", async (req, res): Promise<void> => {
 
 router.post("/properties/:id/claim", async (req, res): Promise<void> => {
   if (!req.isAuthenticated()) { res.status(401).json({ error: "Unauthorized" }); return; }
-  if (!req.user.isStaff) { res.status(403).json({ error: "Forbidden" }); return; }
   const params = ClaimPropertyParams.safeParse(req.params);
   if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
   const [claimed] = await db
