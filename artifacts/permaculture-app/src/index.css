@@ -237,3 +237,18 @@
 @layer utilities {
   input[type="search"]::-webkit-search-cancel-button { @apply hidden; }
 }
+
+/* ── Leaflet cadastral / PDF-export polish ──────────────────────────────────── */
+
+/* Hide Leaflet zoom controls for a clean cartographic dossier look */
+.leaflet-control-zoom { display: none !important; }
+
+/* Smooth SVG path rendering on all Leaflet vector layers */
+.leaflet-overlay-pane svg path {
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Keep controls visible when a .show-map-controls class is present on an ancestor
+   (add it to any interactive view that needs the zoom buttons back) */
+.show-map-controls .leaflet-control-zoom { display: block !important; }

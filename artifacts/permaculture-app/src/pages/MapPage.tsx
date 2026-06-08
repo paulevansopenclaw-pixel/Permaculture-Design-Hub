@@ -82,6 +82,60 @@ async function searchAddress(query: string, token: string) {
   return data.features ?? [];
 }
 
+// ─── NSW Spatial Services — Official Cadastral Boundary ──────────────────────
+// Queries the NSW Government ArcGIS MapServer (public, no auth required).
+// Equivalent to: L.esri.query({ url }).nearby([lat, lng], 5).run()
+async function fetchOfficialBoundary(
+  lat: number,
+  lng: number,
+): Promise<GeoJSON.Polygon | GeoJSON.MultiPolygon | null> {
+  const base =
+    "https://maps.six.nsw.gov.au/arcgis/rest/services/public/NSW_Cadastre/MapServer/0/query";
+  const params = new URLSearchParams({
+    geometry: JSON.stringify({ x: lng, y: lat, spatialReference: { wkid: 4326 } }),
+    geometryType: "esriGeometryPoint",
+    inSR: "4326",
+    outSR: "4326",
+    spatialRel: "esriSpatialRelIntersects",
+    returnGeometry: "true",
+    outFields: "*",
+    f: "geojson",
+  });
+  try {
+    const res = await fetch(`${base}?${params.toString()}`);
+    if (!res.ok) return null;
+    const fc = (await res.json()) as GeoJSON.FeatureCollection;
+    if (!fc.features?.length) return null;
+    // Prefer the feature that actually contains the clicked point; then sort by
+    // area ascending so the most specific cadastral lot wins.
+    const pt = turf.point([lng, lat]);
+    const containing = fc.features.filter((f) => {
+      try {
+        return turf.booleanPointInPolygon(pt, f as GeoJSON.Feature<GeoJSON.Polygon>);
+      } catch {
+        return false;
+      }
+    });
+    const candidates = containing.length > 0 ? containing : fc.features;
+    candidates.sort((a, b) => {
+      try {
+        return (
+          turf.area(a as GeoJSON.Feature) - turf.area(b as GeoJSON.Feature)
+        );
+      } catch {
+        return 0;
+      }
+    });
+    const geom = candidates[0]?.geometry;
+    if (geom?.type === "Polygon" || geom?.type === "MultiPolygon") {
+      return geom as GeoJSON.Polygon | GeoJSON.MultiPolygon;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 async function fetchParcelBoundary(lat: number, lng: number): Promise<GeoJSON.Polygon[]> {
   // Primary: is_in finds polygons that actually contain the point (most accurate)
   // Fallback: small around radius in case is_in returns nothing
@@ -839,7 +893,14 @@ export default function MapPage() {
         features: [{ type: "Feature", geometry: geojson as unknown as GeoJSON.Geometry, properties: {} }],
       };
       const layer = L.geoJSON(fc as any, {
-        style: () => ({ color: "#2D6A1A", weight: 2, opacity: 0.9, fillColor: "#2D6A1A", fillOpacity: 0.12 }),
+        style: () => ({
+          color: "#2C3E50",
+          weight: 3,
+          dashArray: "6, 6",
+          fillColor: "#27AE60",
+          fillOpacity: 0.04,
+          lineJoin: "round" as CanvasLineJoin,
+        }),
       }).addTo(map);
       try {
         const bounds = layer.getBounds();
@@ -2541,23 +2602,56 @@ export default function MapPage() {
     setOverpassAlternatives([]);
     setEditBoundaryMode(false);
     setIsFetchingParcel(true);
-    fetchParcelBoundary(lat, lng).then((polygons) => {
-      setIsFetchingParcel(false);
-      if (polygons.length > 0) {
-        const best = polygons[0];
-        const ha = turf.area(turf.feature(best)) / 10_000;
-        setPendingBoundary(best);
+    // Primary: NSW Spatial Services cadastral API (official government survey data).
+    // Fallback: Overpass/OSM (open data, less precise for rural cadastres).
+    fetchOfficialBoundary(lat, lng).then((officialGeom) => {
+      if (officialGeom) {
+        setIsFetchingParcel(false);
+        // Normalise MultiPolygon → the largest individual Polygon
+        let poly: GeoJSON.Polygon;
+        if (officialGeom.type === "MultiPolygon") {
+          const polys = (officialGeom as GeoJSON.MultiPolygon).coordinates.map(
+            (coords): GeoJSON.Polygon => ({ type: "Polygon", coordinates: coords }),
+          );
+          polys.sort((a, b) => {
+            try { return turf.area(turf.feature(b)) - turf.area(turf.feature(a)); }
+            catch { return 0; }
+          });
+          poly = polys[0];
+        } else {
+          poly = officialGeom as GeoJSON.Polygon;
+        }
+        const ha = turf.area(turf.feature(poly)) / 10_000;
+        setPendingBoundary(poly);
         setPendingAreaHa(ha);
         setPendingAreaAc(ha * 2.47105);
-        if (polygons.length > 1) setOverpassAlternatives(polygons);
         setBoundaryEditVersion((v) => v + 1);
         setEditBoundaryMode(true);
         try {
-          const tempLayer = L.geoJSON(best as any);
+          const tempLayer = L.geoJSON(poly as any);
           map.fitBounds(tempLayer.getBounds(), { padding: [60, 60] });
         } catch { /* no-op */ }
+      } else {
+        // NSW returned nothing (outside NSW or no cadastre match) — fall back to Overpass
+        fetchParcelBoundary(lat, lng).then((polygons) => {
+          setIsFetchingParcel(false);
+          if (polygons.length > 0) {
+            const best = polygons[0];
+            const ha = turf.area(turf.feature(best)) / 10_000;
+            setPendingBoundary(best);
+            setPendingAreaHa(ha);
+            setPendingAreaAc(ha * 2.47105);
+            if (polygons.length > 1) setOverpassAlternatives(polygons);
+            setBoundaryEditVersion((v) => v + 1);
+            setEditBoundaryMode(true);
+            try {
+              const tempLayer = L.geoJSON(best as any);
+              map.fitBounds(tempLayer.getBounds(), { padding: [60, 60] });
+            } catch { /* no-op */ }
+          }
+          // no polygons → empty state, draw fallback shows in sidebar
+        });
       }
-      // no polygons → empty state, draw fallback shows in sidebar
     });
   }
 
