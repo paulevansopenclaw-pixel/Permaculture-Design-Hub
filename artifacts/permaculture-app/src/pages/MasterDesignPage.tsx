@@ -27,21 +27,27 @@ const MID     = "#4a5d3f";
 const CREAM   = "#fcf9f2";
 const INK     = "#1a1c18";
 const TAN     = "#6b5f4e";
-const RULE    = "1px solid rgba(44,53,37,0.15)";
+const RULE    = "1px solid rgba(44,53,37,0.14)";
 const LIGHT   = "#f4f1eb";
+// Card palette — sage highlights on deep green
+const CARD_BG_A = "#233020";
+const CARD_BG_B = "#1c2a1a";
+const CARD_SAGE = "rgba(196,218,168,0.55)";
+const CARD_DIM  = "rgba(196,218,168,0.35)";
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 interface PlantRec { name: string; latinName?: string; layer: string; purpose: string; zones?: string; notes?: string; }
 interface DesignRecsType { plantingPrinciples?: string; plants?: PlantRec[]; }
 
 // ─── Guild data ───────────────────────────────────────────────────────────────
+// Organic muted palette: warm bark → deep moss → sage olive → clay ochre
 const GUILD_LAYERS = [
   {
     layer: "Canopy · Fruit",
     height: "6–10 m",
     spacing: "Central anchor",
-    color: "#2c3525",
-    lightColor: "rgba(44,53,37,0.08)",
+    color: "#3d2e1e",
+    lightColor: "rgba(61,46,30,0.09)",
     plants: ["Apple", "Pear", "Plum", "Cherry", "Mulberry"],
     role: "Primary food yield; shade & shelter for lower layers",
     notes: "Plant 6–8 m apart. Prune to open-vase form for light penetration.",
@@ -50,8 +56,8 @@ const GUILD_LAYERS = [
     layer: "Nitrogen Fixer",
     height: "3–5 m",
     spacing: "2–3 m from trunk",
-    color: "#4a5d3f",
-    lightColor: "rgba(74,93,63,0.08)",
+    color: "#3a5c2e",
+    lightColor: "rgba(58,92,46,0.09)",
     plants: ["Autumn Olive", "Tagasaste", "Siberian Pea Tree", "Black Locust"],
     role: "Fixes atmospheric nitrogen via root bacteria; fast biomass",
     notes: "Coppice annually at 1 m to maximise nitrogen flush and mulch.",
@@ -60,8 +66,8 @@ const GUILD_LAYERS = [
     layer: "Dynamic Accumulator",
     height: "0.5–1.5 m",
     spacing: "0.5–1.5 m from trunk",
-    color: "#7a9b60",
-    lightColor: "rgba(122,155,96,0.1)",
+    color: "#6b8a45",
+    lightColor: "rgba(107,138,69,0.1)",
     plants: ["Comfrey", "Yarrow", "Borage", "Chicory", "Dandelion"],
     role: "Mines deep nutrients; chop-and-drop creates living mulch",
     notes: "Comfrey: plant 3–4 per tree. Chop 3×/season before flowering.",
@@ -70,8 +76,8 @@ const GUILD_LAYERS = [
     layer: "Insectary · Herb",
     height: "0–0.5 m",
     spacing: "Ground cover",
-    color: "#a8895c",
-    lightColor: "rgba(168,137,92,0.1)",
+    color: "#b08650",
+    lightColor: "rgba(176,134,80,0.1)",
     plants: ["Fennel", "Dill", "Lavender", "Phacelia", "Chamomile"],
     role: "Attracts predatory insects & pollinators; aromatic pest deterrent",
     notes: "Allow to flower. Fennel: keep 1.5 m from other herbs — allelopathic.",
@@ -118,27 +124,69 @@ function staticMapUrl(
 // ─── Sub-components ───────────────────────────────────────────────────────────
 function SectionHeader({ n, title, sub }: { n: string; title: string; sub?: string }) {
   return (
-    <div style={{ marginBottom: 36 }}>
-      <div style={{ display: "flex", alignItems: "baseline", gap: 16, marginBottom: 8 }}>
-        <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.2em", color: MID }}>{n}</span>
-        <div style={{ flex: 1, height: 1, background: RULE }} />
+    <div style={{ marginBottom: 52 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 18, marginBottom: 22 }}>
+        <span style={{
+          fontFamily: "'IBM Plex Mono', monospace",
+          fontSize: 9,
+          textTransform: "uppercase",
+          letterSpacing: "0.26em",
+          color: MID,
+          whiteSpace: "nowrap",
+        }}>{n}</span>
+        <div style={{ flex: 1, height: 1, background: `linear-gradient(to right, rgba(74,93,63,0.45), rgba(74,93,63,0.06))` }} />
       </div>
-      <h2 style={{ margin: 0, fontFamily: "'Fraunces', Georgia, serif", fontSize: "clamp(28px,3.5vw,44px)", fontWeight: 300, letterSpacing: "-0.02em", color: INK, lineHeight: 1.05 }}>{title}</h2>
-      {sub && <p style={{ margin: "10px 0 0", fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: TAN, lineHeight: 1.6 }}>{sub}</p>}
+      <h2 style={{
+        margin: 0,
+        fontFamily: "'Fraunces', Georgia, serif",
+        fontSize: "clamp(30px,4vw,52px)",
+        fontWeight: 400,
+        fontStyle: "italic",
+        letterSpacing: "-0.025em",
+        color: INK,
+        lineHeight: 1.0,
+      }}>{title}</h2>
+      {sub && <p style={{ margin: "16px 0 0", fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: TAN, lineHeight: 1.75, maxWidth: 620 }}>{sub}</p>}
     </div>
   );
 }
 
 function MetricCard({ label, value, unit, sub }: { label: string; value: string | number | null | undefined; unit?: string; sub?: string }) {
   const display = value != null ? String(value) : "—";
+  const hasValue = value != null;
   return (
-    <div style={{ border: RULE, padding: "20px 22px", background: "#fff" }}>
-      <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 9, textTransform: "uppercase", letterSpacing: "0.18em", color: TAN, marginBottom: 10 }}>{label}</div>
+    <div style={{
+      borderRadius: 8,
+      padding: "22px 20px 20px",
+      background: `linear-gradient(150deg, ${CARD_BG_A} 0%, ${CARD_BG_B} 100%)`,
+      border: "1px solid rgba(138,171,106,0.16)",
+      boxShadow: "inset 0 1px 0 rgba(255,255,255,0.05), 0 4px 18px rgba(0,0,0,0.22)",
+    }}>
+      <div style={{
+        fontFamily: "'IBM Plex Mono', monospace",
+        fontSize: 8,
+        textTransform: "uppercase",
+        letterSpacing: "0.22em",
+        color: CARD_SAGE,
+        marginBottom: 16,
+        lineHeight: 1,
+      }}>{label}</div>
       <div style={{ display: "flex", alignItems: "baseline", gap: 5 }}>
-        <span style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 34, fontWeight: 400, letterSpacing: "-0.02em", color: value != null ? INK : "#ccc", lineHeight: 1 }}>{display}</span>
-        {unit && value != null && <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: TAN }}>{unit}</span>}
+        <span style={{
+          fontFamily: "'Fraunces', Georgia, serif",
+          fontSize: 38,
+          fontWeight: 400,
+          letterSpacing: "-0.03em",
+          color: hasValue ? CREAM : "rgba(196,218,168,0.18)",
+          lineHeight: 1,
+        }}>{display}</span>
+        {unit && hasValue && (
+          <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: CARD_DIM, letterSpacing: "0.04em" }}>{unit}</span>
+        )}
       </div>
-      {sub && <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 9, color: "#aaa", marginTop: 6 }}>{sub}</div>}
+      {sub && (
+        <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 8, color: "rgba(196,218,168,0.38)", marginTop: 10, letterSpacing: "0.06em" }}>{sub}</div>
+      )}
     </div>
   );
 }
@@ -168,7 +216,7 @@ function SunDiagram({ lat, wind }: { lat?: number | null; wind?: string | null }
   const compass = [{ l: "N", d: 0 }, { l: "E", d: 90 }, { l: "S", d: 180 }, { l: "W", d: 270 }];
   return (
     <svg viewBox="0 0 240 240" style={{ width: "100%", maxWidth: 220, height: "auto", display: "block" }}>
-      <circle cx={cx} cy={cy} r={r + 36} fill="#fff" />
+      <circle cx={cx} cy={cy} r={r + 36} fill={CREAM} />
       {[0.38, 0.58, 0.78, 0.96].map(fr => <circle key={fr} cx={cx} cy={cy} r={r * fr} fill="none" stroke="#eee" strokeWidth="0.7" />)}
       {[0, 45, 90, 135].map(d => { const [x1, y1] = xy(d, r * 0.96); const [x2, y2] = xy(d + 180, r * 0.96); return <line key={d} x1={f(x1)} y1={f(y1)} x2={f(x2)} y2={f(y2)} stroke="#eee" strokeWidth="0.7" />; })}
       <path d={arc(wd - 26, wd + 26, r * 0.28, r * 0.86, 0, 1)} fill="rgba(160,82,45,0.14)" stroke={TAN} strokeWidth="1.5" />
@@ -184,31 +232,59 @@ function SunDiagram({ lat, wind }: { lat?: number | null; wind?: string | null }
 
 function SpacingDiagram() {
   const cx = 140, cy = 140;
-  const radii = [16, 42, 72, 110];
-  const colors = [FOREST, MID, "#7a9b60", "#a8895c"];
-  const labels = ["Canopy", "N-Fixer", "Accumulator", "Insectary"];
-  const spacings = ["centre", "2–3 m", "0.5–1.5 m", "ground"];
+  // Radii and organic muted palette matching GUILD_LAYERS
+  const rings = [
+    { r: 18,  color: "#3d2e1e", label: "Canopy",      spacing: "centre",     dash: false },
+    { r: 46,  color: "#3a5c2e", label: "N-Fixer",     spacing: "2–3 m",      dash: true  },
+    { r: 76,  color: "#6b8a45", label: "Accumulator", spacing: "0.5–1.5 m",  dash: true  },
+    { r: 114, color: "#b08650", label: "Insectary",   spacing: "ground",     dash: true  },
+  ];
+  const labelAngles = [-72, -48, -24, 0];
   return (
     <svg viewBox="0 0 280 280" style={{ width: "100%", maxWidth: 260, height: "auto", display: "block" }}>
-      <rect width="280" height="280" fill="#fff" />
-      {radii.map((r, i) => (
-        <circle key={i} cx={cx} cy={cy} r={r} fill={colors[i] + "18"} stroke={colors[i]} strokeWidth="1.5" strokeDasharray={i > 0 ? "4 3" : "none"} />
+      {/* Cream background */}
+      <rect width="280" height="280" fill={CREAM} rx="4" />
+      {/* Subtle grid rings */}
+      {[0.3, 0.55, 0.78].map(fr => (
+        <circle key={fr} cx={cx} cy={cy} r={114 * fr} fill="none" stroke="rgba(44,53,37,0.07)" strokeWidth="0.5" />
       ))}
-      {radii.map((r, i) => {
-        const angle = -60 + i * 25;
-        const rad = (angle * Math.PI) / 180;
-        const lx = cx + (r + 16) * Math.cos(rad);
-        const ly = cy + (r + 16) * Math.sin(rad);
+      {/* Guild rings — outermost first so inner rings draw on top */}
+      {[...rings].reverse().map((ring, ri) => {
+        const i = rings.length - 1 - ri;
+        return (
+          <circle
+            key={i}
+            cx={cx} cy={cy} r={ring.r}
+            fill={ring.color + "1a"}
+            stroke={ring.color}
+            strokeWidth={i === 0 ? 2 : 1.5}
+            strokeDasharray={ring.dash ? "5 3" : undefined}
+            strokeLinecap="round"
+          />
+        );
+      })}
+      {/* Leader lines + labels */}
+      {rings.map((ring, i) => {
+        const angleDeg = labelAngles[i];
+        const rad = (angleDeg * Math.PI) / 180;
+        const x0 = cx + ring.r * Math.cos(rad);
+        const y0 = cy + ring.r * Math.sin(rad);
+        const x1 = cx + (ring.r + 18) * Math.cos(rad);
+        const y1 = cy + (ring.r + 18) * Math.sin(rad);
+        const anchor = x1 > cx ? "start" : "end";
+        const dx = x1 > cx ? 3 : -3;
         return (
           <g key={i}>
-            <line x1={cx + r * Math.cos(rad)} y1={cy + r * Math.sin(rad)} x2={lx} y2={ly} stroke={colors[i]} strokeWidth="1" />
-            <text x={lx + (lx > cx ? 3 : -3)} y={ly} fill={colors[i]} fontSize="7" fontFamily="monospace" fontWeight="900" textAnchor={lx > cx ? "start" : "end"} dominantBaseline="middle">{labels[i]}</text>
-            <text x={lx + (lx > cx ? 3 : -3)} y={ly + 9} fill="#aaa" fontSize="6" fontFamily="monospace" textAnchor={lx > cx ? "start" : "end"} dominantBaseline="middle">{spacings[i]}</text>
+            <line x1={x0} y1={y0} x2={x1} y2={y1} stroke={ring.color} strokeWidth="1" strokeOpacity="0.7" />
+            <text x={x1 + dx} y={y1 - 2} fill={ring.color} fontSize="7.5" fontFamily="'IBM Plex Mono', monospace" fontWeight="600" textAnchor={anchor} dominantBaseline="auto" letterSpacing="0.04em">{ring.label}</text>
+            <text x={x1 + dx} y={y1 + 9} fill={ring.color + "99"} fontSize="6" fontFamily="'IBM Plex Mono', monospace" textAnchor={anchor} dominantBaseline="auto">{ring.spacing}</text>
           </g>
         );
       })}
-      <circle cx={cx} cy={cy} r={5} fill={FOREST} />
-      <text x={cx} y={cy + 20} textAnchor="middle" fill={INK} fontSize="6" fontFamily="monospace" fontWeight="900" letterSpacing="0.08em">TRUNK</text>
+      {/* Centre trunk dot */}
+      <circle cx={cx} cy={cy} r={6} fill="#3d2e1e" />
+      <circle cx={cx} cy={cy} r={3} fill={CREAM} />
+      <text x={cx} y={cy + 22} textAnchor="middle" fill={INK} fontSize="6.5" fontFamily="'IBM Plex Mono', monospace" fontWeight="700" letterSpacing="0.1em">TRUNK</text>
     </svg>
   );
 }
@@ -540,11 +616,11 @@ export default function MasterDesignPage() {
               </div>
 
               {/* Guild table */}
-              <div style={{ border: RULE, overflow: "hidden" }}>
+              <div style={{ border: RULE, overflow: "hidden", borderRadius: 10, boxShadow: "0 2px 12px rgba(44,53,37,0.08)" }}>
                 {/* Table header */}
-                <div style={{ display: "grid", gridTemplateColumns: "200px 1fr 1fr 200px", background: FOREST, padding: "12px 20px", gap: 16 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "200px 1fr 1fr 200px", background: FOREST, padding: "14px 22px", gap: 16 }}>
                   {["Guild Layer · Height", "Plants", "Function", "Practical Notes"].map((h) => (
-                    <div key={h} className="mono" style={{ fontSize: 8, textTransform: "uppercase", letterSpacing: "0.16em", color: "rgba(252,249,242,0.65)", fontWeight: 500 }}>{h}</div>
+                    <div key={h} className="mono" style={{ fontSize: 8, textTransform: "uppercase", letterSpacing: "0.18em", color: "rgba(252,249,242,0.6)", fontWeight: 500 }}>{h}</div>
                   ))}
                 </div>
 
@@ -555,9 +631,9 @@ export default function MasterDesignPage() {
                       display: "grid",
                       gridTemplateColumns: "200px 1fr 1fr 200px",
                       gap: 16,
-                      padding: "20px 20px",
+                      padding: "22px 22px",
                       borderTop: i === 0 ? "none" : RULE,
-                      background: i % 2 === 0 ? "#fff" : LIGHT,
+                      background: i % 2 === 0 ? "#fff" : CREAM,
                       alignItems: "start",
                     }}
                   >
@@ -577,7 +653,7 @@ export default function MasterDesignPage() {
                         <span
                           key={p}
                           className="mono"
-                          style={{ fontSize: 9, padding: "3px 8px", border: `1px solid ${g.color}40`, background: g.lightColor, color: g.color }}
+                          style={{ fontSize: 9, padding: "4px 10px", borderRadius: 4, border: `1px solid ${g.color}38`, background: g.lightColor, color: g.color, letterSpacing: "0.04em" }}
                         >{p}</span>
                       ))}
                     </div>
@@ -596,23 +672,38 @@ export default function MasterDesignPage() {
               </div>
 
               {/* Spacing table */}
-              <div style={{ marginTop: 32 }}>
-                <div className="mono" style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "0.18em", color: TAN, marginBottom: 16 }}>Planting Distances from Central Trunk</div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 1, background: RULE }}>
-                  {["Canopy Tree", "Nitrogen Fixer", "Dynamic Accumulator", "Insectary / Herb"].map((h) => (
-                    <div key={h} style={{ background: FOREST + "10", padding: "10px 14px" }}>
-                      <div className="mono" style={{ fontSize: 8, textTransform: "uppercase", letterSpacing: "0.12em", color: FOREST, marginBottom: 4 }}>{h}</div>
+              <div style={{ marginTop: 36 }}>
+                <div className="mono" style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "0.2em", color: TAN, marginBottom: 16 }}>Planting Distances from Central Trunk</div>
+                <div style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(4,1fr)",
+                  borderRadius: 8,
+                  overflow: "hidden",
+                  border: RULE,
+                  boxShadow: "0 2px 8px rgba(44,53,37,0.07)",
+                }}>
+                  {[
+                    { h: "Canopy Tree",         color: "#3d2e1e" },
+                    { h: "Nitrogen Fixer",       color: "#3a5c2e" },
+                    { h: "Dynamic Accumulator",  color: "#6b8a45" },
+                    { h: "Insectary / Herb",     color: "#b08650" },
+                  ].map(({ h, color }) => (
+                    <div key={h} style={{ background: color + "12", padding: "12px 16px", borderRight: `1px solid ${color}20` }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                        <div style={{ width: 7, height: 7, borderRadius: "50%", background: color, flexShrink: 0 }} />
+                        <div className="mono" style={{ fontSize: 8, textTransform: "uppercase", letterSpacing: "0.12em", color, lineHeight: 1.3 }}>{h}</div>
+                      </div>
                     </div>
                   ))}
                   {[
-                    { distance: "Central anchor", note: "Every 6–8 m row spacing. Open-vase prune." },
-                    { distance: "2–3 m from trunk", note: "1–2 plants per side. Coppice annually." },
-                    { distance: "0.5–1.5 m from trunk", note: "3–4 Comfrey per tree. Chop 3×/season." },
-                    { distance: "Ground cover", note: "Dense understory. Allow flowering in spring." },
+                    { distance: "Central anchor",      note: "Every 6–8 m row spacing. Open-vase prune.", color: "#3d2e1e" },
+                    { distance: "2–3 m from trunk",    note: "1–2 plants per side. Coppice annually.",    color: "#3a5c2e" },
+                    { distance: "0.5–1.5 m from trunk",note: "3–4 Comfrey per tree. Chop 3×/season.",    color: "#6b8a45" },
+                    { distance: "Ground cover",        note: "Dense understory. Allow flowering in spring.", color: "#b08650" },
                   ].map((row, i) => (
-                    <div key={i} style={{ background: "#fff", padding: "10px 14px", borderTop: RULE }}>
-                      <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 16, fontWeight: 300, color: INK, marginBottom: 4 }}>{row.distance}</div>
-                      <div className="mono" style={{ fontSize: 9, color: "#888", lineHeight: 1.6 }}>{row.note}</div>
+                    <div key={i} style={{ background: "#fff", padding: "14px 16px", borderTop: RULE, borderRight: i < 3 ? `1px solid rgba(44,53,37,0.08)` : "none" }}>
+                      <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: 15, fontWeight: 400, fontStyle: "italic", color: row.color, marginBottom: 6, letterSpacing: "-0.01em" }}>{row.distance}</div>
+                      <div className="mono" style={{ fontSize: 9, color: "#888", lineHeight: 1.65 }}>{row.note}</div>
                     </div>
                   ))}
                 </div>
