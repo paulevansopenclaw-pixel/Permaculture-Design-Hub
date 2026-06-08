@@ -68,7 +68,7 @@ function formatDate(dateStr: string) {
 }
 
 // ── Property card ─────────────────────────────────────────────────────────────
-const TIER_LABELS = ["Discovery", "Site Reading", "The Design", "Full Dossier"] as const;
+const TIER_LABELS = ["Discovery", "Site Reading", "The Design", "Full Profile"] as const;
 
 function PropertyCard({
   property, onOpen, onDelete, onImageUpload, onTierChange,
@@ -374,7 +374,7 @@ export default function PropertiesPage() {
             { Icon: ClipboardList, label: "Intake",       desc: "Survey + vision board",   path: "/intake"    },
             { Icon: Map,           label: "Map Workspace",desc: "Draw + annotate",          path: "/workspace" },
             { Icon: BarChart3,     label: "AI Analysis",  desc: "Water + sectors + zones",  path: "/analysis"  },
-            { Icon: FolderOpen,    label: "Dossier",      desc: "Budget + plants",          path: "/dossier"   },
+            { Icon: FolderOpen,    label: "Landscape Profile", desc: "Site profile + plants", path: "/dossier"   },
             { Icon: FileText,      label: "Presentation", desc: "Client PDF",               path: null         },
           ].map(({ Icon, label, desc, path }) => (
             <div key={label} style={{ display: "flex", gap: 10, marginBottom: 14, paddingBottom: 14, borderBottom: RULE, cursor: path ? "pointer" : "default", opacity: path ? 1 : 0.5 }}>

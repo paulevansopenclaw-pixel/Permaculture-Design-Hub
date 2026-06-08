@@ -11,7 +11,7 @@ const LAYERS = [
   { path: "/workspace", label: "Map",      Icon: Map           },
   { path: "/analysis",  label: "Analysis", Icon: BarChart3     },
   { path: "/plans",     label: "Plans",    Icon: Layers        },
-  { path: "/dossier",        label: "Dossier",       Icon: FolderOpen  },
+  { path: "/dossier",        label: "Landscape Profile", Icon: FolderOpen  },
   { path: "/master-design", label: "Master Design", Icon: BookMarked  },
 ];
 

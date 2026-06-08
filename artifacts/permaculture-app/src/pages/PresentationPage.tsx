@@ -247,7 +247,7 @@ export default function PresentationPage() {
           {/* Sidebar header */}
           <div className="shrink-0 px-5 py-4" style={{ borderBottom: "2px solid #111" }}>
             <h2 className="text-[11px] font-bold uppercase tracking-[0.15em] mb-0.5" style={{ color: "#1f6b7a" }}>
-              Property Resilience Dossier
+              Landscape Profile
             </h2>
             <p className="text-[10px] font-mono" style={{ color: "#bbb" }}>
               {property?.name ?? "—"} · {brief?.aiAnalysisGeneratedAt

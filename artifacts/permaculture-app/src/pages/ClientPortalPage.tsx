@@ -35,7 +35,7 @@ const TIERS = [
   },
   {
     phase: "Phase IV",
-    name: "Full Dossier",
+    name: "Landscape Profile",
     tagline: "The complete picture.",
     description: "Implementation guide, full presentation, downloadable design report.",
     previewImg: "garden-people.png",

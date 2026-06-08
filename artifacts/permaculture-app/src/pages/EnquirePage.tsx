@@ -358,7 +358,7 @@ export default function EnquirePage() {
 
           {/* Phase IV — locked */}
           <LockedPhase
-            phase="IV" name="Full Dossier" tagline="The complete picture."
+            phase="IV" name="Landscape Profile" tagline="The complete picture."
             gradient="linear-gradient(135deg, #141e14 0%, #1e2e18 60%, #131c12 100%)"
             description="A fully illustrated design report ready to print. A phased implementation guide — what to plant in year one, year three, year ten. A curated plant supplier list for your region. 3D concept visualisations. A shareable presentation for your family, council, or investors. Everything, beautifully bound."
             isLast

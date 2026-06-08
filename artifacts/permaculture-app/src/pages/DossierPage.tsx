@@ -44,6 +44,7 @@ const T    = "#6b5f4e";
 const INK  = "#2c2416";
 const RULE = "1px solid #ddd6cc";
 const LIGHT = "#f8f5f0";
+const SAGE  = "#4a6b2e";
 
 // ─── Mapbox static map ────────────────────────────────────────────────────────
 function mapboxStaticUrl(geo: string | null | undefined, style: string, w = 800, h = 360, fill = T): string | null {
@@ -217,18 +218,21 @@ function SoilProfileViz({ clay, sand, silt, ph, organicCarbon, textureClass }: {
 // ─── Shared layout atoms ──────────────────────────────────────────────────────
 function SectionLabel({ n, title }: { n: string; title: string }) {
   return (
-    <div style={{ display:"flex", alignItems:"baseline", gap:12, marginBottom:20, borderBottom:"3px solid #111", paddingBottom:8 }}>
-      <span style={{ fontFamily:"monospace", fontSize:10, fontWeight:900, color:T, flexShrink:0 }}>{n}</span>
-      <h2 style={{ margin:0, fontSize:17, fontWeight:900, letterSpacing:"-0.03em", color:INK, textTransform:"uppercase", lineHeight:1 }}>{title}</h2>
+    <div style={{ marginBottom:28 }}>
+      <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:8 }}>
+        <span style={{ fontFamily:"'IBM Plex Mono', monospace", fontSize:8, fontWeight:600, color:T, letterSpacing:"0.22em", textTransform:"uppercase", flexShrink:0 }}>— {n} —</span>
+        <div style={{ flex:1, height:1, background:"linear-gradient(to right, rgba(74,93,63,0.35), transparent)" }}/>
+      </div>
+      <h2 style={{ margin:0, fontSize:24, fontWeight:400, fontStyle:"italic", fontFamily:"'Fraunces', Georgia, serif", letterSpacing:"-0.02em", color:INK, lineHeight:1.1 }}>{title}</h2>
     </div>
   );
 }
 
 function Field({ label, value }: { label: string; value: string }) {
   return (
-    <div style={{ borderBottom:"1px solid #e5e5e5", paddingBottom:10, paddingTop:4 }}>
-      <div style={{ fontFamily:"monospace", fontSize:8, textTransform:"uppercase", letterSpacing:"0.14em", color:"#aaa", marginBottom:3 }}>{label}</div>
-      <div style={{ fontFamily:"monospace", fontSize:14, fontWeight:900, letterSpacing:"-0.02em", color:INK }}>{value}</div>
+    <div style={{ padding:"10px 0", borderBottom:"1px solid #ece8e2" }}>
+      <div style={{ fontFamily:"'IBM Plex Mono', monospace", fontSize:8, textTransform:"uppercase", letterSpacing:"0.16em", color:"#bbb", marginBottom:4 }}>{label}</div>
+      <div style={{ fontFamily:"'Fraunces', Georgia, serif", fontSize:16, fontWeight:400, letterSpacing:"-0.01em", color:INK }}>{value}</div>
     </div>
   );
 }
@@ -249,24 +253,46 @@ function AiTableDoc({ rows }: { rows: unknown[] }) {
   if (!rows.length) return null;
   const first = rows[0];
   if (typeof first !== "object" || first === null) {
-    return <ul style={{ margin:0, paddingLeft:0, listStyle:"none" }}>{rows.map((r,i)=><li key={i} style={{ fontFamily:"monospace", fontSize:10, color:"#444", paddingLeft:10, borderLeft:`2px solid ${T}`, marginBottom:4 }}>{String(r)}</li>)}</ul>;
+    return (
+      <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+        {rows.map((r,i)=>(
+          <div key={i} style={{ display:"flex", alignItems:"flex-start", gap:10, padding:"8px 0", borderBottom:"1px solid #ece8e2" }}>
+            <div style={{ width:4, height:4, borderRadius:2, background:SAGE, flexShrink:0, marginTop:5 }}/>
+            <span style={{ fontFamily:"monospace", fontSize:11, color:"#444", lineHeight:1.7 }}>{String(r)}</span>
+          </div>
+        ))}
+      </div>
+    );
   }
   const keys = Object.keys(first as object);
+  const SHORT_VAL = /^[A-Za-z][A-Za-z\s-]{1,18}$/;
   return (
-    <table style={{ width:"100%", borderCollapse:"collapse", border: RULE, fontFamily:"monospace", fontSize:10 }}>
-      <thead>
-        <tr style={{ background: LIGHT, borderBottom: RULE }}>
-          {keys.map(k=><th key={k} style={{ padding:"6px 10px", textAlign:"left", color:INK, fontWeight:900, textTransform:"uppercase", fontSize:8, letterSpacing:"0.1em", borderRight:"1px solid #ddd" }}>{k}</th>)}
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((row,i)=>(
-          <tr key={i} style={{ background:i%2===0?"#fff":LIGHT, borderBottom:"1px solid #eee" }}>
-            {keys.map(k=><td key={k} style={{ padding:"6px 10px", color:"#333", borderRight:"1px solid #eee", verticalAlign:"top" }}>{String((row as Record<string,unknown>)[k]??"")}</td>)}
+    <div style={{ borderRadius:8, overflow:"hidden", boxShadow:"0 1px 4px rgba(44,36,22,0.07)" }}>
+      <table style={{ width:"100%", borderCollapse:"collapse", fontFamily:"monospace", fontSize:10 }}>
+        <thead>
+          <tr style={{ background:"#f4f1eb" }}>
+            {keys.map(k=><th key={k} style={{ padding:"10px 16px", textAlign:"left", color:"#aaa", fontWeight:700, textTransform:"uppercase", fontSize:8, letterSpacing:"0.12em" }}>{k}</th>)}
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {rows.map((row,i)=>(
+            <tr key={i} style={{ background:i%2===0?"#fff":"#faf9f7" }}>
+              {keys.map((k,ki)=>{
+                const raw = String((row as Record<string,unknown>)[k]??"");
+                const isShort = SHORT_VAL.test(raw) && raw.length < 20;
+                return (
+                  <td key={k} style={{ padding:"11px 16px", verticalAlign:"top", borderBottom:"1px solid #ece8e2", color: ki===0 ? INK : "#555", fontWeight: ki===0 ? 700 : 400 }}>
+                    {ki>0 && isShort
+                      ? <span style={{ display:"inline-block", padding:"2px 9px", borderRadius:20, background:"rgba(74,107,46,0.09)", color:SAGE, fontSize:9, fontWeight:700 }}>{raw}</span>
+                      : raw}
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
@@ -276,10 +302,36 @@ function AiObjectDoc({ obj }: { obj: Record<string,unknown>|null|undefined }) {
     <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
       {Object.entries(obj).map(([k,v])=>(
         <div key={k}>
-          <div style={{ fontFamily:"monospace", fontSize:8, textTransform:"uppercase", letterSpacing:"0.14em", color:"#aaa", marginBottom:4, fontWeight:900 }}>{k}</div>
-          {Array.isArray(v)?<AiTableDoc rows={v}/>:typeof v==="object"&&v!==null?<AiObjectDoc obj={v as Record<string,unknown>}/>:<p style={{ margin:0, fontFamily:"monospace", fontSize:10, color:"#333", lineHeight:1.7 }}>{String(v)}</p>}
+          <div style={{ fontFamily:"'IBM Plex Mono', monospace", fontSize:8, textTransform:"uppercase", letterSpacing:"0.14em", color:"#aaa", marginBottom:4, fontWeight:600 }}>{k}</div>
+          {Array.isArray(v)?<AiTableDoc rows={v}/>:typeof v==="object"&&v!==null?<AiObjectDoc obj={v as Record<string,unknown>}/>:<p style={{ margin:0, fontFamily:"monospace", fontSize:10, color:"#333", lineHeight:1.8 }}>{String(v)}</p>}
         </div>
       ))}
+    </div>
+  );
+}
+
+// ─── Insight extraction ────────────────────────────────────────────────────────
+const INSIGHT_RE = /vulnerab|anomal|risk|critical|concern|erosion|flood|exposure|threat|instab|hazard|damage|severe|failure|deficit|exceed/i;
+
+function extractInsights(text: string): string[] {
+  return text
+    .split(/(?<=[.!?])\s+/)
+    .filter(s => s.length > 40 && INSIGHT_RE.test(s))
+    .slice(0, 2);
+}
+
+function InsightCallout({ text, accent, tint }: { text: string; accent: string; tint: string }) {
+  return (
+    <div style={{
+      display:"flex", gap:12, alignItems:"flex-start",
+      background:tint, borderRadius:8, padding:"12px 16px",
+      borderLeft:`3px solid ${accent}`, marginBottom:12,
+    }}>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth="2" style={{ flexShrink:0, marginTop:2 }}>
+        <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+        <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+      </svg>
+      <p style={{ margin:0, fontFamily:"monospace", fontSize:11, lineHeight:1.75, color:"#333" }}>{text}</p>
     </div>
   );
 }
@@ -311,6 +363,7 @@ export default function DossierPage() {
 
   return (
     <div style={{ minHeight:"100vh", background:"#f8f5f0", display:"flex", flexDirection:"column", color:INK, fontFamily:"'Inter', system-ui, sans-serif" }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;1,9..144,400&family=IBM+Plex+Mono:wght@400;600;700&display=swap');`}</style>
 
       {/* ── TOP NAV ────────────────────────────────────────────────────────── */}
       <header className="print:hidden" style={{
@@ -326,7 +379,7 @@ export default function DossierPage() {
             <span style={{ fontFamily:"Georgia, serif", fontWeight:700, fontSize:14 }}>Pattern</span>
           </button>
           <div style={{ width:1, height:16, background:"#ddd6cc" }}/>
-          <span style={{ fontSize:11, fontWeight:600, color:T }}>Dossier</span>
+          <span style={{ fontSize:11, fontWeight:600, color:T }}>Landscape Profile</span>
         </div>
         <div style={{ display:"flex", alignItems:"center", gap:10 }}>
           <StepNav />
@@ -364,11 +417,11 @@ export default function DossierPage() {
           {/* MASTHEAD */}
           <div style={{ borderBottom: RULE, padding:"36px 48px 28px", maxWidth:920, margin:"0 auto", background:"#fff" }}>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:8 }}>
-              <span style={{ fontSize:10, letterSpacing:"0.12em", textTransform:"uppercase", color:T }}>Pattern · Property Resilience Dossier</span>
+              <span style={{ fontSize:10, letterSpacing:"0.12em", textTransform:"uppercase", color:T }}>Pattern · The Landscape Profile</span>
               <span style={{ fontSize:10, color:"#a89880" }}>{today}</span>
             </div>
-            <h1 style={{ margin:"10px 0 0", fontSize:48, fontWeight:700, letterSpacing:"-0.03em", lineHeight:1.1, color:INK, fontFamily:"Georgia, serif" }}>
-              {property?.name ?? "Property Dossier"}
+            <h1 style={{ margin:"10px 0 0", fontSize:48, fontWeight:400, fontStyle:"italic", letterSpacing:"-0.02em", lineHeight:1.1, color:INK, fontFamily:"'Fraunces', Georgia, serif" }}>
+              {property?.name ?? "Landscape Profile"}
             </h1>
             <div style={{ display:"flex", gap:28, marginTop:12, alignItems:"flex-end" }}>
               <span style={{ fontSize:11, color:"#a89880" }}>Site Analysis Report</span>
@@ -395,7 +448,7 @@ export default function DossierPage() {
             {!brief && (
               <div style={{ borderLeft:`5px solid ${INK}`, paddingLeft:18 }}>
                 <p style={{ margin:0, fontFamily:"monospace", fontSize:12, fontWeight:900, color:INK, textTransform:"uppercase", letterSpacing:"0.04em" }}>Site survey not completed</p>
-                <p style={{ margin:"4px 0 0", fontFamily:"monospace", fontSize:9, color:"#888", textTransform:"uppercase", letterSpacing:"0.1em" }}>Complete the intake survey to populate this dossier.</p>
+                <p style={{ margin:"4px 0 0", fontFamily:"monospace", fontSize:9, color:"#888", textTransform:"uppercase", letterSpacing:"0.1em" }}>Complete the intake survey to populate this profile.</p>
               </div>
             )}
 
@@ -573,10 +626,23 @@ export default function DossierPage() {
                               <span style={{ fontFamily:"monospace", fontSize:12, fontWeight:900, letterSpacing:"-0.02em", textTransform:"uppercase", color:INK }}>{title}</span>
                             </div>
                             {visual}
-                            <div style={{ padding:"14px 18px", fontFamily:"monospace", fontSize:11, lineHeight:1.75, color:"#333" }}>
+                            <div style={{ padding:"18px 20px", fontFamily:"monospace", fontSize:11, lineHeight:1.8, color:"#333" }}>
                               {missing
                                 ?<Notice msg="Run the AI resilience analysis in the War Room to generate this section."/>
-                                :typeof val==="string"?<p style={{ margin:0, whiteSpace:"pre-wrap" }}>{val}</p>
+                                :typeof val==="string"
+                                  ?<>
+                                    {(key==="ClimateResilience"||key==="InfrastructureCritique")
+                                      && extractInsights(val).map((s,si)=>(
+                                        <InsightCallout key={si} text={s}
+                                          tint={key==="InfrastructureCritique"?"#fff8ed":"#f0f6ec"}
+                                          accent={key==="InfrastructureCritique"?"#b07030":"#4a6b2e"}
+                                        />
+                                      ))
+                                    }
+                                    <div style={val.length>280?{columns:2,columnGap:"30px",columnRule:"1px solid #ece8e2"}:{}}>
+                                      <p style={{ margin:0, lineHeight:1.85 }}>{val}</p>
+                                    </div>
+                                  </>
                                 :Array.isArray(val)?<AiTableDoc rows={val}/>
                                 :<AiObjectDoc obj={val as Record<string,unknown>}/>
                               }
@@ -834,7 +900,7 @@ function DesignRecsSection({ designRecs }: { designRecs: DesignRecsType|null|und
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={T} strokeWidth="2.5" style={{ flexShrink:0 }}>
           <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
         </svg>
-        <h2 style={{ margin:0, fontSize:22, fontWeight:900, letterSpacing:"-0.04em", color:INK, textTransform:"uppercase" }}>Final Design Recommendations</h2>
+        <h2 style={{ margin:0, fontSize:28, fontWeight:400, fontStyle:"italic", letterSpacing:"-0.02em", color:INK, fontFamily:"'Fraunces', Georgia, serif" }}>Final Design Recommendations</h2>
       </div>
 
       {!designRecs ? <Notice msg="Run the AI analysis in the War Room to generate the plant palette, design elements, and implementation plan."/> : (
@@ -869,18 +935,20 @@ function DesignRecsSection({ designRecs }: { designRecs: DesignRecsType|null|und
                         <thead>
                           <tr style={{ background:LIGHT, borderBottom:"1px solid #e5e5e5" }}>
                             {["Common name","Latin name","Purpose","Zone","Notes"].map(h=>(
-                              <th key={h} style={{ padding:"5px 10px", textAlign:"left", fontWeight:900, textTransform:"uppercase", fontSize:8, letterSpacing:"0.08em", color:"#888" }}>{h}</th>
+                              <th key={h} style={{ padding:"10px 14px", textAlign:"left", fontWeight:700, textTransform:"uppercase", fontSize:8, letterSpacing:"0.11em", color:"#bbb", borderBottom:"2px solid #ece8e2" }}>{h}</th>
                             ))}
                           </tr>
                         </thead>
                         <tbody>
                           {lp.map((plant,i)=>(
-                            <tr key={i} style={{ borderBottom:"1px solid #f0f0f0" }}>
-                              <td style={{ padding:"7px 10px", fontWeight:900, color:INK }}>{plant.name}</td>
-                              <td style={{ padding:"7px 10px", fontStyle:"italic", color:"#888" }}>{plant.latinName}</td>
-                              <td style={{ padding:"7px 10px", color:"#555" }}>{plant.purpose}</td>
-                              <td style={{ padding:"7px 10px", fontWeight:900, color:T, whiteSpace:"nowrap" }}>{plant.zones}</td>
-                              <td style={{ padding:"7px 10px", color:"#999" }}>{plant.notes}</td>
+                            <tr key={i} style={{ background:i%2===0?"#fff":"#faf9f7" }}>
+                              <td style={{ padding:"12px 14px", fontWeight:700, color:INK, borderBottom:"1px solid #ece8e2" }}>{plant.name}</td>
+                              <td style={{ padding:"12px 14px", fontStyle:"italic", color:"#8a7a6a", borderBottom:"1px solid #ece8e2" }}>{plant.latinName}</td>
+                              <td style={{ padding:"12px 14px", color:"#555", borderBottom:"1px solid #ece8e2" }}>{plant.purpose}</td>
+                              <td style={{ padding:"12px 14px", borderBottom:"1px solid #ece8e2" }}>
+                                <span style={{ display:"inline-block", padding:"2px 10px", borderRadius:20, background:"rgba(74,107,46,0.1)", color:SAGE, fontSize:9, fontWeight:700, letterSpacing:"0.05em", whiteSpace:"nowrap" }}>{plant.zones}</span>
+                              </td>
+                              <td style={{ padding:"12px 14px", color:"#aaa", fontSize:10, borderBottom:"1px solid #ece8e2" }}>{plant.notes}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -909,7 +977,7 @@ function DesignRecsSection({ designRecs }: { designRecs: DesignRecsType|null|und
                           <p style={{ margin:0, fontFamily:"monospace", fontSize:11, fontWeight:900, color:INK }}>{el.name}</p>
                           <p style={{ margin:"2px 0 0", fontFamily:"monospace", fontSize:8, textTransform:"uppercase", letterSpacing:"0.1em", color:"#aaa" }}>{el.type}</p>
                         </div>
-                        <span style={{ flexShrink:0, padding:"3px 8px", fontFamily:"monospace", fontSize:8, fontWeight:900, textTransform:"uppercase", letterSpacing:"0.1em", color:col, border:`2px solid ${col}`, background:"#fff" }}>{el.priority}</span>
+                        <span style={{ flexShrink:0, padding:"3px 11px", fontFamily:"monospace", fontSize:8, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.08em", color:col, borderRadius:20, background:`${col}15` }}>{el.priority}</span>
                       </div>
                       <div style={{ padding:"10px 14px" }}>
                         <p style={{ margin:0, fontFamily:"monospace", fontSize:9, lineHeight:1.7, color:"#555" }}>{el.description}</p>
@@ -952,7 +1020,7 @@ function DesignRecsSection({ designRecs }: { designRecs: DesignRecsType|null|und
                           {ph.elements?.length>0&&(
                             <div style={{ display:"flex", flexWrap:"wrap", gap:5, marginBottom:8 }}>
                               {ph.elements.map((el,j)=>(
-                                <span key={j} style={{ padding:"2px 8px", fontFamily:"monospace", fontSize:9, background:LIGHT, border:"1px solid #ddd", color:"#555" }}>{el}</span>
+                                <span key={j} style={{ padding:"3px 10px", fontFamily:"monospace", fontSize:9, background:"#edf4e6", border:"none", color:SAGE, borderRadius:20, fontWeight:600 }}>{el}</span>
                               ))}
                             </div>
                           )}
