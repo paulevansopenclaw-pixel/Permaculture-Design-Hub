@@ -2,8 +2,6 @@ import { useState, useRef, useEffect, type ReactNode } from "react";
 import { useLocation } from "wouter";
 import * as turf from "@turf/turf";
 import { useQueryClient } from "@tanstack/react-query";
-import patternMark from "@assets/pattern-mark.png";
-import { resolveObjectUrl } from "@/lib/objectUrl";
 import {
   useListProperties,
   useGetProperty,
@@ -16,6 +14,7 @@ import { useAppStore } from "@/store/useAppStore";
 import { OnboardingModal } from "@/components/OnboardingModal";
 import { StepNav } from "@/components/StepNav";
 import { fetchClimateBaseline } from "@/lib/fetchClimateBaseline";
+import { generateAutoDesign } from "@/lib/autoDesign";
 
 // ─── Image resize helper ───────────────────────────────────────────────────────
 async function resizeToDataUrl(file: File, maxPx = 900): Promise<string> {
@@ -61,6 +60,8 @@ export default function IntakePage() {
 
   // Wizard step: 0 = Survey, 1 = Vision Board
   const [wizardStep, setWizardStep] = useState<0 | 1>(0);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generateError, setGenerateError] = useState<string | null>(null);
 
   // Vision Board state
   const [photos, setPhotos] = useState<string[]>([]);
@@ -216,29 +217,74 @@ export default function IntakePage() {
     }
   }
 
+  async function handleGenerateDesign() {
+    if (!activePropertyId || !property?.boundaryGeojson || !brief) return;
+    setIsGenerating(true);
+    setGenerateError(null);
+    try {
+      const boundaryGeo =
+        typeof property.boundaryGeojson === "string"
+          ? JSON.parse(property.boundaryGeojson)
+          : property.boundaryGeojson;
+      const centroid = turf.centroid({ type: "Feature", geometry: boundaryGeo, properties: {} });
+      const [lng, lat] = centroid.geometry.coordinates;
+
+      const result = generateAutoDesign({
+        boundary: boundaryGeo,
+        centroid: [lng, lat],
+        areaHa: property.areaHectares ?? 1,
+        brief: {
+          primaryGoal: brief.primaryGoal,
+          maintenanceCapacity: brief.maintenanceCapacity,
+          householdSize: brief.householdSize,
+          prevailingWindDir: brief.prevailingWindDir,
+          meanWindSpeedMs: brief.meanWindSpeedMs,
+          annualRainfallMm: brief.annualRainfallMm,
+          climateZone: brief.climateZone,
+          soilTextureClass: brief.soilTextureClass,
+          elevationM: brief.elevationM,
+          frostDaysPerYear: brief.frostDaysPerYear,
+          solarIrradianceKwhM2: brief.solarIrradianceKwhM2,
+          challengeHighWind: brief.challengeHighWind,
+          challengeWinterFlooding: brief.challengeWinterFlooding,
+          challengeSevereErosion: brief.challengeSevereErosion,
+          machineryWidthM: brief.machineryWidthM ?? 3.0,
+        },
+      });
+
+      localStorage.setItem("pattern:lastAutoDesign", JSON.stringify(result));
+      navigate("/workspace");
+    } catch (err) {
+      setGenerateError(err instanceof Error ? err.message : "Generation failed");
+    } finally {
+      setIsGenerating(false);
+    }
+  }
+
   const hasBoundary = !!property?.boundaryGeojson;
   const hasBrief = !!brief;
   const showWizardTabs = !!activePropertyId && hasBoundary && hasBrief;
+  const canGenerateDesign = hasBoundary && hasBrief;
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: "#f8f5f0", fontFamily: "'Inter', system-ui, sans-serif" }}>
+    <div className="min-h-screen flex flex-col" style={{ background: "#fff" }}>
       {/* ── TOP BAR ── */}
       <header
-        className="shrink-0 flex items-center justify-between px-5"
-        style={{ height: 54, background: "#fff", borderBottom: "1px solid #ddd6cc", boxShadow: "0 2px 6px rgba(44,36,22,0.06)" }}
+        className="shrink-0 flex items-center justify-between px-5 py-3 border-b"
+        style={{ background: "#fff", borderColor: "#e5e5e5" }}
       >
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4">
           <button
             onClick={() => navigate("/properties")}
-            className="flex items-center gap-2"
-            style={{ color: "#2c2416", background: "none", border: "none", cursor: "pointer", padding: 0, fontFamily: "inherit" }}
+            className="flex items-center gap-2 transition-opacity hover:opacity-70"
+            style={{ color: "#111" }}
           >
-            <img src={patternMark} alt="Pattern" style={{ height: 26, width: "auto" }} />
-            <span style={{ fontFamily: "Georgia, serif", fontWeight: 700, fontSize: 14, color: "#2c2416" }} className="hidden sm:inline">Pattern</span>
+            <span className="text-base">🛡</span>
+            <span className="text-[13px] font-bold tracking-tight hidden sm:inline">TerraGuard</span>
           </button>
-          <div className="hidden sm:block" style={{ width: 1, height: 16, background: "#ddd6cc" }} />
-          <span style={{ fontSize: 11, fontWeight: 600, color: "#6b5f4e" }} className="hidden sm:inline">
-            Site Intake
+          <div className="w-px h-4 hidden sm:block" style={{ background: "#ddd" }} />
+          <span className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "#1d4ed8" }}>
+            Mission Control
           </span>
         </div>
         <StepNav />
@@ -283,7 +329,7 @@ export default function IntakePage() {
                 className="px-4 py-1.5 text-[12px] font-semibold transition-all"
                 style={wizardStep === idx ? {
                   background: "#fff",
-                  color: "#1f6b7a",
+                  color: "#1d4ed8",
                   boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
                   border: "1px solid #e5e5e5",
                 } : {
@@ -320,7 +366,7 @@ export default function IntakePage() {
                   <button
                     onClick={() => navigate("/workspace")}
                     className="mt-4 px-5 py-2.5 rounded-xl text-[13px] font-semibold"
-                    style={{ background: "#1f6b7a", color: "#fff", border: "2px solid #1f6b7a" }}
+                    style={{ background: "#1d4ed8", color: "#fff", border: "2px solid #1d4ed8" }}
                   >
                     Go to Sandbox →
                   </button>
@@ -346,7 +392,7 @@ export default function IntakePage() {
                     <button
                       onClick={() => setShowOnboarding(true)}
                       className="px-6 py-3 text-[13px] font-semibold"
-                      style={{ background: "#1f6b7a", color: "#fff", border: "2px solid #1f6b7a" }}
+                      style={{ background: "#1d4ed8", color: "#fff", border: "2px solid #1d4ed8" }}
                     >
                       🌿 Start Site Survey
                     </button>
@@ -358,7 +404,25 @@ export default function IntakePage() {
                     >
                       {isSyncing ? "Syncing…" : "⟳ Auto-fill from Climate APIs"}
                     </button>
+                    <button
+                      onClick={handleGenerateDesign}
+                      disabled={!canGenerateDesign || isGenerating}
+                      className="px-5 py-3 text-[13px] font-semibold"
+                      style={{
+                        background: canGenerateDesign ? "#1a4a0d" : "#e5e5e5",
+                        color: canGenerateDesign ? "#e8f5e2" : "#999",
+                        border: `2px solid ${canGenerateDesign ? "#2a7a1d" : "#ddd"}`,
+                        opacity: isGenerating ? 0.8 : 1,
+                      }}
+                    >
+                      {isGenerating ? "Generating…" : "⚡ Generate Design"}
+                    </button>
                   </div>
+                  {generateError && (
+                    <div className="mt-2 text-[11px] text-center" style={{ color: "#b45309" }}>
+                      {generateError}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -385,8 +449,8 @@ export default function IntakePage() {
                       className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium transition-all"
                       style={{
                         background: "#fff",
-                        color: syncStatus === "ok" ? "#4a6b2e" : syncStatus === "error" ? "#ef4444" : "#555",
-                        border: `1px solid ${syncStatus === "ok" ? "#4a6b2e" : syncStatus === "error" ? "#ef4444" : "#ddd"}`,
+                        color: syncStatus === "ok" ? "#16a34a" : syncStatus === "error" ? "#ef4444" : "#555",
+                        border: `1px solid ${syncStatus === "ok" ? "#16a34a" : syncStatus === "error" ? "#ef4444" : "#ddd"}`,
                         opacity: isSyncing ? 0.7 : 1,
                       }}
                     >
@@ -397,7 +461,7 @@ export default function IntakePage() {
                     <button
                       onClick={() => setShowOnboarding(true)}
                       className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium transition-all"
-                      style={{ background: "#fff", color: "#1f6b7a", border: "1px solid #1f6b7a" }}
+                      style={{ background: "#fff", color: "#1d4ed8", border: "1px solid #1d4ed8" }}
                     >
                       ✎ Edit Survey
                     </button>
@@ -482,14 +546,14 @@ export default function IntakePage() {
                   <button
                     onClick={() => setWizardStep(1)}
                     className="flex items-center gap-2 px-4 py-2 text-[12px] font-medium"
-                    style={{ background: "#fff", color: "#1f6b7a", border: "1px solid #1f6b7a" }}
+                    style={{ background: "#fff", color: "#1d4ed8", border: "1px solid #1d4ed8" }}
                   >
                     🖼 Add Vision Board →
                   </button>
                   <button
                     onClick={() => navigate("/workspace")}
                     className="flex items-center gap-2 px-5 py-2.5 text-[13px] font-semibold"
-                    style={{ background: "#1f6b7a", color: "#fff", border: "2px solid #1f6b7a" }}
+                    style={{ background: "#1d4ed8", color: "#fff", border: "2px solid #1d4ed8" }}
                   >
                     Next: The Sandbox →
                   </button>
@@ -515,7 +579,7 @@ export default function IntakePage() {
                   <button
                     onClick={() => fileInputRef.current?.click()}
                     className="flex items-center gap-1.5 px-3 py-2 text-[12px] font-semibold"
-                    style={{ background: "#fff", color: "#1f6b7a", border: "1px solid #1f6b7a" }}
+                    style={{ background: "#fff", color: "#1d4ed8", border: "1px solid #1d4ed8" }}
                   >
                     <span className="text-sm">＋</span> Add Photo
                     <span className="text-[10px] ml-1 opacity-60">({photos.length}/5)</span>
@@ -526,11 +590,11 @@ export default function IntakePage() {
                   disabled={isSavingPhotos}
                   className="flex items-center gap-1.5 px-4 py-2 text-[12px] font-semibold transition-all"
                   style={photosSaveStatus === "ok" ? {
-                    background: "#fff", color: "#4a6b2e", border: "1px solid #4a6b2e",
+                    background: "#fff", color: "#16a34a", border: "1px solid #16a34a",
                   } : photosSaveStatus === "error" ? {
                     background: "#fff", color: "#ef4444", border: "1px solid #ef4444",
                   } : {
-                    background: "#1f6b7a", color: "#fff", border: "2px solid #1f6b7a",
+                    background: "#1d4ed8", color: "#fff", border: "2px solid #1d4ed8",
                     opacity: isSavingPhotos ? 0.7 : 1,
                   }}
                 >
@@ -574,7 +638,7 @@ export default function IntakePage() {
                     className="relative group overflow-hidden"
                     style={{ background: "#f7f7f7", border: "1px solid #e5e5e5", aspectRatio: "4/3" }}
                   >
-                    <img src={resolveObjectUrl(src)} alt={`Vision board photo ${i + 1}`} className="w-full h-full object-cover" />
+                    <img src={src} alt={`Vision board photo ${i + 1}`} className="w-full h-full object-cover" />
                     <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center">
                       <button
                         onClick={() => handleRemovePhoto(i)}
@@ -596,7 +660,7 @@ export default function IntakePage() {
                     className="flex flex-col items-center justify-center gap-2 transition-all"
                     style={{ background: "#f7f7f7", border: "2px dashed #ddd", aspectRatio: "4/3", color: "#bbb" }}
                   >
-                    <span className="text-2xl" style={{ color: "#1f6b7a" }}>＋</span>
+                    <span className="text-2xl" style={{ color: "#1d4ed8" }}>＋</span>
                     <span className="text-[10px]">{photos.length}/5</span>
                   </button>
                 )}
@@ -615,7 +679,7 @@ export default function IntakePage() {
               <button
                 onClick={() => navigate("/workspace")}
                 className="flex items-center gap-2 px-5 py-2.5 text-[13px] font-semibold"
-                style={{ background: "#1f6b7a", color: "#fff", border: "2px solid #1f6b7a" }}
+                style={{ background: "#1d4ed8", color: "#fff", border: "2px solid #1d4ed8" }}
               >
                 Next: The Sandbox →
               </button>
