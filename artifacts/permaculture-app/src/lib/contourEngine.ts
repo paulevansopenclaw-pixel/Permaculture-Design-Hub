@@ -75,7 +75,12 @@ export async function generateContours(
   token: string,
   intervalMeters = 1,
 ): Promise<GeoJSON.FeatureCollection> {
-  const bbox = turf.bbox(boundaryGeojson as turf.AllGeoJSON);
+  const boundaryFeature: GeoJSON.Feature<GeoJSON.Polygon> =
+    boundaryGeojson.type === "Feature"
+      ? (boundaryGeojson as GeoJSON.Feature<GeoJSON.Polygon>)
+      : { type: "Feature", geometry: boundaryGeojson as GeoJSON.Geometry, properties: {} };
+
+  const bbox = turf.bbox(boundaryFeature);
   const [minLng, minLat, maxLng, maxLat] = bbox;
 
   // Choose zoom level based on area size (14 is good for 1-100+ acres)
@@ -175,23 +180,36 @@ export async function generateContours(
         if (coords.length < 2) continue;
 
         try {
-          const line: GeoJSON.Feature<GeoJSON.LineString> = {
+          const line: any = {
             type: "Feature",
             geometry: { type: "LineString", coordinates: coords },
             properties: { elevation },
           };
-          const clipped = turf.bboxClip(line, bboxTurf);
+          const clipped: any = turf.lineSplit(line, turf.polygonToLine(boundaryFeature));
+          const kept: any[] = [];
+          (clipped.features || []).forEach((seg: any) => {
+            try {
+              const bb = turf.bbox(seg);
+              const mid = turf.point([
+                (bb[0] + bb[2]) / 2,
+                (bb[1] + bb[3]) / 2,
+              ]);
+              if (turf.booleanPointInPolygon(mid, boundaryFeature)) kept.push(seg);
+            } catch { /* keep on failure */ }
+          });
+          const finalLine = kept[0] ?? line;
           if (
-            clipped.geometry.coordinates.length > 0 &&
-            (clipped.geometry.coordinates as number[][]).length > 1
+            finalLine.geometry.coordinates.length > 0 &&
+            (finalLine.geometry.coordinates as number[][]).length > 1
           ) {
             features.push({
-              ...clipped,
+              type: "Feature",
+              geometry: finalLine.geometry,
               properties: { elevation },
             });
           }
         } catch {
-          // Skip invalid geometry
+          // skip invalid contour ring
         }
       }
     }

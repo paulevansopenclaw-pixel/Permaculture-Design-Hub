@@ -3,7 +3,6 @@ import { useLocation } from "wouter";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import mapboxgl from "mapbox-gl";
-import patternMark from "@assets/pattern-mark.png";
 import "mapbox-gl/dist/mapbox-gl.css";
 // @ts-ignore
 import "leaflet-draw/dist/leaflet.draw.css";
@@ -36,17 +35,14 @@ import {
   useListDesignedSwales,
   useCreateDesignedSwale,
   useDeleteDesignedSwale,
-  useUpdateDesignedSwale,
   getListDesignedSwalesQueryKey,
   useListPathways,
   useCreatePathway,
   useDeletePathway,
-  useUpdatePathway,
   getListPathwaysQueryKey,
   useListZones,
   useBulkReplaceZones,
   useDeleteZone,
-  useUpdateZone,
   getListZonesQueryKey,
   useListSensoryVectors,
   useCreateSensoryVector,
@@ -57,10 +53,10 @@ import {
   useRunWaterBudget,
   type WaterBudgetReport,
 } from "@workspace/api-client-react";
-import EcologicalTagPanel from "@/components/EcologicalTagPanel";
 import { useAppStore, type Role } from "@/store/useAppStore";
 import { generateContours } from "@/lib/contourEngine";
 import { analyzeWaterPaths, type WaterAnalysisResult, type AnalyzedSwale } from "@/lib/keylineEngine";
+import { StepNav } from "@/components/StepNav";
 import { FreehandDrawer } from "@/lib/freehandDraw";
 
 async function fetchMapboxToken(): Promise<string> {
@@ -80,60 +76,6 @@ async function searchAddress(query: string, token: string) {
   if (!res.ok) return [];
   const data = await res.json();
   return data.features ?? [];
-}
-
-// ─── NSW Spatial Services — Official Cadastral Boundary ──────────────────────
-// Queries the NSW Government ArcGIS MapServer (public, no auth required).
-// Equivalent to: L.esri.query({ url }).nearby([lat, lng], 5).run()
-async function fetchOfficialBoundary(
-  lat: number,
-  lng: number,
-): Promise<GeoJSON.Polygon | GeoJSON.MultiPolygon | null> {
-  const base =
-    "https://maps.six.nsw.gov.au/arcgis/rest/services/public/NSW_Cadastre/MapServer/0/query";
-  const params = new URLSearchParams({
-    geometry: JSON.stringify({ x: lng, y: lat, spatialReference: { wkid: 4326 } }),
-    geometryType: "esriGeometryPoint",
-    inSR: "4326",
-    outSR: "4326",
-    spatialRel: "esriSpatialRelIntersects",
-    returnGeometry: "true",
-    outFields: "*",
-    f: "geojson",
-  });
-  try {
-    const res = await fetch(`${base}?${params.toString()}`);
-    if (!res.ok) return null;
-    const fc = (await res.json()) as GeoJSON.FeatureCollection;
-    if (!fc.features?.length) return null;
-    // Prefer the feature that actually contains the clicked point; then sort by
-    // area ascending so the most specific cadastral lot wins.
-    const pt = turf.point([lng, lat]);
-    const containing = fc.features.filter((f) => {
-      try {
-        return turf.booleanPointInPolygon(pt, f as GeoJSON.Feature<GeoJSON.Polygon>);
-      } catch {
-        return false;
-      }
-    });
-    const candidates = containing.length > 0 ? containing : fc.features;
-    candidates.sort((a, b) => {
-      try {
-        return (
-          turf.area(a as GeoJSON.Feature) - turf.area(b as GeoJSON.Feature)
-        );
-      } catch {
-        return 0;
-      }
-    });
-    const geom = candidates[0]?.geometry;
-    if (geom?.type === "Polygon" || geom?.type === "MultiPolygon") {
-      return geom as GeoJSON.Polygon | GeoJSON.MultiPolygon;
-    }
-    return null;
-  } catch {
-    return null;
-  }
 }
 
 async function fetchParcelBoundary(lat: number, lng: number): Promise<GeoJSON.Polygon[]> {
@@ -200,10 +142,10 @@ function parseGeoJsonFile(text: string): GeoJSON.Polygon | null {
 }
 
 const SECTOR_TYPES = [
-  { value: "custom_view",  label: "Custom View Corridor", emoji: "👁",  color: "rgba(200,151,26,0.3)",  border: "#C8971A" },
-  { value: "noise",        label: "Nuisance/Road Noise",  emoji: "🔊",  color: "rgba(180,80,50,0.3)",   border: "#B45032" },
-  { value: "wind",         label: "Damaging Winds",       emoji: "💨",  color: "rgba(85,119,168,0.3)",  border: "#5577A8" },
-  { value: "winter_solar", label: "Winter Solar Arc",     emoji: "☀️",  color: "rgba(210,138,32,0.3)",  border: "#D28A20" },
+  { value: "custom_view",  label: "Custom View Corridor", emoji: "👁",  color: "rgba(255,215,0,0.3)",   border: "#d4a800" },
+  { value: "noise",        label: "Nuisance/Road Noise",  emoji: "🔊",  color: "rgba(220,38,38,0.3)",   border: "#dc2626" },
+  { value: "wind",         label: "Damaging Winds",       emoji: "💨",  color: "rgba(59,130,246,0.3)",  border: "#3b82f6" },
+  { value: "winter_solar", label: "Winter Solar Arc",     emoji: "☀️",  color: "rgba(249,115,22,0.3)",  border: "#f97316" },
 ];
 
 // (solar arc geometry is now computed inline via suncalc in the SVG overlay effect)
@@ -229,8 +171,8 @@ const PATHWAY_TYPES = [
 // ─── ZONE ANALYSIS CONSTANTS ──────────────────────────────────────────────────
 const ZONE_STYLES = [
   { zone: 1, label: "Zone 1 — Daily Use",         drawLabel: "Draw Zone 1 (Daily)",            color: "#CA8A04", fillColor: "#FDE68A", fillOpacity: 0.35, hint: "Kitchen garden, herbs — most visited" },
-  { zone: 2, label: "Zone 2 — Semi-Daily",         drawLabel: "Draw Zone 2 (Semi-Daily)",        color: "#4A7C3F", fillColor: "#9DC08B", fillOpacity: 0.35, hint: "Orchard, small livestock, compost" },
-  { zone: 3, label: "Zone 3 — Farm / Pasture",     drawLabel: "Draw Zone 3 (Pasture/Crops)",     color: "#3B6B30", fillColor: "#7AAF68", fillOpacity: 0.30, hint: "Crops, larger livestock, fuel plants" },
+  { zone: 2, label: "Zone 2 — Semi-Daily",         drawLabel: "Draw Zone 2 (Semi-Daily)",        color: "#16A34A", fillColor: "#86EFAC", fillOpacity: 0.35, hint: "Orchard, small livestock, compost" },
+  { zone: 3, label: "Zone 3 — Farm / Pasture",     drawLabel: "Draw Zone 3 (Pasture/Crops)",     color: "#15803D", fillColor: "#4ADE80", fillOpacity: 0.30, hint: "Crops, larger livestock, fuel plants" },
   { zone: 4, label: "Zone 4 — Semi-Wild / Timber", drawLabel: "Draw Zone 4 (Woodlot/Semi-Wild)", color: "#92400E", fillColor: "#D4A27A", fillOpacity: 0.30, hint: "Timber, foraging, managed forest" },
   { zone: 5, label: "Zone 5 — Wilderness",         drawLabel: "Draw Zone 5 (Wild Nature)",       color: "#475569", fillColor: "#94A3B8", fillOpacity: 0.30, hint: "No intervention — wildlife sanctuary" },
 ];
@@ -251,15 +193,6 @@ const STRUCTURE_TYPES = [
   { value: "garage",     label: "Garage",      emoji: "🚗" },
   { value: "other",      label: "Other",       emoji: "📍" },
 ];
-
-function escHtml(str: string): string {
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
 
 function structureIcon(type: string, label: string, mode: "icon+label" | "icon-only" | "text-inside" | "dot" = "icon+label") {
   const entry = STRUCTURE_TYPES.find((t) => t.value === type) ?? STRUCTURE_TYPES[STRUCTURE_TYPES.length - 1];
@@ -294,7 +227,7 @@ function structureIcon(type: string, label: string, mode: "icon+label" | "icon-o
         font-size:9px;font-weight:700;color:#fff;
         white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
         letter-spacing:0.02em;
-      ">${escHtml(short)}</div>`,
+      ">${short}</div>`,
       iconSize: [72, 26],
       iconAnchor: [36, 13],
       popupAnchor: [0, -16],
@@ -336,7 +269,7 @@ function structureIcon(type: string, label: string, mode: "icon+label" | "icon-o
           white-space:nowrap;max-width:90px;
           overflow:hidden;text-overflow:ellipsis;
           box-shadow:0 1px 3px rgba(0,0,0,0.4);
-        ">${escHtml(maxLabel)}</div>
+        ">${maxLabel}</div>
       </div>`,
     iconSize: [34, 52],
     iconAnchor: [17, 34],
@@ -410,7 +343,6 @@ export default function MapPage() {
   const sensoryVectorLayersRef = useRef<(L.Marker | L.Polyline)[]>([]);
   const pendingSensoryLinePreviewRef = useRef<L.Polyline | null>(null);
   const sensoryLineHandlerRef = useRef<any>(null);
-  const ghostLayerRef = useRef<L.GeoJSON | null>(null);
   const sensoryLineDrawActiveRef = useRef(false);
   const freehandDrawerRef = useRef<FreehandDrawer | null>(null);
   const boundaryEditGroupRef = useRef<L.FeatureGroup | null>(null);
@@ -481,7 +413,6 @@ export default function MapPage() {
   const [sensoryVectorType, setSensoryVectorType] = useState<"road_noise" | "view_corridor" | "privacy_threat">("road_noise");
   const [sensoryVectorLabel, setSensoryVectorLabel] = useState("");
   const [showWater, setShowWater] = useState(true);
-  const [wizardStep, setWizardStep] = useState(1);
   const [waterAnalysis, setWaterAnalysis] = useState<WaterAnalysisResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [minUphillAcres, setMinUphillAcres] = useState(0.5);
@@ -501,29 +432,29 @@ export default function MapPage() {
   const [overpassCandidates, setOverpassCandidates] = useState<GeoJSON.Polygon[]>([]);
   const [overpassSelectedIdx, setOverpassSelectedIdx] = useState(0);
   const [isFetchingParcel, setIsFetchingParcel] = useState(false);
-  const [overpassAlternatives, setOverpassAlternatives] = useState<GeoJSON.Polygon[]>([]);
-  const [boundaryEditVersion, setBoundaryEditVersion] = useState(0);
   const [geoImportError, setGeoImportError] = useState<string | null>(null);
   const [isBoundaryDrawing, setIsBoundaryDrawing] = useState(false);
   const [showKeylineModal, setShowKeylineModal] = useState(false);
   const [waterBudget, setWaterBudget] = useState<WaterBudgetReport | null>(null);
   const [isRunningWaterBudget, setIsRunningWaterBudget] = useState(false);
   const [waterBudgetError, setWaterBudgetError] = useState<string | null>(null);
-  const [legendCollapsed, setLegendCollapsed] = useState(false);
-  const [showGhostLayers, setShowGhostLayers] = useState(true);
-  const [selectedTagFeature, setSelectedTagFeature] = useState<{
-    type: "swale" | "zone" | "pathway";
-    id: string;
-    label: string;
-    tags: string[];
-  } | null>(null);
-  const [isSavingTags, setIsSavingTags] = useState(false);
   const [freehandMode, setFreehandMode] = useState(false);
   const [editBoundaryMode, setEditBoundaryMode] = useState(false);
   const [editFootprintMode, setEditFootprintMode] = useState(false);
   const [editPathwayMode, setEditPathwayMode] = useState(false);
   const [pendingFootprintEdits, setPendingFootprintEdits] = useState<Array<{ id: string; geojson: string }> | null>(null);
   const [pendingPathwayEdits, setPendingPathwayEdits] = useState<Array<{ id: string; label: string; pathwayType: string; geojson: string }> | null>(null);
+
+  // ─── WATER STRUCTURE STATE ──────────────────────────────────────────────────
+  const [showWaterStructures, setShowWaterStructures] = useState(true);
+  const [waterStructureMode, setWaterStructureMode] = useState<"none" | "tank" | "dam" | "swale">("none");
+  const [waterStructureDraft, setWaterStructureDraft] = useState<{
+    type: "tank" | "dam" | "swale";
+    volumeLiters?: number | null;
+    heightM?: number | null;
+    lengthM?: number | null;
+    label: string;
+  } | null>(null);
 
   // ─── DUAL-MODE ────────────────────────────────────────────────────────────
   const [inputMode, setInputMode] = useState<"native" | "upload">("native");
@@ -566,9 +497,6 @@ export default function MapPage() {
   const createStructure = useCreateStructure();
   const updateStructure = useUpdateStructure();
   const deleteStructure = useDeleteStructure();
-  const updateDesignedSwale = useUpdateDesignedSwale();
-  const updateZone = useUpdateZone();
-  const updatePathway = useUpdatePathway();
 
   const { data: sectors = [] } = useListSectors(activePropertyId ?? "", {
     query: {
@@ -618,8 +546,6 @@ export default function MapPage() {
   sectorsRef.current = sectors;
   const activePropertyRef = useRef(activeProperty);
   activePropertyRef.current = activeProperty;
-  const pendingBoundaryRef = useRef<GeoJSON.Polygon | null>(null);
-  pendingBoundaryRef.current = pendingBoundary;
   const bulkReplaceZones = useBulkReplaceZones();
   const deleteZone = useDeleteZone();
 
@@ -720,9 +646,9 @@ export default function MapPage() {
     });
     pathwayPolylineHandlerRef.current = pathwayPolylineHandler;
 
-    // Sensory vector line handler — dashed terracotta stroke
+    // Sensory vector line handler — dashed red-orange stroke
     const sensoryLineHandler = new PolylineHandler(map, {
-      shapeOptions: { color: "#B85232", weight: 2.5, opacity: 0.9, dashArray: "8 5" },
+      shapeOptions: { color: "#ef4444", weight: 2.5, opacity: 0.9, dashArray: "8 5" },
       allowIntersection: true,
     });
     sensoryLineHandlerRef.current = sensoryLineHandler;
@@ -858,7 +784,7 @@ export default function MapPage() {
     if (overpassLayerRef.current) { map.removeLayer(overpassLayerRef.current); overpassLayerRef.current = null; }
     if (!overpassPreview || !mapLoaded) return;
     const layer = L.geoJSON(overpassPreview as any, {
-      style: { color: "#4A8C8C", weight: 2.5, opacity: 1, fillColor: "#4A8C8C", fillOpacity: 0.08, dashArray: "8 5" },
+      style: { color: "#3b82f6", weight: 2.5, opacity: 1, fillColor: "#3b82f6", fillOpacity: 0.08, dashArray: "8 5" },
     }).addTo(map);
     overpassLayerRef.current = layer;
     try { map.fitBounds(layer.getBounds(), { padding: [40, 40] }); } catch { /* no-op */ }
@@ -893,14 +819,7 @@ export default function MapPage() {
         features: [{ type: "Feature", geometry: geojson as unknown as GeoJSON.Geometry, properties: {} }],
       };
       const layer = L.geoJSON(fc as any, {
-        style: () => ({
-          color: "#2C3E50",
-          weight: 3,
-          dashArray: "6, 6",
-          fillColor: "#27AE60",
-          fillOpacity: 0.04,
-          lineJoin: "round" as CanvasLineJoin,
-        }),
+        style: () => ({ color: "#1a4a0d", weight: 2.5, opacity: 0.95, fillColor: "#2D6A1A", fillOpacity: 0.08 }),
       }).addTo(map);
       try {
         const bounds = layer.getBounds();
@@ -932,7 +851,7 @@ export default function MapPage() {
         if (!m) return;
         contourDataRef.current = fc;
         const layer = L.geoJSON(fc as any, {
-          style: () => ({ color: "#A0714F", weight: 2, opacity: 0.9, fill: false }),
+          style: () => ({ color: "#8B7355", weight: 1.5, opacity: 0.7, fill: false }),
         }).addTo(m);
         contourLayerRef.current = layer;
         // Auto-run keyline analysis as soon as contours are ready
@@ -954,68 +873,6 @@ export default function MapPage() {
       .catch(console.error)
       .finally(() => setIsGeneratingContours(false));
   }, [showContours, activeProperty?.id, activeProperty?.boundaryGeojson, mapLoaded, mapboxToken]);
-
-  // ─── GHOST RECOMMENDATION LAYERS ─────────────────────────────────────────
-  useEffect(() => {
-    const map = mapRef.current;
-    if (ghostLayerRef.current) { map?.removeLayer(ghostLayerRef.current); ghostLayerRef.current = null; }
-    if (!map || !mapLoaded || !showGhostLayers) return;
-    const recs = activeProperty?.spatialRecommendations;
-    const boundary = activeProperty?.boundaryGeojson;
-    if (!recs || recs.length === 0 || !boundary) return;
-
-    try {
-      const centroid = turf.centroid(boundary as unknown as turf.AllGeoJSON);
-      const bbox = turf.bbox(boundary as unknown as turf.AllGeoJSON);
-      const diagDeg = Math.sqrt(Math.pow(bbox[2] - bbox[0], 2) + Math.pow(bbox[3] - bbox[1], 2));
-      const diagKm = diagDeg * 111;
-
-      const PRIORITY_COLORS: Record<string, { fill: string; stroke: string }> = {
-        critical: { fill: "rgba(194,120,30,0.09)", stroke: "rgba(194,120,30,0.7)" },
-        high:     { fill: "rgba(74,107,46,0.09)",  stroke: "rgba(74,107,46,0.7)" },
-        medium:   { fill: "rgba(60,90,130,0.09)",  stroke: "rgba(60,90,130,0.7)" },
-      };
-
-      const features: GeoJSON.Feature[] = [];
-      for (const rec of recs) {
-        try {
-          const radiusKm = Math.max(0.05, rec.radiusFraction * diagKm * 0.5);
-          const [start, end] = rec.bearingRange as [number, number];
-          const wedge = turf.sector(centroid, radiusKm, start, end, { units: "kilometers", steps: 48 });
-          wedge.properties = {
-            id: rec.id,
-            label: rec.label,
-            priority: rec.priority,
-            rationale: rec.rationale,
-            fn: rec.ecologicalFunction,
-          };
-          features.push(wedge);
-        } catch { /* skip malformed rec */ }
-      }
-      if (!features.length) return;
-
-      const fc: GeoJSON.FeatureCollection = { type: "FeatureCollection", features };
-      const layer = L.geoJSON(fc as any, {
-        style: (feature) => {
-          const p = feature?.properties?.priority as string ?? "medium";
-          const c = PRIORITY_COLORS[p] ?? PRIORITY_COLORS.medium;
-          return { fillColor: c.fill, fillOpacity: 1, color: c.stroke, weight: 1.5, opacity: 0.85, dashArray: "4 4" };
-        },
-        onEachFeature: (feature, lyr) => {
-          const p = feature.properties ?? {};
-          lyr.bindTooltip(
-            `<div style="font-size:11px;font-weight:700;color:#C4875A;margin-bottom:2px;">${escHtml(p.label)}</div>` +
-            `<div style="font-size:9px;color:#aaa;text-transform:capitalize;">${escHtml(p.priority)} · ${escHtml(p.fn?.replace(/-/g, " ") ?? "")}</div>` +
-            `<div style="font-size:9px;color:#bbb;margin-top:3px;max-width:200px;">${escHtml(p.rationale)}</div>`,
-            { sticky: true },
-          );
-        },
-      });
-      layer.addTo(map);
-      ghostLayerRef.current = layer;
-    } catch { /* ignore turf errors */ }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeProperty?.id, activeProperty?.spatialRecommendations, mapLoaded, showGhostLayers]);
 
   // ─── 3D TERRAIN OVERLAY ───────────────────────────────────────────────────
   useEffect(() => {
@@ -1078,8 +935,8 @@ export default function MapPage() {
           paint: {
             "line-color": [
               "case",
-              ["==", ["%", ["to-number", ["coalesce", ["get", "ele"], 0]], 5], 0], "#C4875A",
-              "#C4875A88",
+              ["==", ["%", ["to-number", ["coalesce", ["get", "ele"], 0]], 5], 0], "#ef4444",
+              "#ff666688",
             ],
             "line-width": ["case", ["==", ["%", ["to-number", ["coalesce", ["get", "ele"], 0]], 5], 0], 1.8, 0.8],
             "line-opacity": 0.85,
@@ -1100,14 +957,14 @@ export default function MapPage() {
         glMap.addLayer({
           id: "gl-zones-fill", type: "fill", source: "gl-zones",
           paint: {
-            "fill-color": ["match", ["get", "zoneNumber"], 1, "#FDE68A", 2, "#9DC08B", 3, "#7AAF68", 4, "#D4A27A", 5, "#94A3B8", "#ffffff"],
+            "fill-color": ["match", ["get", "zoneNumber"], 1, "#FDE68A", 2, "#86EFAC", 3, "#4ADE80", 4, "#D4A27A", 5, "#94A3B8", "#ffffff"],
             "fill-opacity": 0.30,
           },
         });
         glMap.addLayer({
           id: "gl-zones-line", type: "line", source: "gl-zones",
           paint: {
-            "line-color": ["match", ["get", "zoneNumber"], 1, "#CA8A04", 2, "#4A7C3F", 3, "#3B6B30", 4, "#92400E", 5, "#475569", "#888888"],
+            "line-color": ["match", ["get", "zoneNumber"], 1, "#CA8A04", 2, "#16A34A", 3, "#15803D", 4, "#92400E", 5, "#475569", "#888888"],
             "line-width": 2, "line-opacity": 0.85,
           },
         });
@@ -1125,8 +982,8 @@ export default function MapPage() {
       });
       if (sectorFeatures.length > 0) {
         glMap.addSource("gl-sectors", { type: "geojson", data: { type: "FeatureCollection", features: sectorFeatures } });
-        glMap.addLayer({ id: "gl-sectors-fill", type: "fill", source: "gl-sectors", paint: { "fill-color": "#5A7B42", "fill-opacity": 0.18 } });
-        glMap.addLayer({ id: "gl-sectors-line", type: "line", source: "gl-sectors", paint: { "line-color": "#8FAD6A", "line-width": 1.5, "line-opacity": 0.75 } });
+        glMap.addLayer({ id: "gl-sectors-fill", type: "fill", source: "gl-sectors", paint: { "fill-color": "#3b82f6", "fill-opacity": 0.18 } });
+        glMap.addLayer({ id: "gl-sectors-line", type: "line", source: "gl-sectors", paint: { "line-color": "#93c5fd", "line-width": 1.5, "line-opacity": 0.75 } });
       }
 
       // Animate to pitched 3D view
@@ -1203,8 +1060,8 @@ export default function MapPage() {
       el.style.cssText = "font-size:12px;padding:2px 4px;min-width:150px;max-width:220px;";
       el.innerHTML = `
         <div style="font-weight:600;margin-bottom:3px;color:#111;">${isBoundaryReq ? "Boundary Request" : "Feedback"}</div>
-        <div style="color:#333;line-height:1.4;margin-bottom:4px;">${escHtml(displayText)}</div>
-        <div style="font-size:10px;color:#888;">${escHtml(comment.authorRole)}</div>
+        <div style="color:#333;line-height:1.4;margin-bottom:4px;">${displayText}</div>
+        <div style="font-size:10px;color:#888;">${comment.authorRole}</div>
         ${role === "designer" ? `<button class="del-btn" style="margin-top:6px;padding:2px 8px;border:1px solid #c00;color:#c00;border-radius:3px;cursor:pointer;font-size:10px;background:none;">Delete</button>` : ""}
       `;
       el.querySelector(".del-btn")?.addEventListener("click", () => {
@@ -1217,6 +1074,26 @@ export default function MapPage() {
     });
   }, [comments, activePropertyId, mapLoaded, role, handleDeleteComment]);
 
+  // ─── Building normalization ──────────────────────────────────────────────────
+  function regularizeBuildingPolygon(inputGeo: GeoJSON.Polygon): GeoJSON.Polygon {
+    const ring = inputGeo.coordinates[0];
+    if (!ring || ring.length < 3) return inputGeo;
+    const xs = ring.map((pt) => pt[0]);
+    const ys = ring.map((pt) => pt[1]);
+    const minX = Math.min(...xs); const maxX = Math.max(...xs);
+    const minY = Math.min(...ys); const maxY = Math.max(...ys);
+    return {
+      type: "Polygon",
+      coordinates: [[
+        [minX, minY],
+        [maxX, minY],
+        [maxX, maxY],
+        [minX, maxY],
+        [minX, minY],
+      ]],
+    };
+  }
+
   // ─── BUILDING OUTLINE DRAW MODE ──────────────────────────────────────────
   useEffect(() => {
     const map = mapRef.current;
@@ -1224,11 +1101,12 @@ export default function MapPage() {
     if (freehandMode) {
       const drawer = freehandDrawerRef.current;
       if (!drawer) return;
-      drawer.enablePolygon((geom: GeoJSON.Polygon) => {
-        const feat = { type: "Feature", geometry: geom, properties: {} } as GeoJSON.Feature;
+      drawer.enablePolygon((geom: any) => {
+        const regularized = regularizeBuildingPolygon(geom);
+        const feat = { type: "Feature", geometry: regularized, properties: {} } as any;
         const centroid = turf.centroid(feat);
         const [lng, lat] = centroid.geometry.coordinates;
-        setPendingFootprint(geom);
+        setPendingFootprint(regularized);
         setPendingStructure({ lng, lat });
         if (pendingFootprintPreviewRef.current) map.removeLayer(pendingFootprintPreviewRef.current);
         const previewLayer = L.geoJSON(feat as any, {
@@ -1308,9 +1186,9 @@ export default function MapPage() {
     if (!activePropertyId || !showSensoryVectors) return;
 
     const typeConfig: Record<string, { color: string; emoji: string }> = {
-      road_noise:       { color: "#B85232", emoji: "🔊" },
-      view_corridor:    { color: "#2A9D8F", emoji: "👁" },
-      privacy_threat:   { color: "#7C4F7E", emoji: "🚫" },
+      road_noise:       { color: "#ef4444", emoji: "🔊" },
+      view_corridor:    { color: "#22c55e", emoji: "👁" },
+      privacy_threat:   { color: "#a855f7", emoji: "🚫" },
     };
 
     sensoryVectors.forEach((sv) => {
@@ -1328,14 +1206,14 @@ export default function MapPage() {
         });
         const marker = L.marker([lat, lng], { icon });
         const label = sv.label || sv.vectorType.replace(/_/g, " ");
-        marker.bindPopup(`<div style="font-size:12px;"><b>${escHtml(label)}</b><br/><span style="color:#666;font-size:10px;">${escHtml(sv.vectorType)}</span></div>`);
+        marker.bindPopup(`<div style="font-size:12px;"><b>${label}</b><br/><span style="color:#666;font-size:10px;">${sv.vectorType}</span></div>`);
         marker.addTo(map);
         sensoryVectorLayersRef.current.push(marker);
       } else if (geom?.type === "LineString") {
         const coords = (geom as GeoJSON.LineString).coordinates.map(([lng, lat]) => [lat, lng] as [number, number]);
         const line = L.polyline(coords, { color: cfg.color, weight: 3, dashArray: "8 5", opacity: 0.85 });
         const label = sv.label || sv.vectorType.replace(/_/g, " ");
-        line.bindPopup(`<div style="font-size:12px;"><b>${cfg.emoji} ${escHtml(label)}</b><br/><span style="color:#666;font-size:10px;">${escHtml(sv.vectorType)}</span></div>`);
+        line.bindPopup(`<div style="font-size:12px;"><b>${cfg.emoji} ${label}</b><br/><span style="color:#666;font-size:10px;">${sv.vectorType}</span></div>`);
         line.addTo(map);
         sensoryVectorLayersRef.current.push(line as unknown as L.Marker);
       }
@@ -1400,8 +1278,8 @@ export default function MapPage() {
       const el = document.createElement("div");
       el.style.cssText = "font-size:12px;padding:2px 4px;min-width:130px;max-width:200px;";
       el.innerHTML = `
-        <div style="font-weight:700;margin-bottom:2px;color:#111;">${escHtml(s.label)}</div>
-        <div style="font-size:10px;color:#555;margin-bottom:4px;text-transform:capitalize;">${escHtml(STRUCTURE_TYPES.find(t => t.value === s.structureType)?.label ?? s.structureType)}</div>
+        <div style="font-weight:700;margin-bottom:2px;color:#111;">${s.label}</div>
+        <div style="font-size:10px;color:#555;margin-bottom:4px;text-transform:capitalize;">${STRUCTURE_TYPES.find(t => t.value === s.structureType)?.label ?? s.structureType}</div>
         ${role === "designer" ? `<button class="del-btn" style="margin-top:4px;padding:2px 8px;border:1px solid #c00;color:#c00;border-radius:3px;cursor:pointer;font-size:10px;background:none;">Delete</button>` : ""}
       `;
       el.querySelector(".del-btn")?.addEventListener("click", () => {
@@ -1455,20 +1333,12 @@ export default function MapPage() {
         const popup = document.createElement("div");
         popup.style.cssText = "font-size:12px;padding:2px 4px;min-width:120px;max-width:200px;";
         popup.innerHTML = `
-          <div style="font-weight:700;color:#111;margin-bottom:2px;">${escHtml(p.label)}</div>
-          <div style="font-size:10px;color:#555;margin-bottom:4px;">${escHtml(pt?.label ?? p.pathwayType)}</div>
+          <div style="font-weight:700;color:#111;margin-bottom:2px;">${p.label}</div>
+          <div style="font-size:10px;color:#555;margin-bottom:4px;">${pt?.label ?? p.pathwayType}</div>
           ${role === "designer" ? `<button class="del-btn" style="margin-top:4px;padding:2px 8px;border:1px solid #c00;color:#c00;border-radius:3px;cursor:pointer;font-size:10px;background:none;">Delete</button>` : ""}
         `;
         layer.bindPopup(popup);
         popup.querySelector(".del-btn")?.addEventListener("click", () => { handleDeletePathway(p.id); layer.closePopup(); });
-        if (role === "designer") {
-          layer.on("click", () => setSelectedTagFeature({
-            type: "pathway",
-            id: p.id,
-            label: p.label,
-            tags: (p as any).tags ? (p as any).tags.split(",").filter(Boolean) : [],
-          }));
-        }
         layer.addTo(map);
         pathwayLayersRef.current.push(layer);
       } catch { /* skip malformed GeoJSON */ }
@@ -1509,17 +1379,6 @@ export default function MapPage() {
           setPendingPin({ lng: e.latlng.lng, lat: e.latlng.lat });
           setPinText(`[${style.label}] `);
           setDropPinMode(false);
-        });
-      }
-      // Designer mode: clicking a zone opens the ecological tag panel
-      if (role === "designer") {
-        layer.on("click", () => {
-          setSelectedTagFeature({
-            type: "zone",
-            id: z.id,
-            label: style.label,
-            tags: (z as any).tags ? (z as any).tags.split(",").filter(Boolean) : [],
-          });
         });
       }
       layer.addTo(map);
@@ -1661,8 +1520,6 @@ export default function MapPage() {
   }, [pendingZoneEdits, activePropertyId]);
 
   // ─── BOUNDARY EDIT MODE (vertex-drag reshaping) ──────────────────────────
-  // Sources: pendingBoundaryRef (auto-fetched or drawn) first, else saved boundary.
-  // boundaryEditVersion forces re-init when the user switches alternatives.
   useEffect(() => {
     const map = mapRef.current;
     const editGroup = boundaryEditGroupRef.current;
@@ -1676,8 +1533,7 @@ export default function MapPage() {
       return;
     }
     editGroup.clearLayers();
-    // Prefer pending (unsaved) boundary so auto-fetched polygons are editable immediately
-    const rawGeo = pendingBoundaryRef.current ?? activePropertyRef.current?.boundaryGeojson;
+    const rawGeo = activePropertyRef.current?.boundaryGeojson;
     if (!rawGeo) { setEditBoundaryMode(false); return; }
     try {
       const geo = typeof rawGeo === "string" ? JSON.parse(rawGeo) : rawGeo;
@@ -1700,7 +1556,7 @@ export default function MapPage() {
       editGroup.clearLayers();
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editBoundaryMode, mapLoaded, boundaryEditVersion]);
+  }, [editBoundaryMode, mapLoaded]);
 
   // ─── FOOTPRINT EDIT MODE (vertex-drag reshaping) ─────────────────────────
   useEffect(() => {
@@ -2291,8 +2147,8 @@ export default function MapPage() {
                 const el = document.createElement("div");
                 el.style.cssText = "font-size:12px;padding:4px 6px;min-width:140px;";
                 el.innerHTML = `
-                  <div style="font-weight:700;margin-bottom:3px;">${st.emoji} ${escHtml(s.label || st.label)}</div>
-                  <div style="font-size:10px;color:#666;margin-bottom:6px;">${escHtml(st.label)} · R=${s.radiusKm}km · ${s.startAngle}°→${s.endAngle}°</div>
+                  <div style="font-weight:700;margin-bottom:3px;">${st.emoji} ${s.label || st.label}</div>
+                  <div style="font-size:10px;color:#666;margin-bottom:6px;">${st.label} · R=${s.radiusKm}km · ${s.startAngle}°→${s.endAngle}°</div>
                   ${role === "designer" ? `<button class="delbtn" style="padding:2px 8px;border:1px solid #c00;color:#c00;border-radius:3px;cursor:pointer;font-size:10px;background:none;">Delete</button>` : ""}
                 `;
                 el.querySelector(".delbtn")?.addEventListener("click", () => { handleDeleteSector(s.id); map!.closePopup(); });
@@ -2529,19 +2385,11 @@ export default function MapPage() {
       const el = document.createElement("div");
       el.style.cssText = "font-size:11px;padding:2px 4px;min-width:150px;";
       el.innerHTML = `
-        <div style="font-weight:700;color:#0369a1;margin-bottom:3px;">💾 ${escHtml(ds.name)}</div>
+        <div style="font-weight:700;color:#0369a1;margin-bottom:3px;">💾 ${ds.name}</div>
         <div style="color:#444;margin-bottom:2px;">Elev: ${ds.elevationM.toFixed(1)} m · ${ds.lengthM.toLocaleString()} m</div>
-        <div style="color:#666;font-size:10px;text-transform:capitalize;">${escHtml(ds.swaleType.replace(/_/g, " "))}</div>
+        <div style="color:#666;font-size:10px;text-transform:capitalize;">${ds.swaleType.replace(/_/g, " ")}</div>
         ${role === "designer" ? `<button class="del-swale" style="margin-top:5px;padding:2px 8px;border:1px solid #c00;color:#c00;border-radius:3px;cursor:pointer;font-size:10px;background:none;">Delete</button>` : ""}`;
       el.querySelector(".del-swale")?.addEventListener("click", () => { handleDeleteSavedSwale(ds.id); layer.closePopup(); });
-      if (role === "designer") {
-        layer.on("click", () => setSelectedTagFeature({
-          type: "swale",
-          id: ds.id,
-          label: ds.name,
-          tags: (ds as any).tags ? (ds as any).tags.split(",").filter(Boolean) : [],
-        }));
-      }
       layer.bindPopup(el).addTo(map);
       savedSwaleLayersRef.current.push(layer);
     });
@@ -2581,14 +2429,6 @@ export default function MapPage() {
     return () => clearTimeout(timer);
   }, [searchQuery, mapboxToken]);
 
-  // ─── WIZARD STEP AUTO-TOGGLE layers ──────────────────────────────────────
-  useEffect(() => {
-    if (wizardStep === 1) { setShowSatellite(true); setShowBoundary(true); }
-    else if (wizardStep === 2) { setShowContours(true); setShowWater(true); }
-    else if (wizardStep === 3) { setShowStructures(true); setShowPathways(true); }
-    else if (wizardStep === 4) { setShowSectors(true); setShowZones(true); setShowSensoryVectors(true); }
-  }, [wizardStep]);
-
   function flyToResult(result: any) {
     const map = mapRef.current;
     if (!map) return;
@@ -2599,77 +2439,12 @@ export default function MapPage() {
     setSearchResults([]);
     setOverpassCandidates([]);
     setOverpassSelectedIdx(0);
-    setOverpassAlternatives([]);
-    setEditBoundaryMode(false);
     setIsFetchingParcel(true);
-    // Primary: NSW Spatial Services cadastral API (official government survey data).
-    // Fallback: Overpass/OSM (open data, less precise for rural cadastres).
-    fetchOfficialBoundary(lat, lng).then((officialGeom) => {
-      if (officialGeom) {
-        setIsFetchingParcel(false);
-        // Normalise MultiPolygon → the largest individual Polygon
-        let poly: GeoJSON.Polygon;
-        if (officialGeom.type === "MultiPolygon") {
-          const polys = (officialGeom as GeoJSON.MultiPolygon).coordinates.map(
-            (coords): GeoJSON.Polygon => ({ type: "Polygon", coordinates: coords }),
-          );
-          polys.sort((a, b) => {
-            try { return turf.area(turf.feature(b)) - turf.area(turf.feature(a)); }
-            catch { return 0; }
-          });
-          poly = polys[0];
-        } else {
-          poly = officialGeom as GeoJSON.Polygon;
-        }
-        const ha = turf.area(turf.feature(poly)) / 10_000;
-        setPendingBoundary(poly);
-        setPendingAreaHa(ha);
-        setPendingAreaAc(ha * 2.47105);
-        setBoundaryEditVersion((v) => v + 1);
-        setEditBoundaryMode(true);
-        try {
-          const tempLayer = L.geoJSON(poly as any);
-          map.fitBounds(tempLayer.getBounds(), { padding: [60, 60] });
-        } catch { /* no-op */ }
-      } else {
-        // NSW returned nothing (outside NSW or no cadastre match) — fall back to Overpass
-        fetchParcelBoundary(lat, lng).then((polygons) => {
-          setIsFetchingParcel(false);
-          if (polygons.length > 0) {
-            const best = polygons[0];
-            const ha = turf.area(turf.feature(best)) / 10_000;
-            setPendingBoundary(best);
-            setPendingAreaHa(ha);
-            setPendingAreaAc(ha * 2.47105);
-            if (polygons.length > 1) setOverpassAlternatives(polygons);
-            setBoundaryEditVersion((v) => v + 1);
-            setEditBoundaryMode(true);
-            try {
-              const tempLayer = L.geoJSON(best as any);
-              map.fitBounds(tempLayer.getBounds(), { padding: [60, 60] });
-            } catch { /* no-op */ }
-          }
-          // no polygons → empty state, draw fallback shows in sidebar
-        });
-      }
+    fetchParcelBoundary(lat, lng).then((polygons) => {
+      setIsFetchingParcel(false);
+      setOverpassCandidates(polygons);
+      setOverpassSelectedIdx(0);
     });
-  }
-
-  // ─── SWITCH OVERPASS ALTERNATIVE ─────────────────────────────────────────
-  function handleSwitchAlternative(poly: GeoJSON.Polygon) {
-    const ha = turf.area(turf.feature(poly)) / 10_000;
-    setPendingBoundary(poly);
-    setPendingAreaHa(ha);
-    setPendingAreaAc(ha * 2.47105);
-    setBoundaryEditVersion((v) => v + 1); // retriggers edit effect
-    setEditBoundaryMode(true);
-    const map = mapRef.current;
-    if (map) {
-      try {
-        const tempLayer = L.geoJSON(poly as any);
-        map.fitBounds(tempLayer.getBounds(), { padding: [60, 60] });
-      } catch { /* no-op */ }
-    }
   }
 
   // ─── IMPORT OVERPASS PARCEL BOUNDARY ─────────────────────────────────────
@@ -2737,8 +2512,6 @@ export default function MapPage() {
           setPendingBoundary(null);
           setPendingAreaHa(null);
           setPendingAreaAc(null);
-          setOverpassAlternatives([]);
-          setEditBoundaryMode(false);
           drawnItemsRef.current?.clearLayers();
           refetchProperty();
         },
@@ -2933,38 +2706,6 @@ export default function MapPage() {
   const displayAreaHa = pendingAreaHa ?? activeProperty?.areaHectares;
   const displayAreaAc = pendingAreaAc ?? activeProperty?.areaAcres;
 
-  // ─── SAVE ECOLOGICAL TAGS ─────────────────────────────────────────────────
-  async function handleSaveTags(tags: string[]) {
-    if (!selectedTagFeature || !activePropertyId) return;
-    setIsSavingTags(true);
-    try {
-      if (selectedTagFeature.type === "zone") {
-        await updateZone.mutateAsync({
-          propertyId: activePropertyId,
-          zoneId: selectedTagFeature.id,
-          data: { tags },
-        });
-        queryClient.invalidateQueries({ queryKey: getListZonesQueryKey(activePropertyId) });
-      } else if (selectedTagFeature.type === "swale") {
-        await updateDesignedSwale.mutateAsync({
-          propertyId: activePropertyId,
-          swaleId: selectedTagFeature.id,
-          data: { tags },
-        });
-        queryClient.invalidateQueries({ queryKey: getListDesignedSwalesQueryKey(activePropertyId) });
-      } else if (selectedTagFeature.type === "pathway") {
-        await updatePathway.mutateAsync({
-          propertyId: activePropertyId,
-          pathwayId: selectedTagFeature.id,
-          data: { tags },
-        });
-        queryClient.invalidateQueries({ queryKey: getListPathwaysQueryKey(activePropertyId) });
-      }
-      setSelectedTagFeature((prev) => prev ? { ...prev, tags } : null);
-    } catch { /* ignore — user can retry */ }
-    setIsSavingTags(false);
-  }
-
   // ─── RENDER ───────────────────────────────────────────────────────────────
   return (
     <div className="flex h-screen w-screen overflow-hidden">
@@ -2982,8 +2723,8 @@ export default function MapPage() {
         className="flex flex-col overflow-y-auto flex-shrink-0"
         style={{
           width: "18rem",
-          background: "hsl(94, 40%, 10%)",
-          borderRight: "1px solid hsl(94, 35%, 18%)",
+          background: "hsl(103, 48%, 11%)",
+          borderRight: "1px solid hsl(103, 35%, 18%)",
           ...(sidebarIsOverlay
             ? {
                 position: "fixed",
@@ -2998,14 +2739,11 @@ export default function MapPage() {
         }}
       >
         {/* Header */}
-        <div className="px-4 py-3 border-b" style={{ borderColor: "hsl(94, 35%, 18%)" }}>
+        <div className="px-4 py-3 border-b" style={{ borderColor: "hsl(103, 35%, 18%)" }}>
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <img src={patternMark} alt="Pattern" style={{ height: 26, width: "auto" }} />
-              <div>
-                <h1 className="text-sm font-semibold tracking-tight" style={{ color: "hsl(44, 58%, 62%)" }}>Pattern</h1>
-                <p className="text-[10px] mt-0.5" style={{ color: "hsl(42, 15%, 55%)" }}>Natural Systems Design</p>
-              </div>
+            <div>
+              <h1 className="text-sm font-semibold tracking-tight" style={{ color: "hsl(42, 28%, 90%)" }}>TerraGuard</h1>
+              <p className="text-[10px] mt-0.5" style={{ color: "hsl(42, 15%, 55%)" }}>Land Security Platform</p>
             </div>
             <div className="flex items-center gap-1">
               <button
@@ -3034,7 +2772,7 @@ export default function MapPage() {
             </div>
           </div>
 
-          <div className="mt-3 flex rounded-md overflow-hidden border" style={{ borderColor: "hsl(94, 35%, 20%)" }}>
+          <div className="mt-3 flex rounded-md overflow-hidden border" style={{ borderColor: "hsl(103, 35%, 20%)" }}>
             {(["designer", "client"] as Role[]).map((r) => (
               <button
                 key={r}
@@ -3052,18 +2790,18 @@ export default function MapPage() {
         </div>
 
         {/* ── INPUT MODE TOGGLE ── */}
-        <div className="px-4 py-3 border-b" style={{ borderColor: "hsl(94, 35%, 18%)" }}>
+        <div className="px-4 py-3 border-b" style={{ borderColor: "hsl(103, 35%, 18%)" }}>
           <div className="text-[10px] font-semibold uppercase tracking-widest mb-2" style={{ color: "hsl(42, 15%, 50%)" }}>
             Input Mode
           </div>
-          <div className="flex rounded-md overflow-hidden border" style={{ borderColor: "hsl(94, 35%, 20%)" }}>
+          <div className="flex rounded-md overflow-hidden border" style={{ borderColor: "hsl(103, 35%, 20%)" }}>
             {(["native", "upload"] as const).map((mode) => (
               <button
                 key={mode}
                 onClick={() => setInputMode(mode)}
                 className="flex-1 py-1.5 text-[11px] font-medium transition-colors"
                 style={{
-                  background: inputMode === mode ? "#1f6b7a" : "transparent",
+                  background: inputMode === mode ? "#1d4ed8" : "transparent",
                   color: inputMode === mode ? "#fff" : "hsl(42, 15%, 55%)",
                 }}
               >
@@ -3079,7 +2817,7 @@ export default function MapPage() {
         </div>
 
         {/* Property selector */}
-        <div className="px-4 py-3 border-b" style={{ borderColor: "hsl(94, 35%, 18%)" }}>
+        <div className="px-4 py-3 border-b" style={{ borderColor: "hsl(103, 35%, 18%)" }}>
           <label className="text-[10px] font-semibold uppercase tracking-widest mb-1.5 block" style={{ color: "hsl(42, 15%, 50%)" }}>
             Active Property
           </label>
@@ -3087,7 +2825,7 @@ export default function MapPage() {
             <div className="flex gap-1.5">
               <input
                 className="flex-1 text-xs px-2 py-1.5 rounded border outline-none"
-                style={{ background: "hsl(94, 35%, 17%)", borderColor: "hsl(94, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
+                style={{ background: "hsl(103, 35%, 17%)", borderColor: "hsl(103, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
                 placeholder="Property name..."
                 value={newPropName}
                 onChange={(e) => setNewPropName(e.target.value)}
@@ -3101,7 +2839,7 @@ export default function MapPage() {
             <div className="flex gap-1.5">
               <select
                 className="flex-1 text-xs px-2 py-1.5 rounded border outline-none"
-                style={{ background: "hsl(94, 35%, 17%)", borderColor: "hsl(94, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
+                style={{ background: "hsl(103, 35%, 17%)", borderColor: "hsl(103, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
                 value={activePropertyId ?? ""}
                 onChange={(e) => setActivePropertyId(e.target.value || null)}
               >
@@ -3114,21 +2852,21 @@ export default function MapPage() {
                 onClick={() => setShowNewPropForm(true)}
                 title="New property"
                 className="px-2 py-1 rounded text-xs font-medium"
-                style={{ background: "hsl(94, 35%, 17%)", border: "1px solid hsl(94, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
+                style={{ background: "hsl(103, 35%, 17%)", border: "1px solid hsl(103, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
               >+</button>
             </div>
           )}
         </div>
 
         {/* Address search */}
-        <div className="px-4 py-3 border-b relative" style={{ borderColor: "hsl(94, 35%, 18%)" }}>
+        <div className="px-4 py-3 border-b relative" style={{ borderColor: "hsl(103, 35%, 18%)" }}>
           <label className="text-[10px] font-semibold uppercase tracking-widest mb-1.5 block" style={{ color: "hsl(42, 15%, 50%)" }}>
             Address Search
           </label>
           <input
             type="search"
             className="w-full text-xs px-2.5 py-1.5 rounded border outline-none"
-            style={{ background: "hsl(94, 35%, 17%)", borderColor: "hsl(94, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
+            style={{ background: "hsl(103, 35%, 17%)", borderColor: "hsl(103, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
             placeholder="Find a location..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -3138,13 +2876,13 @@ export default function MapPage() {
           {showDropdown && (
             <div
               className="absolute left-4 right-4 z-50 rounded border shadow-lg mt-1 overflow-hidden"
-              style={{ background: "hsl(94, 40%, 10%)", borderColor: "hsl(94, 30%, 22%)", top: "100%" }}
+              style={{ background: "hsl(103, 40%, 10%)", borderColor: "hsl(103, 30%, 22%)", top: "100%" }}
             >
               {searchResults.map((r, i) => (
                 <button
                   key={i}
                   className="w-full text-left px-3 py-2 text-xs transition-colors"
-                  style={{ color: "hsl(42, 28%, 85%)", borderBottom: i < searchResults.length - 1 ? "1px solid hsl(94, 25%, 16%)" : "none" }}
+                  style={{ color: "hsl(42, 28%, 85%)", borderBottom: i < searchResults.length - 1 ? "1px solid hsl(103, 25%, 16%)" : "none" }}
                   onMouseDown={() => flyToResult(r)}
                 >
                   <div className="font-medium truncate">{r.text}</div>
@@ -3156,68 +2894,96 @@ export default function MapPage() {
           {isFetchingParcel && (
             <p className="text-[10px] mt-1.5 animate-pulse" style={{ color: "#3b82f6" }}>Searching for parcel boundary…</p>
           )}
-          {!isFetchingParcel && pendingBoundary && overpassAlternatives.length > 0 && (
-            <p className="text-[10px] mt-1.5" style={{ color: "#4ade80" }}>
-              ✓ Parcel boundary auto-fetched{overpassAlternatives.length > 1 ? ` (${overpassAlternatives.length} options)` : ""} — drag vertices to adjust.
+          {!isFetchingParcel && overpassCandidates.length > 0 && (
+            <p className="text-[10px] mt-1.5" style={{ color: "#60a5fa" }}>
+              ● {overpassCandidates.length} parcel option{overpassCandidates.length > 1 ? "s" : ""} found — shown in blue. Select a property below then import.
             </p>
           )}
-          {!isFetchingParcel && pendingBoundary && overpassAlternatives.length === 0 && !editBoundaryMode && searchQuery && !showDropdown && (
-            <p className="text-[10px] mt-1.5" style={{ color: "#4ade80" }}>✓ Parcel boundary found — drag vertices to adjust.</p>
-          )}
-          {!isFetchingParcel && !pendingBoundary && searchQuery && overpassAlternatives.length === 0 && overpassCandidates.length === 0 && !showDropdown && (
+          {!isFetchingParcel && searchQuery && overpassCandidates.length === 0 && !showDropdown && (
             <p className="text-[10px] mt-1.5" style={{ color: "hsl(42, 15%, 45%)" }}>No parcel data found — upload a GeoJSON file or draw manually.</p>
           )}
         </div>
 
-
-        {/* ── WIZARD STEP INDICATOR ── */}
-        {inputMode === "native" && (
-          <div className="shrink-0 px-3 pt-3 pb-2.5 border-b" style={{ borderColor: "hsl(94, 35%, 18%)" }}>
-            <div className="text-[8px] uppercase tracking-widest mb-2.5" style={{ color: "hsl(42, 15%, 38%)" }}>
-              Map Steps — Scale of Permanence
-            </div>
-            <div className="grid grid-cols-4 gap-1">
-              {([
-                { num: 1, label: "Base & Boundary", icon: "⬡" },
-                { num: 2, label: "Water & Topo",    icon: "⛰"  },
-                { num: 3, label: "Access & Build",  icon: "🏗" },
-                { num: 4, label: "Sectors & Zones", icon: "🗺" },
-              ] as const).map(({ num, label, icon }) => {
-                const isActive = wizardStep === num;
-                const isDone   = wizardStep > num;
-                return (
-                  <button
-                    key={num}
-                    onClick={() => setWizardStep(num)}
-                    className="flex flex-col items-center gap-0.5 py-2 rounded transition-all"
-                    style={{
-                      background: isActive ? "hsl(94,35%,20%)" : isDone ? "hsl(94,28%,14%)" : "transparent",
-                      border: `1px solid ${isActive ? "hsl(94,45%,32%)" : isDone ? "hsl(94,28%,22%)" : "hsl(94,28%,18%)"}`,
-                    }}
-                  >
-                    <span className="text-[13px] leading-none">{isDone ? "✓" : icon}</span>
-                    <span
-                      className="text-[8px] text-center leading-tight font-semibold mt-0.5"
-                      style={{ color: isActive ? "hsl(94,55%,72%)" : isDone ? "hsl(94,40%,50%)" : "hsl(42,15%,40%)" }}
-                    >
-                      {label}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-            <div className="mt-2.5 h-1 rounded-full overflow-hidden" style={{ background: "hsl(94,28%,16%)" }}>
-              <div
-                className="h-full rounded-full transition-all duration-300"
-                style={{ width: `${((wizardStep - 1) / 3) * 100}%`, background: "hsl(94,42%,40%)" }}
-              />
-            </div>
+        {/* ── LAYER VISIBILITY ── */}
+        <SidebarSection label="Layer Visibility" defaultOpen>
+          <div className="space-y-2">
+            <LayerToggle label="Satellite Imagery" color="#4a9eff" active={showSatellite} onToggle={() => setShowSatellite((v) => !v)} />
+            <LayerToggle
+              label="Property Boundary"
+              color="#2D6A1A"
+              active={showBoundary}
+              onToggle={() => setShowBoundary((v) => !v)}
+              disabled={!activeProperty?.boundaryGeojson}
+            />
+            <LayerToggle
+              label="Terrain Contours"
+              color="#ef4444"
+              active={showContours}
+              onToggle={() => setShowContours((v) => !v)}
+              disabled={!activeProperty?.boundaryGeojson}
+            />
+            <LayerToggle
+              label="Sectors"
+              color="#d4a800"
+              active={showSectors}
+              onToggle={() => setShowSectors((v) => !v)}
+              disabled={!activePropertyId}
+            />
+            <LayerToggle
+              label="Solar Arcs"
+              color="#FBBF24"
+              active={showSolarArcs}
+              onToggle={() => setShowSolarArcs((v) => !v)}
+              disabled={!activePropertyId || !sectorCenter}
+            />
+            <LayerToggle
+              label="Water Analysis"
+              color="#0ea5e9"
+              active={showWater}
+              onToggle={() => setShowWater((v) => !v)}
+              disabled={!activePropertyId}
+            />
+            <LayerToggle
+              label="Structures"
+              color="#1e3a5f"
+              active={showStructures}
+              onToggle={() => setShowStructures((v) => !v)}
+              disabled={!activePropertyId}
+            />
+            <LayerToggle
+              label="Pathways"
+              color="#8B6914"
+              active={showPathways}
+              onToggle={() => setShowPathways((v) => !v)}
+              disabled={!activePropertyId}
+            />
+            <LayerToggle
+              label="Zone Mapping"
+              color="#CA8A04"
+              active={showZones}
+              onToggle={() => setShowZones((v) => !v)}
+              disabled={!activePropertyId}
+            />
+            <LayerToggle
+              label="Sensory Vectors"
+              color="#a855f7"
+              active={showSensoryVectors}
+              onToggle={() => setShowSensoryVectors((v) => !v)}
+              disabled={!activePropertyId}
+            />
           </div>
-        )}
+          {isGeneratingContours && (
+            <div className="flex items-center gap-2 mt-2.5">
+              <div className="w-3 h-3 border border-t-transparent rounded-full animate-spin" style={{ borderColor: "#ef4444" }} />
+              <span className="text-[10px]" style={{ color: "hsl(42, 15%, 55%)" }}>Fetching elevation tiles...</span>
+            </div>
+          )}
+        </SidebarSection>
+
         {/* ── LAYER SECTIONS — native mode only ── */}
         {inputMode === "upload" ? (
           <div className="px-4 py-5 space-y-3">
-            <div className="rounded-xl p-3 text-center" style={{ background: "hsl(192,35%,10%)", border: "1px solid #1f6b7a55" }}>
+            <div className="rounded-xl p-3 text-center" style={{ background: "hsl(220,35%,10%)", border: "1px solid #1d4ed855" }}>
               <div className="text-2xl mb-2">📷</div>
               <div className="text-[11px] font-bold mb-1" style={{ color: "#60a5fa" }}>Image Upload Mode Active</div>
               <div className="text-[10px] leading-relaxed" style={{ color: "hsl(42,15%,45%)" }}>
@@ -3233,10 +2999,10 @@ export default function MapPage() {
               ].map(({ key, label, color, icon }) => {
                 const uploaded = !!uploadedMaps[key as keyof typeof uploadedMaps];
                 return (
-                  <div key={key} className="flex items-center gap-2.5 rounded-lg px-3 py-2" style={{ background: "hsl(94,35%,12%)", border: `1px solid ${uploaded ? color + "55" : "hsl(94,28%,18%)"}` }}>
+                  <div key={key} className="flex items-center gap-2.5 rounded-lg px-3 py-2" style={{ background: "hsl(103,35%,12%)", border: `1px solid ${uploaded ? color + "55" : "hsl(103,28%,18%)"}` }}>
                     <span className="text-base">{icon}</span>
                     <span className="text-[11px] flex-1" style={{ color: uploaded ? color : "hsl(42,15%,50%)" }}>{label}</span>
-                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ background: uploaded ? color + "22" : "hsl(94,25%,16%)", color: uploaded ? color : "hsl(42,15%,40%)" }}>
+                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ background: uploaded ? color + "22" : "hsl(103,25%,16%)", color: uploaded ? color : "hsl(42,15%,40%)" }}>
                       {uploaded ? "✓ Loaded" : "Empty"}
                     </span>
                   </div>
@@ -3247,65 +3013,17 @@ export default function MapPage() {
         ) : (
         <>
 
-        {/* ── WIZARD STEP 1: BASE & BOUNDARY ── */}
-        {wizardStep === 1 && (
-          <div className="flex-1 overflow-y-auto min-h-0">
         {/* ── LAYER 1: BOUNDARY ── */}
         <SidebarSection label="Layer 1 — Property Boundary" defaultOpen>
           {!activePropertyId ? (
             <p className="text-[11px]" style={{ color: "hsl(42, 15%, 50%)" }}>Select a property to manage its boundary.</p>
           ) : role === "designer" ? (
             <div className="space-y-2.5">
-              {/* ── Auto-fetched parcel status + alternatives picker ── */}
-              {overpassAlternatives.length > 0 && (
-                <div className="rounded p-2.5 space-y-2" style={{ background: "hsl(140, 30%, 8%)", border: "1px solid hsl(140, 40%, 22%)" }}>
-                  <div className="flex items-center gap-1.5">
-                    <span style={{ color: "#4ade80" }}>✓</span>
-                    <p className="text-[10px] font-semibold" style={{ color: "#4ade80" }}>
-                      Boundary auto-fetched — vertices are live
-                    </p>
-                  </div>
-                  <p className="text-[9px]" style={{ color: "hsl(42, 15%, 50%)" }}>
-                    Drag the corner handles on the map to refine. {overpassAlternatives.length > 1 ? "Multiple parcels found — tap to switch:" : ""}
-                  </p>
-                  {overpassAlternatives.length > 1 && (
-                    <div className="space-y-1">
-                      {overpassAlternatives.map((poly, idx) => {
-                        const ha = turf.area(turf.feature(poly)) / 10_000;
-                        const isCurrent = pendingBoundary != null &&
-                          Math.abs(turf.area(turf.feature(pendingBoundary)) - turf.area(turf.feature(poly))) < 1;
-                        return (
-                          <button
-                            key={idx}
-                            onClick={() => handleSwitchAlternative(poly)}
-                            className="w-full text-left px-2 py-1.5 rounded text-[10px] transition-colors"
-                            style={{
-                              background: isCurrent ? "hsl(140, 35%, 16%)" : "hsl(140, 20%, 9%)",
-                              border: isCurrent ? "1px solid hsl(140, 50%, 32%)" : "1px solid hsl(140, 25%, 18%)",
-                              color: isCurrent ? "#86efac" : "hsl(42, 15%, 55%)",
-                            }}
-                          >
-                            {isCurrent ? "▶ " : ""}Option {idx + 1} — {ha < 0.01 ? (ha * 10000).toFixed(0) + " m²" : ha.toFixed(2) + " ha"}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                  <button
-                    onClick={() => { setOverpassAlternatives([]); setPendingBoundary(null); setPendingAreaHa(null); setPendingAreaAc(null); setEditBoundaryMode(false); }}
-                    className="w-full text-xs px-3 py-1.5 rounded transition-colors"
-                    style={{ background: "transparent", color: "hsl(42, 15%, 50%)", border: "1px solid hsl(94, 30%, 22%)" }}
-                  >
-                    Dismiss — use file upload or draw manually
-                  </button>
-                </div>
-              )}
-
-              {/* ── Legacy OSM candidate picker (manual import flow) ── */}
-              {overpassCandidates.length > 0 && overpassAlternatives.length === 0 && (
+              {/* ── OSM candidate picker ── */}
+              {overpassCandidates.length > 0 && (
                 <div className="rounded p-2.5 space-y-2" style={{ background: "hsl(220, 60%, 10%)", border: "1px solid hsl(220, 50%, 28%)" }}>
                   <p className="text-[10px] font-semibold" style={{ color: "#60a5fa" }}>
-                    {overpassCandidates.length} parcel option{overpassCandidates.length > 1 ? "s" : ""} from map data
+                    {overpassCandidates.length} parcel option{overpassCandidates.length > 1 ? "s" : ""} from map data (blue outline on map)
                   </p>
                   {overpassCandidates.length > 1 && (
                     <div className="space-y-1">
@@ -3332,14 +3050,14 @@ export default function MapPage() {
                   <button
                     onClick={handleImportOverpassBoundary}
                     className="w-full text-xs px-3 py-2 rounded font-semibold transition-colors"
-                    style={{ background: "#1f6b7a", color: "#fff", border: "1px solid #3b82f6" }}
+                    style={{ background: "#1d4ed8", color: "#fff", border: "1px solid #3b82f6" }}
                   >
                     Import {overpassCandidates.length > 1 ? "Selected" : "This"} Boundary
                   </button>
                   <button
                     onClick={() => { setOverpassCandidates([]); setOverpassSelectedIdx(0); }}
                     className="w-full text-xs px-3 py-1.5 rounded transition-colors"
-                    style={{ background: "transparent", color: "hsl(42, 15%, 50%)", border: "1px solid hsl(94, 30%, 22%)" }}
+                    style={{ background: "transparent", color: "hsl(42, 15%, 50%)", border: "1px solid hsl(103, 30%, 22%)" }}
                   >
                     Dismiss — use file upload or draw
                   </button>
@@ -3350,7 +3068,7 @@ export default function MapPage() {
               <div>
                 <label
                   className="w-full text-xs px-3 py-2 rounded font-medium text-left transition-colors cursor-pointer flex items-center gap-2"
-                  style={{ background: "hsl(94, 35%, 17%)", border: "1px solid hsl(94, 30%, 22%)", color: "hsl(42, 28%, 88%)", display: "flex" }}
+                  style={{ background: "hsl(103, 35%, 17%)", border: "1px solid hsl(103, 30%, 22%)", color: "hsl(42, 28%, 88%)", display: "flex" }}
                 >
                   <span>⬆</span> Import Boundary from GeoJSON File
                   <input type="file" accept=".geojson,.json" className="hidden" onChange={handleGeoJsonFileImport} />
@@ -3369,14 +3087,14 @@ export default function MapPage() {
                 <button
                   onClick={() => setFreehandMode(false)}
                   className="text-[10px] px-2 py-0.5 rounded-l"
-                  style={{ background: freehandMode ? "hsl(94,35%,14%)" : "hsl(84,38%,30%)", border: "1px solid hsl(84,38%,25%)", color: freehandMode ? "hsl(42,15%,50%)" : "hsl(84,55%,80%)" }}
+                  style={{ background: freehandMode ? "hsl(103,35%,14%)" : "hsl(84,38%,30%)", border: "1px solid hsl(84,38%,25%)", color: freehandMode ? "hsl(42,15%,50%)" : "hsl(84,55%,80%)" }}
                 >
                   ✦ Precise
                 </button>
                 <button
                   onClick={() => setFreehandMode(true)}
                   className="text-[10px] px-2 py-0.5 rounded-r -ml-px"
-                  style={{ background: freehandMode ? "hsl(192,45%,24%)" : "hsl(94,35%,14%)", border: "1px solid hsl(200,50%,30%)", color: freehandMode ? "#7dd3fc" : "hsl(42,15%,50%)" }}
+                  style={{ background: freehandMode ? "hsl(200,50%,22%)" : "hsl(103,35%,14%)", border: "1px solid hsl(200,50%,30%)", color: freehandMode ? "#7dd3fc" : "hsl(42,15%,50%)" }}
                 >
                   ✏ Freehand
                 </button>
@@ -3384,7 +3102,7 @@ export default function MapPage() {
 
               {isBoundaryDrawing ? (
                 <div className="space-y-2">
-                  <div className="rounded p-2.5" style={{ background: "hsl(94, 40%, 12%)", border: "1px solid hsl(84, 50%, 35%)" }}>
+                  <div className="rounded p-2.5" style={{ background: "hsl(103, 40%, 12%)", border: "1px solid hsl(84, 50%, 35%)" }}>
                     <p className="text-[10px] font-semibold mb-1" style={{ color: "hsl(84, 60%, 65%)" }}>
                       {freehandMode ? "✏ Freehand active" : "✏ Drawing active"}
                     </p>
@@ -3414,7 +3132,7 @@ export default function MapPage() {
                       setIsBoundaryDrawing(true);
                     }}
                     className="w-full text-xs px-3 py-2 rounded font-medium text-left transition-colors"
-                    style={{ background: "hsl(94, 35%, 17%)", border: "1px solid hsl(94, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
+                    style={{ background: "hsl(103, 35%, 17%)", border: "1px solid hsl(103, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
                   >
                     {freehandMode ? "✏ Freehand Boundary" : "✏ Draw Property Boundary"}
                   </button>
@@ -3444,7 +3162,7 @@ export default function MapPage() {
                         <button
                           onClick={() => { boundaryEditHandlerRef.current?.revertLayers(); setEditBoundaryMode(false); }}
                           className="px-3 text-[11px] py-1.5 rounded"
-                          style={{ color: "hsl(42,15%,55%)", border: "1px solid hsl(94,30%,22%)" }}
+                          style={{ color: "hsl(42,15%,55%)", border: "1px solid hsl(103,30%,22%)" }}
                         >
                           Cancel
                         </button>
@@ -3455,7 +3173,7 @@ export default function MapPage() {
               )}
 
               {(displayAreaHa || displayAreaAc) && (
-                <div className="rounded p-2.5" style={{ background: "hsl(94, 35%, 14%)", border: "1px solid hsl(84, 35%, 28%)" }}>
+                <div className="rounded p-2.5" style={{ background: "hsl(103, 35%, 14%)", border: "1px solid hsl(84, 35%, 28%)" }}>
                   <div className="text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: "hsl(84, 35%, 55%)" }}>Area</div>
                   <div className="text-sm font-bold" style={{ color: "hsl(42, 28%, 90%)" }}>{displayAreaHa?.toFixed(2)} ha</div>
                   <div className="text-xs mt-0.5" style={{ color: "hsl(42, 15%, 55%)" }}>{displayAreaAc?.toFixed(2)} acres</div>
@@ -3488,104 +3206,7 @@ export default function MapPage() {
             />
           )}
         </SidebarSection>
-        {/* ── LAYER 5: FEEDBACK PINS ── */}
-        <SidebarSection label="Layer 5 — Feedback Pins">
-          {!activePropertyId ? (
-            <p className="text-[11px]" style={{ color: "hsl(42, 15%, 50%)" }}>Select a property to manage feedback.</p>
-          ) : role === "client" ? (
-            <div className="space-y-2.5">
-              {pendingPin ? (
-                <div className="space-y-2">
-                  <p className="text-[11px]" style={{ color: "hsl(42, 28%, 80%)" }}>Pin placed. Add your feedback:</p>
-                  <textarea
-                    className="w-full text-xs px-2.5 py-2 rounded border outline-none resize-none"
-                    style={{ background: "hsl(94, 35%, 17%)", borderColor: "hsl(94, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
-                    rows={3}
-                    placeholder="Describe what you observed or want to change..."
-                    value={pinText}
-                    onChange={(e) => setPinText(e.target.value)}
-                    autoFocus
-                  />
-                  <div className="flex gap-1.5">
-                    <button
-                      onClick={handleSavePin}
-                      disabled={!pinText.trim() || createComment.isPending}
-                      className="flex-1 text-xs py-1.5 rounded font-medium transition-colors"
-                      style={{ background: "hsl(84, 38%, 42%)", color: "#fff", opacity: !pinText.trim() ? 0.5 : 1 }}
-                    >
-                      {createComment.isPending ? "Saving..." : "Save Feedback"}
-                    </button>
-                    <button
-                      onClick={() => { setPendingPin(null); setPinText(""); }}
-                      className="px-3 text-xs py-1.5 rounded"
-                      style={{ color: "hsl(42, 15%, 55%)" }}
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <button
-                  onClick={() => setDropPinMode(true)}
-                  className="w-full text-xs px-3 py-2 rounded font-medium transition-colors"
-                  style={{
-                    background: dropPinMode ? "hsl(0, 60%, 38%)" : "hsl(94, 35%, 17%)",
-                    border: "1px solid hsl(94, 30%, 22%)",
-                    color: dropPinMode ? "#fff" : "hsl(42, 28%, 88%)",
-                  }}
-                >
-                  {dropPinMode ? "Click on the map to drop a pin" : "Drop Feedback Pin"}
-                </button>
-              )}
-              {comments.length > 0 && !pendingPin && (
-                <div>
-                  <div className="text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: "hsl(42, 15%, 50%)" }}>
-                    Your Feedback ({comments.filter((c) => c.authorRole === "client").length})
-                  </div>
-                  <div className="space-y-1.5 max-h-40 overflow-y-auto">
-                    {comments.filter((c) => c.authorRole === "client").map((c) => (
-                      <div key={c.id} className="text-[11px] px-2 py-1.5 rounded" style={{ background: "hsl(94, 35%, 14%)", color: "hsl(42, 25%, 78%)" }}>
-                        {c.text}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div>
-              {comments.length === 0 ? (
-                <p className="text-[11px]" style={{ color: "hsl(42, 15%, 50%)" }}>No feedback pins yet. Client pins will appear here.</p>
-              ) : (
-                <div>
-                  <div className="text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: "hsl(42, 15%, 50%)" }}>
-                    {comments.length} {comments.length === 1 ? "Pin" : "Pins"} — click pins on map
-                  </div>
-                  <div className="space-y-1.5 max-h-48 overflow-y-auto">
-                    {comments.map((c) => (
-                      <div key={c.id} className="flex items-start gap-2 px-2 py-2 rounded" style={{ background: "hsl(94, 35%, 14%)" }}>
-                        <div className="w-2 h-2 rounded-full mt-0.5 flex-shrink-0" style={{ background: "#d97706" }} />
-                        <div className="flex-1 min-w-0">
-                          <div className="text-[10px] mb-0.5" style={{ color: "hsl(42, 15%, 50%)" }}>{c.authorRole}</div>
-                          <div className="text-[11px] leading-snug" style={{ color: "hsl(42, 25%, 80%)" }}>{c.text}</div>
-                        </div>
-                        <button onClick={() => handleDeleteComment(c.id)} className="flex-shrink-0 text-[10px] transition-colors" style={{ color: "hsl(0, 55%, 50%)" }}>
-                          Delete
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </SidebarSection>
-          </div>
-        )}
 
-        {/* ── WIZARD STEP 2: WATER & TOPOGRAPHY ── */}
-        {wizardStep === 2 && (
-          <div className="flex-1 overflow-y-auto min-h-0">
         {/* ── LAYER 2: CONTOURS ── */}
         <SidebarSection label="Layer 2 — Terrain Contours">
           {!activeProperty?.boundaryGeojson ? (
@@ -3599,6 +3220,196 @@ export default function MapPage() {
             <p className="text-[10px]" style={{ color: "hsl(42, 15%, 45%)" }}>Toggle contours on in Layer Visibility above.</p>
           ) : null}
         </SidebarSection>
+
+        {/* ── LAYER 3: SECTOR ANALYSIS ── */}
+        <SidebarSection label="Layer 3 — Sector Analysis">
+          <>
+          {!activePropertyId ? (
+            <p className="text-[11px]" style={{ color: "hsl(42, 15%, 50%)" }}>Select a property to add sector overlays.</p>
+          ) : role !== "designer" ? (
+            <div>
+              {sectors.length === 0 ? (
+                <p className="text-[11px]" style={{ color: "hsl(42, 15%, 50%)" }}>No sector overlays mapped yet.</p>
+              ) : (
+                <div className="space-y-1 max-h-44 overflow-y-auto">
+                  {sectors.map((s) => {
+                    const st = SECTOR_TYPES.find((t) => t.value === s.sectorType) ?? SECTOR_TYPES[0];
+                    return (
+                      <div key={s.id} className="flex items-center gap-2 px-2 py-1.5 rounded" style={{ background: "hsl(103, 35%, 14%)" }}>
+                        <span className="text-sm">{st.emoji}</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[11px] font-medium truncate" style={{ color: "hsl(42, 28%, 85%)" }}>{s.label || st.label}</div>
+                          <div className="text-[10px]" style={{ color: "hsl(42, 15%, 50%)" }}>{s.radiusKm}km · {s.startAngle}°→{s.endAngle}°</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          ) : sectorCenter ? (
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between px-2 py-1.5 rounded" style={{ background: "hsl(103, 35%, 14%)", border: "1px solid hsl(103, 30%, 22%)" }}>
+                <span className="text-[11px]" style={{ color: "hsl(42, 28%, 80%)" }}>
+                  Zone 0 fixed · {sectorCenter.lat.toFixed(4)}, {sectorCenter.lng.toFixed(4)}
+                </span>
+                <button
+                  onClick={() => setDropSectorCenterMode(true)}
+                  className="text-[10px] px-1.5 py-0.5 rounded ml-2 flex-shrink-0"
+                  style={{ color: "hsl(42, 28%, 70%)", border: "1px solid hsl(103, 30%, 28%)" }}
+                >
+                  Move
+                </button>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-medium mb-1 block" style={{ color: "hsl(42, 15%, 55%)" }}>Sector Type</label>
+                <select
+                  className="w-full text-xs px-2 py-1.5 rounded border outline-none"
+                  style={{ background: "hsl(103, 35%, 17%)", borderColor: "hsl(103, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
+                  value={sectorDraft.sectorType}
+                  onChange={(e) => setSectorDraft((d) => ({ ...d, sectorType: e.target.value }))}
+                >
+                  {SECTOR_TYPES.map((t) => <option key={t.value} value={t.value}>{t.emoji} {t.label}</option>)}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-medium mb-1 block" style={{ color: "hsl(42, 15%, 55%)" }}>Label (optional)</label>
+                <input
+                  className="w-full text-xs px-2.5 py-1.5 rounded border outline-none"
+                  style={{ background: "hsl(103, 35%, 17%)", borderColor: "hsl(103, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
+                  placeholder="e.g. NW Prevailing Wind"
+                  value={sectorDraft.label}
+                  onChange={(e) => setSectorDraft((d) => ({ ...d, label: e.target.value }))}
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] font-medium mb-1 flex justify-between" style={{ color: "hsl(42, 15%, 55%)" }}>
+                  <span>Radius</span><span style={{ color: "hsl(42, 28%, 80%)" }}>{sectorDraft.radiusKm} km</span>
+                </label>
+                <input type="range" min="0.05" max="50" step="0.05"
+                  className="w-full h-1.5 rounded appearance-none"
+                  style={{ accentColor: "#84cc16" }}
+                  value={sectorDraft.radiusKm}
+                  onChange={(e) => setSectorDraft((d) => ({ ...d, radiusKm: parseFloat(e.target.value) }))}
+                />
+              </div>
+
+              <div>
+                <p className="text-[9px] mb-1.5" style={{ color: "hsl(42, 15%, 50%)" }}>
+                  Drag the handles on the map to set angles
+                </p>
+                <div className="grid grid-cols-2 gap-2 text-center">
+                  <div className="rounded px-2 py-1.5" style={{ background: "hsl(103,35%,14%)", border: "1.5px solid #84cc16" }}>
+                    <div className="text-[9px] mb-0.5" style={{ color: "hsl(42,15%,55%)" }}>Start</div>
+                    <div className="text-xs font-medium" style={{ color: "#84cc16" }}>{sectorDraft.startAngle}°</div>
+                  </div>
+                  <div className="rounded px-2 py-1.5" style={{ background: "hsl(103,35%,14%)", border: "1.5px solid #f97316" }}>
+                    <div className="text-[9px] mb-0.5" style={{ color: "hsl(42,15%,55%)" }}>End</div>
+                    <div className="text-xs font-medium" style={{ color: "#f97316" }}>{sectorDraft.endAngle}°</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-1.5 pt-1">
+                <button
+                  onClick={handleSaveSector}
+                  disabled={createSector.isPending || updateSector.isPending}
+                  className="flex-1 text-xs py-1.5 rounded font-medium"
+                  style={{ background: "hsl(84, 38%, 42%)", color: "#fff" }}
+                >
+                  {(createSector.isPending || updateSector.isPending) ? "Saving…" : editingSectorId ? "Update Sector" : "Save Sector"}
+                </button>
+                <button onClick={handleCancelSectorDraft} className="px-3 text-xs py-1.5 rounded" style={{ color: "hsl(42, 15%, 55%)" }}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-2.5">
+              <button
+                onClick={() => setDropSectorCenterMode(true)}
+                className="w-full text-xs px-3 py-2 rounded font-medium transition-colors"
+                style={{
+                  background: dropSectorCenterMode ? "hsl(220, 60%, 30%)" : "hsl(103, 35%, 17%)",
+                  border: "1px solid hsl(103, 30%, 22%)",
+                  color: dropSectorCenterMode ? "#fff" : "hsl(42, 28%, 88%)",
+                }}
+              >
+                {dropSectorCenterMode ? "Click on map to place Zone 0 center…" : "Place Sector Center (Zone 0)"}
+              </button>
+
+              {sectors.length > 0 && (
+                <div>
+                  <div className="text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: "hsl(42, 15%, 50%)" }}>
+                    {sectors.length} {sectors.length === 1 ? "Sector" : "Sectors"}
+                  </div>
+                  <div className="space-y-1 max-h-40 overflow-y-auto">
+                    {sectors.map((s) => {
+                      const st = SECTOR_TYPES.find((t) => t.value === s.sectorType) ?? SECTOR_TYPES[0];
+                      return (
+                        <div key={s.id} className="flex items-center gap-2 px-2 py-1.5 rounded" style={{ background: "hsl(103, 35%, 14%)" }}>
+                          <span className="text-sm">{st.emoji}</span>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-[11px] font-medium truncate" style={{ color: "hsl(42, 28%, 85%)" }}>{s.label || st.label}</div>
+                            <div className="text-[10px]" style={{ color: "hsl(42, 15%, 50%)" }}>{s.radiusKm}km · {s.startAngle}°→{s.endAngle}°</div>
+                          </div>
+                          <button onClick={() => handleDeleteSector(s.id)} className="text-[10px] flex-shrink-0" style={{ color: "hsl(0, 55%, 50%)" }}>×</button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Solar Arcs legend + radius — shown whenever sector center is placed ── */}
+          {sectorCenter && activePropertyId && (
+            <div className="mt-2.5 pt-2.5 space-y-2" style={{ borderTop: "1px solid hsl(103, 30%, 20%)" }}>
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "hsl(42, 28%, 65%)" }}>
+                  Solar Arcs
+                </span>
+                <button
+                  onClick={() => setShowSolarArcs((v) => !v)}
+                  className="text-[10px] px-2 py-0.5 rounded"
+                  style={{
+                    background: showSolarArcs ? "hsl(43, 75%, 30%)" : "hsl(103, 35%, 17%)",
+                    border: "1px solid hsl(103, 30%, 26%)",
+                    color: showSolarArcs ? "#FBBF24" : "hsl(42, 15%, 55%)",
+                  }}
+                >
+                  {showSolarArcs ? "Visible" : "Hidden"}
+                </button>
+              </div>
+              {[
+                { key: "summer", label: "Summer Sun", fillColor: "rgba(245,175,25,0.35)", borderColor: "#C8A43C" },
+                { key: "winter", label: "Winter Sun",  fillColor: "rgba(148,185,220,0.35)", borderColor: "#8BAFC8" },
+              ].map(({ key, label, fillColor, borderColor }) => (
+                <div key={key} className="flex items-center gap-2">
+                  <span style={{
+                    display: "inline-block",
+                    width: 20,
+                    height: 12,
+                    background: fillColor,
+                    border: `1.5px solid ${borderColor}`,
+                    borderRadius: 3,
+                    flexShrink: 0,
+                  }} />
+                  <span className="text-[10px]" style={{ color: "hsl(42, 15%, 65%)" }}>{label}</span>
+                </div>
+              ))}
+              <p className="text-[10px]" style={{ color: "hsl(42, 15%, 45%)" }}>
+                Arcs scale with the Radius slider above. Radius represents the sun's reach from Zone 0.
+              </p>
+            </div>
+          )}
+          </>
+        </SidebarSection>
+
         {/* ── LAYER 4: WATER AUTOMATION ── compact launcher */}
         <SidebarSection label="Layer 4 — Water Automation">
           <div className="space-y-2">
@@ -3610,8 +3421,8 @@ export default function MapPage() {
               style={{
                 background: waterAnalysis
                   ? "linear-gradient(135deg, hsl(198,45%,10%), hsl(198,48%,13%))"
-                  : "hsl(94, 20%, 10%)",
-                border: `1px solid ${waterAnalysis ? "hsl(198, 45%, 22%)" : "hsl(94, 20%, 18%)"}`,
+                  : "hsl(103, 20%, 10%)",
+                border: `1px solid ${waterAnalysis ? "hsl(198, 45%, 22%)" : "hsl(103, 20%, 18%)"}`,
                 color: waterAnalysis ? "hsl(198, 70%, 72%)" : "hsl(42, 15%, 38%)",
                 boxShadow: waterAnalysis ? "0 2px 12px rgba(6,182,212,0.15)" : "none",
                 opacity: !activePropertyId || !activeProperty?.boundaryGeojson ? 0.4 : 1,
@@ -3649,8 +3460,8 @@ export default function MapPage() {
                 }}
                 className="w-full text-[11px] px-3 py-1.5 rounded-lg font-medium transition-colors"
                 style={{
-                  background: waterHighlightsActive ? "hsl(142, 50%, 14%)" : "hsl(94, 22%, 12%)",
-                  border: `1px solid ${waterHighlightsActive ? "#15803d" : "hsl(94, 22%, 20%)"}`,
+                  background: waterHighlightsActive ? "hsl(142, 50%, 14%)" : "hsl(103, 22%, 12%)",
+                  border: `1px solid ${waterHighlightsActive ? "#15803d" : "hsl(103, 22%, 20%)"}`,
                   color: waterHighlightsActive ? "#4ade80" : "hsl(42, 15%, 50%)",
                 }}
               >
@@ -3686,12 +3497,100 @@ export default function MapPage() {
             )}
           </div>
         </SidebarSection>
-          </div>
-        )}
 
-        {/* ── WIZARD STEP 3: ACCESS & STRUCTURES ── */}
-        {wizardStep === 3 && (
-          <div className="flex-1 overflow-y-auto min-h-0">
+        {/* ── LAYER 5: FEEDBACK PINS ── */}
+        <SidebarSection label="Layer 5 — Feedback Pins">
+          {!activePropertyId ? (
+            <p className="text-[11px]" style={{ color: "hsl(42, 15%, 50%)" }}>Select a property to manage feedback.</p>
+          ) : role === "client" ? (
+            <div className="space-y-2.5">
+              {pendingPin ? (
+                <div className="space-y-2">
+                  <p className="text-[11px]" style={{ color: "hsl(42, 28%, 80%)" }}>Pin placed. Add your feedback:</p>
+                  <textarea
+                    className="w-full text-xs px-2.5 py-2 rounded border outline-none resize-none"
+                    style={{ background: "hsl(103, 35%, 17%)", borderColor: "hsl(103, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
+                    rows={3}
+                    placeholder="Describe what you observed or want to change..."
+                    value={pinText}
+                    onChange={(e) => setPinText(e.target.value)}
+                    autoFocus
+                  />
+                  <div className="flex gap-1.5">
+                    <button
+                      onClick={handleSavePin}
+                      disabled={!pinText.trim() || createComment.isPending}
+                      className="flex-1 text-xs py-1.5 rounded font-medium transition-colors"
+                      style={{ background: "hsl(84, 38%, 42%)", color: "#fff", opacity: !pinText.trim() ? 0.5 : 1 }}
+                    >
+                      {createComment.isPending ? "Saving..." : "Save Feedback"}
+                    </button>
+                    <button
+                      onClick={() => { setPendingPin(null); setPinText(""); }}
+                      className="px-3 text-xs py-1.5 rounded"
+                      style={{ color: "hsl(42, 15%, 55%)" }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setDropPinMode(true)}
+                  className="w-full text-xs px-3 py-2 rounded font-medium transition-colors"
+                  style={{
+                    background: dropPinMode ? "hsl(0, 60%, 38%)" : "hsl(103, 35%, 17%)",
+                    border: "1px solid hsl(103, 30%, 22%)",
+                    color: dropPinMode ? "#fff" : "hsl(42, 28%, 88%)",
+                  }}
+                >
+                  {dropPinMode ? "Click on the map to drop a pin" : "Drop Feedback Pin"}
+                </button>
+              )}
+              {comments.length > 0 && !pendingPin && (
+                <div>
+                  <div className="text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: "hsl(42, 15%, 50%)" }}>
+                    Your Feedback ({comments.filter((c) => c.authorRole === "client").length})
+                  </div>
+                  <div className="space-y-1.5 max-h-40 overflow-y-auto">
+                    {comments.filter((c) => c.authorRole === "client").map((c) => (
+                      <div key={c.id} className="text-[11px] px-2 py-1.5 rounded" style={{ background: "hsl(103, 35%, 14%)", color: "hsl(42, 25%, 78%)" }}>
+                        {c.text}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div>
+              {comments.length === 0 ? (
+                <p className="text-[11px]" style={{ color: "hsl(42, 15%, 50%)" }}>No feedback pins yet. Client pins will appear here.</p>
+              ) : (
+                <div>
+                  <div className="text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: "hsl(42, 15%, 50%)" }}>
+                    {comments.length} {comments.length === 1 ? "Pin" : "Pins"} — click pins on map
+                  </div>
+                  <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                    {comments.map((c) => (
+                      <div key={c.id} className="flex items-start gap-2 px-2 py-2 rounded" style={{ background: "hsl(103, 35%, 14%)" }}>
+                        <div className="w-2 h-2 rounded-full mt-0.5 flex-shrink-0" style={{ background: "#d97706" }} />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[10px] mb-0.5" style={{ color: "hsl(42, 15%, 50%)" }}>{c.authorRole}</div>
+                          <div className="text-[11px] leading-snug" style={{ color: "hsl(42, 25%, 80%)" }}>{c.text}</div>
+                        </div>
+                        <button onClick={() => handleDeleteComment(c.id)} className="flex-shrink-0 text-[10px] transition-colors" style={{ color: "hsl(0, 55%, 50%)" }}>
+                          Delete
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </SidebarSection>
+
         {/* ── LAYER 6: STRUCTURES ── */}
         <SidebarSection label="Layer 6 — Structures">
           {!activePropertyId ? (
@@ -3700,7 +3599,7 @@ export default function MapPage() {
             <div className="space-y-2.5">
               {pendingStructure ? (
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2 px-2 py-1.5 rounded" style={{ background: "hsl(94, 35%, 14%)", border: "1px solid hsl(94, 30%, 22%)" }}>
+                  <div className="flex items-center gap-2 px-2 py-1.5 rounded" style={{ background: "hsl(103, 35%, 14%)", border: "1px solid hsl(103, 30%, 22%)" }}>
                     {pendingFootprint ? (
                       <>
                         <span className="text-sm">⬛</span>
@@ -3715,7 +3614,7 @@ export default function MapPage() {
                   </div>
                   <select
                     className="w-full text-xs px-2 py-1.5 rounded border outline-none"
-                    style={{ background: "hsl(94, 35%, 17%)", borderColor: "hsl(94, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
+                    style={{ background: "hsl(103, 35%, 17%)", borderColor: "hsl(103, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
                     value={structureType}
                     onChange={(e) => setStructureType(e.target.value)}
                   >
@@ -3725,7 +3624,7 @@ export default function MapPage() {
                   </select>
                   <input
                     className="w-full text-xs px-2.5 py-1.5 rounded border outline-none"
-                    style={{ background: "hsl(94, 35%, 17%)", borderColor: "hsl(94, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
+                    style={{ background: "hsl(103, 35%, 17%)", borderColor: "hsl(103, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
                     placeholder="Label (e.g. Main House, Old Shed...)"
                     value={structureLabel}
                     onChange={(e) => setStructureLabel(e.target.value)}
@@ -3778,8 +3677,8 @@ export default function MapPage() {
                     disabled={drawBuildingOutlineMode}
                     className="w-full text-xs px-3 py-2 rounded font-medium transition-colors"
                     style={{
-                      background: drawBuildingOutlineMode ? "hsl(220, 60%, 30%)" : "hsl(94, 35%, 17%)",
-                      border: "1px solid hsl(94, 30%, 22%)",
+                      background: drawBuildingOutlineMode ? "hsl(220, 60%, 30%)" : "hsl(103, 35%, 17%)",
+                      border: "1px solid hsl(103, 30%, 22%)",
                       color: drawBuildingOutlineMode ? "#fff" : "hsl(42, 28%, 88%)",
                     }}
                   >
@@ -3792,8 +3691,8 @@ export default function MapPage() {
                     disabled={dropStructureMode}
                     className="w-full text-xs px-3 py-2 rounded font-medium transition-colors"
                     style={{
-                      background: dropStructureMode ? "hsl(220, 60%, 30%)" : "hsl(94, 35%, 17%)",
-                      border: "1px solid hsl(94, 30%, 22%)",
+                      background: dropStructureMode ? "hsl(220, 60%, 30%)" : "hsl(103, 35%, 17%)",
+                      border: "1px solid hsl(103, 30%, 22%)",
                       color: dropStructureMode ? "#fff" : "hsl(42, 28%, 88%)",
                     }}
                   >
@@ -3807,16 +3706,16 @@ export default function MapPage() {
                   <div className="text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: "hsl(42, 15%, 45%)" }}>
                     Label Style
                   </div>
-                  <div className="flex rounded-lg overflow-hidden" style={{ border: "1px solid hsl(94, 22%, 20%)" }}>
+                  <div className="flex rounded-lg overflow-hidden" style={{ border: "1px solid hsl(103, 22%, 20%)" }}>
                     {(["icon+label", "icon-only", "text-inside", "dot"] as const).map((mode, i, arr) => (
                       <button
                         key={mode}
                         onClick={() => setStructureLabelMode(mode)}
                         className="flex-1 py-1.5 text-[10px] font-medium transition-colors"
                         style={{
-                          background: structureLabelMode === mode ? "hsl(94, 35%, 20%)" : "hsl(94, 20%, 10%)",
-                          color: structureLabelMode === mode ? "hsl(94, 50%, 70%)" : "hsl(42, 15%, 45%)",
-                          borderRight: i < arr.length - 1 ? "1px solid hsl(94, 22%, 20%)" : "none",
+                          background: structureLabelMode === mode ? "hsl(103, 35%, 20%)" : "hsl(103, 20%, 10%)",
+                          color: structureLabelMode === mode ? "hsl(103, 50%, 70%)" : "hsl(42, 15%, 45%)",
+                          borderRight: i < arr.length - 1 ? "1px solid hsl(103, 22%, 20%)" : "none",
                         }}
                       >
                         {mode === "icon+label" ? "🏷 Icon+Label" : mode === "icon-only" ? "🔲 Icon" : mode === "text-inside" ? "Aa Text" : "· Dot"}
@@ -3836,7 +3735,7 @@ export default function MapPage() {
                       const entry = STRUCTURE_TYPES.find((t) => t.value === s.structureType);
                       const isTankItem = s.structureType === "tank";
                       return (
-                        <div key={s.id} className="flex items-center gap-2 px-2 py-1.5 rounded" style={{ background: "hsl(94, 35%, 14%)" }}>
+                        <div key={s.id} className="flex items-center gap-2 px-2 py-1.5 rounded" style={{ background: "hsl(103, 35%, 14%)" }}>
                           <span className="text-sm">{entry?.emoji ?? "📍"}</span>
                           <div className="flex-1 min-w-0">
                             <div className="text-[11px] font-medium truncate" style={{ color: "hsl(42, 28%, 85%)" }}>{s.label}</div>
@@ -3882,7 +3781,7 @@ export default function MapPage() {
                         <button
                           onClick={() => { footprintEditHandlerRef.current?.revertLayers(); setEditFootprintMode(false); }}
                           className="px-3 text-[11px] py-1.5 rounded"
-                          style={{ color: "hsl(42,15%,55%)", border: "1px solid hsl(94,30%,22%)" }}
+                          style={{ color: "hsl(42,15%,55%)", border: "1px solid hsl(103,30%,22%)" }}
                         >
                           Cancel
                         </button>
@@ -3906,7 +3805,7 @@ export default function MapPage() {
                       const entry = STRUCTURE_TYPES.find((t) => t.value === s.structureType);
                       const isTankItem = s.structureType === "tank";
                       return (
-                        <div key={s.id} className="flex items-center gap-2 px-2 py-1.5 rounded" style={{ background: "hsl(94, 35%, 14%)" }}>
+                        <div key={s.id} className="flex items-center gap-2 px-2 py-1.5 rounded" style={{ background: "hsl(103, 35%, 14%)" }}>
                           <span className="text-sm">{entry?.emoji ?? "📍"}</span>
                           <div className="flex-1 min-w-0">
                             <div className="text-[11px] font-medium truncate" style={{ color: "hsl(42, 28%, 85%)" }}>{s.label}</div>
@@ -3929,6 +3828,7 @@ export default function MapPage() {
             </div>
           )}
         </SidebarSection>
+
         {/* ── LAYER 7: ACCESS & PATHWAYS ── */}
         <SidebarSection label="Layer 7 — Access & Pathways">
           {!activePropertyId ? (
@@ -3937,13 +3837,13 @@ export default function MapPage() {
             <div className="space-y-2.5">
               {pendingPathway ? (
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2 px-2 py-1.5 rounded" style={{ background: "hsl(94, 35%, 14%)", border: "1px solid hsl(94, 30%, 22%)" }}>
+                  <div className="flex items-center gap-2 px-2 py-1.5 rounded" style={{ background: "hsl(103, 35%, 14%)", border: "1px solid hsl(103, 30%, 22%)" }}>
                     <span style={{ display: "inline-block", width: 16, height: 3, background: PATHWAY_TYPES.find((t) => t.value === pathwayType)?.color ?? "#8B6914", borderRadius: 2, flexShrink: 0 }} />
                     <span className="text-[11px]" style={{ color: "hsl(42, 28%, 80%)" }}>Path drawn. Add details:</span>
                   </div>
                   <select
                     className="w-full text-xs px-2 py-1.5 rounded border outline-none"
-                    style={{ background: "hsl(94, 35%, 17%)", borderColor: "hsl(94, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
+                    style={{ background: "hsl(103, 35%, 17%)", borderColor: "hsl(103, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
                     value={pathwayType}
                     onChange={(e) => setPathwayType(e.target.value)}
                   >
@@ -3951,7 +3851,7 @@ export default function MapPage() {
                   </select>
                   <input
                     className="w-full text-xs px-2.5 py-1.5 rounded border outline-none"
-                    style={{ background: "hsl(94, 35%, 17%)", borderColor: "hsl(94, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
+                    style={{ background: "hsl(103, 35%, 17%)", borderColor: "hsl(103, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
                     placeholder="Label (e.g. Main Driveway, North Path...)"
                     value={pathwayLabel}
                     onChange={(e) => setPathwayLabel(e.target.value)}
@@ -3978,8 +3878,8 @@ export default function MapPage() {
                   disabled={drawPathwayMode}
                   className="w-full text-xs px-3 py-2 rounded font-medium transition-colors"
                   style={{
-                    background: drawPathwayMode ? "hsl(220, 60%, 30%)" : "hsl(94, 35%, 17%)",
-                    border: "1px solid hsl(94, 30%, 22%)",
+                    background: drawPathwayMode ? "hsl(220, 60%, 30%)" : "hsl(103, 35%, 17%)",
+                    border: "1px solid hsl(103, 30%, 22%)",
                     color: drawPathwayMode ? "#fff" : "hsl(42, 28%, 88%)",
                   }}
                 >
@@ -3997,7 +3897,7 @@ export default function MapPage() {
                     {pathways.map((p) => {
                       const pt = PATHWAY_TYPES.find((t) => t.value === p.pathwayType);
                       return (
-                        <div key={p.id} className="flex items-center gap-2 px-2 py-1.5 rounded" style={{ background: "hsl(94, 35%, 14%)" }}>
+                        <div key={p.id} className="flex items-center gap-2 px-2 py-1.5 rounded" style={{ background: "hsl(103, 35%, 14%)" }}>
                           <span style={{ display: "inline-block", width: 16, height: 3, background: pt?.color ?? "#8B6914", borderRadius: 2, flexShrink: 0 }} />
                           <div className="flex-1 min-w-0">
                             <div className="text-[11px] font-medium truncate" style={{ color: "hsl(42, 28%, 85%)" }}>{p.label}</div>
@@ -4033,7 +3933,7 @@ export default function MapPage() {
                         <button
                           onClick={() => { pathwayEditHandlerRef.current?.revertLayers(); setEditPathwayMode(false); }}
                           className="px-3 text-[11px] py-1.5 rounded"
-                          style={{ color: "hsl(42,15%,55%)", border: "1px solid hsl(94,30%,22%)" }}
+                          style={{ color: "hsl(42,15%,55%)", border: "1px solid hsl(103,30%,22%)" }}
                         >
                           Cancel
                         </button>
@@ -4056,7 +3956,7 @@ export default function MapPage() {
                     {pathways.map((p) => {
                       const pt = PATHWAY_TYPES.find((t) => t.value === p.pathwayType);
                       return (
-                        <div key={p.id} className="flex items-center gap-2 px-2 py-1.5 rounded" style={{ background: "hsl(94, 35%, 14%)" }}>
+                        <div key={p.id} className="flex items-center gap-2 px-2 py-1.5 rounded" style={{ background: "hsl(103, 35%, 14%)" }}>
                           <span style={{ display: "inline-block", width: 16, height: 3, background: pt?.color ?? "#8B6914", borderRadius: 2, flexShrink: 0 }} />
                           <div className="flex-1 min-w-0">
                             <div className="text-[11px] font-medium truncate" style={{ color: "hsl(42, 28%, 85%)" }}>{p.label}</div>
@@ -4071,200 +3971,7 @@ export default function MapPage() {
             </div>
           )}
         </SidebarSection>
-          </div>
-        )}
 
-        {/* ── WIZARD STEP 4: SECTORS & ZONES ── */}
-        {wizardStep === 4 && (
-          <div className="flex-1 overflow-y-auto min-h-0">
-        {/* ── LAYER 3: SECTOR ANALYSIS ── */}
-        <SidebarSection label="Layer 3 — Sector Analysis">
-          <>
-          {!activePropertyId ? (
-            <p className="text-[11px]" style={{ color: "hsl(42, 15%, 50%)" }}>Select a property to add sector overlays.</p>
-          ) : role !== "designer" ? (
-            <div>
-              {sectors.length === 0 ? (
-                <p className="text-[11px]" style={{ color: "hsl(42, 15%, 50%)" }}>No sector overlays mapped yet.</p>
-              ) : (
-                <div className="space-y-1 max-h-44 overflow-y-auto">
-                  {sectors.map((s) => {
-                    const st = SECTOR_TYPES.find((t) => t.value === s.sectorType) ?? SECTOR_TYPES[0];
-                    return (
-                      <div key={s.id} className="flex items-center gap-2 px-2 py-1.5 rounded" style={{ background: "hsl(94, 35%, 14%)" }}>
-                        <span className="text-sm">{st.emoji}</span>
-                        <div className="flex-1 min-w-0">
-                          <div className="text-[11px] font-medium truncate" style={{ color: "hsl(42, 28%, 85%)" }}>{s.label || st.label}</div>
-                          <div className="text-[10px]" style={{ color: "hsl(42, 15%, 50%)" }}>{s.radiusKm}km · {s.startAngle}°→{s.endAngle}°</div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          ) : sectorCenter ? (
-            <div className="space-y-2.5">
-              <div className="flex items-center justify-between px-2 py-1.5 rounded" style={{ background: "hsl(94, 35%, 14%)", border: "1px solid hsl(94, 30%, 22%)" }}>
-                <span className="text-[11px]" style={{ color: "hsl(42, 28%, 80%)" }}>
-                  Zone 0 fixed · {sectorCenter.lat.toFixed(4)}, {sectorCenter.lng.toFixed(4)}
-                </span>
-                <button
-                  onClick={() => setDropSectorCenterMode(true)}
-                  className="text-[10px] px-1.5 py-0.5 rounded ml-2 flex-shrink-0"
-                  style={{ color: "hsl(42, 28%, 70%)", border: "1px solid hsl(94, 30%, 28%)" }}
-                >
-                  Move
-                </button>
-              </div>
-
-              <div>
-                <label className="text-[10px] font-medium mb-1 block" style={{ color: "hsl(42, 15%, 55%)" }}>Sector Type</label>
-                <select
-                  className="w-full text-xs px-2 py-1.5 rounded border outline-none"
-                  style={{ background: "hsl(94, 35%, 17%)", borderColor: "hsl(94, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
-                  value={sectorDraft.sectorType}
-                  onChange={(e) => setSectorDraft((d) => ({ ...d, sectorType: e.target.value }))}
-                >
-                  {SECTOR_TYPES.map((t) => <option key={t.value} value={t.value}>{t.emoji} {t.label}</option>)}
-                </select>
-              </div>
-
-              <div>
-                <label className="text-[10px] font-medium mb-1 block" style={{ color: "hsl(42, 15%, 55%)" }}>Label (optional)</label>
-                <input
-                  className="w-full text-xs px-2.5 py-1.5 rounded border outline-none"
-                  style={{ background: "hsl(94, 35%, 17%)", borderColor: "hsl(94, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
-                  placeholder="e.g. NW Prevailing Wind"
-                  value={sectorDraft.label}
-                  onChange={(e) => setSectorDraft((d) => ({ ...d, label: e.target.value }))}
-                />
-              </div>
-
-              <div>
-                <label className="text-[10px] font-medium mb-1 flex justify-between" style={{ color: "hsl(42, 15%, 55%)" }}>
-                  <span>Radius</span><span style={{ color: "hsl(42, 28%, 80%)" }}>{sectorDraft.radiusKm} km</span>
-                </label>
-                <input type="range" min="0.05" max="50" step="0.05"
-                  className="w-full h-1.5 rounded appearance-none"
-                  style={{ accentColor: "#84cc16" }}
-                  value={sectorDraft.radiusKm}
-                  onChange={(e) => setSectorDraft((d) => ({ ...d, radiusKm: parseFloat(e.target.value) }))}
-                />
-              </div>
-
-              <div>
-                <p className="text-[9px] mb-1.5" style={{ color: "hsl(42, 15%, 50%)" }}>
-                  Drag the handles on the map to set angles
-                </p>
-                <div className="grid grid-cols-2 gap-2 text-center">
-                  <div className="rounded px-2 py-1.5" style={{ background: "hsl(94,35%,14%)", border: "1.5px solid #84cc16" }}>
-                    <div className="text-[9px] mb-0.5" style={{ color: "hsl(42,15%,55%)" }}>Start</div>
-                    <div className="text-xs font-medium" style={{ color: "#84cc16" }}>{sectorDraft.startAngle}°</div>
-                  </div>
-                  <div className="rounded px-2 py-1.5" style={{ background: "hsl(94,35%,14%)", border: "1.5px solid #f97316" }}>
-                    <div className="text-[9px] mb-0.5" style={{ color: "hsl(42,15%,55%)" }}>End</div>
-                    <div className="text-xs font-medium" style={{ color: "#f97316" }}>{sectorDraft.endAngle}°</div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex gap-1.5 pt-1">
-                <button
-                  onClick={handleSaveSector}
-                  disabled={createSector.isPending || updateSector.isPending}
-                  className="flex-1 text-xs py-1.5 rounded font-medium"
-                  style={{ background: "hsl(84, 38%, 42%)", color: "#fff" }}
-                >
-                  {(createSector.isPending || updateSector.isPending) ? "Saving…" : editingSectorId ? "Update Sector" : "Save Sector"}
-                </button>
-                <button onClick={handleCancelSectorDraft} className="px-3 text-xs py-1.5 rounded" style={{ color: "hsl(42, 15%, 55%)" }}>
-                  Cancel
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-2.5">
-              <button
-                onClick={() => setDropSectorCenterMode(true)}
-                className="w-full text-xs px-3 py-2 rounded font-medium transition-colors"
-                style={{
-                  background: dropSectorCenterMode ? "hsl(220, 60%, 30%)" : "hsl(94, 35%, 17%)",
-                  border: "1px solid hsl(94, 30%, 22%)",
-                  color: dropSectorCenterMode ? "#fff" : "hsl(42, 28%, 88%)",
-                }}
-              >
-                {dropSectorCenterMode ? "Click on map to place Zone 0 center…" : "Place Sector Center (Zone 0)"}
-              </button>
-
-              {sectors.length > 0 && (
-                <div>
-                  <div className="text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: "hsl(42, 15%, 50%)" }}>
-                    {sectors.length} {sectors.length === 1 ? "Sector" : "Sectors"}
-                  </div>
-                  <div className="space-y-1 max-h-40 overflow-y-auto">
-                    {sectors.map((s) => {
-                      const st = SECTOR_TYPES.find((t) => t.value === s.sectorType) ?? SECTOR_TYPES[0];
-                      return (
-                        <div key={s.id} className="flex items-center gap-2 px-2 py-1.5 rounded" style={{ background: "hsl(94, 35%, 14%)" }}>
-                          <span className="text-sm">{st.emoji}</span>
-                          <div className="flex-1 min-w-0">
-                            <div className="text-[11px] font-medium truncate" style={{ color: "hsl(42, 28%, 85%)" }}>{s.label || st.label}</div>
-                            <div className="text-[10px]" style={{ color: "hsl(42, 15%, 50%)" }}>{s.radiusKm}km · {s.startAngle}°→{s.endAngle}°</div>
-                          </div>
-                          <button onClick={() => handleDeleteSector(s.id)} className="text-[10px] flex-shrink-0" style={{ color: "hsl(0, 55%, 50%)" }}>×</button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ── Solar Arcs legend + radius — shown whenever sector center is placed ── */}
-          {sectorCenter && activePropertyId && (
-            <div className="mt-2.5 pt-2.5 space-y-2" style={{ borderTop: "1px solid hsl(94, 30%, 20%)" }}>
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "hsl(42, 28%, 65%)" }}>
-                  Solar Arcs
-                </span>
-                <button
-                  onClick={() => setShowSolarArcs((v) => !v)}
-                  className="text-[10px] px-2 py-0.5 rounded"
-                  style={{
-                    background: showSolarArcs ? "hsl(43, 75%, 30%)" : "hsl(94, 35%, 17%)",
-                    border: "1px solid hsl(94, 30%, 26%)",
-                    color: showSolarArcs ? "#FBBF24" : "hsl(42, 15%, 55%)",
-                  }}
-                >
-                  {showSolarArcs ? "Visible" : "Hidden"}
-                </button>
-              </div>
-              {[
-                { key: "summer", label: "Summer Sun", fillColor: "rgba(245,175,25,0.35)", borderColor: "#C8A43C" },
-                { key: "winter", label: "Winter Sun",  fillColor: "rgba(148,185,220,0.35)", borderColor: "#8BAFC8" },
-              ].map(({ key, label, fillColor, borderColor }) => (
-                <div key={key} className="flex items-center gap-2">
-                  <span style={{
-                    display: "inline-block",
-                    width: 20,
-                    height: 12,
-                    background: fillColor,
-                    border: `1.5px solid ${borderColor}`,
-                    borderRadius: 3,
-                    flexShrink: 0,
-                  }} />
-                  <span className="text-[10px]" style={{ color: "hsl(42, 15%, 65%)" }}>{label}</span>
-                </div>
-              ))}
-              <p className="text-[10px]" style={{ color: "hsl(42, 15%, 45%)" }}>
-                Arcs scale with the Radius slider above. Radius represents the sun's reach from Zone 0.
-              </p>
-            </div>
-          )}
-          </>
-        </SidebarSection>
         {/* ── LAYER 8: ZONE MAPPING ── */}
         <SidebarSection label="Layer 8 — Zone Mapping">
           {!activePropertyId ? (
@@ -4286,8 +3993,8 @@ export default function MapPage() {
                           }}
                           className="w-full text-left text-[11px] px-2.5 py-2 rounded flex items-center gap-2.5"
                           style={{
-                            background: isActive ? "hsl(94,35%,22%)" : "hsl(94,35%,15%)",
-                            border: `1.5px solid ${isActive ? s.color : "hsl(94,30%,22%)"}`,
+                            background: isActive ? "hsl(103,35%,22%)" : "hsl(103,35%,15%)",
+                            border: `1.5px solid ${isActive ? s.color : "hsl(103,30%,22%)"}`,
                             color: isActive ? s.fillColor : "hsl(42,20%,70%)",
                             cursor: "pointer",
                           }}
@@ -4343,7 +4050,7 @@ export default function MapPage() {
                             setEditZoneMode(false);
                           }}
                           className="px-3 text-[11px] py-1.5 rounded"
-                          style={{ color: "hsl(42,15%,55%)", border: "1px solid hsl(94,30%,22%)" }}
+                          style={{ color: "hsl(42,15%,55%)", border: "1px solid hsl(103,30%,22%)" }}
                         >
                           Cancel
                         </button>
@@ -4361,7 +4068,7 @@ export default function MapPage() {
                         {[...zones].sort((a, b) => a.zoneNumber - b.zoneNumber).map((z) => {
                           const s = ZONE_STYLES.find((st) => st.zone === z.zoneNumber);
                           return (
-                            <div key={z.id} className="flex items-center gap-2 px-2 py-1.5 rounded" style={{ background: "hsl(94, 35%, 14%)" }}>
+                            <div key={z.id} className="flex items-center gap-2 px-2 py-1.5 rounded" style={{ background: "hsl(103, 35%, 14%)" }}>
                               <span style={{ display: "inline-block", width: 10, height: 10, background: s?.fillColor ?? "#ccc", border: `1.5px solid ${s?.color ?? "#888"}`, borderRadius: 2, flexShrink: 0 }} />
                               <div className="flex-1 min-w-0">
                                 <div className="text-[11px] font-medium truncate" style={{ color: "hsl(42, 28%, 85%)" }}>{s?.label ?? `Zone ${z.zoneNumber}`}</div>
@@ -4405,6 +4112,7 @@ export default function MapPage() {
             </div>
           )}
         </SidebarSection>
+
         {/* ── LAYER 9: SENSORY VECTORS ── */}
         <SidebarSection label="Layer 9 — Sensory Vectors">
           {!activePropertyId ? (
@@ -4417,7 +4125,7 @@ export default function MapPage() {
                 <div className="grid grid-cols-1 gap-1">
                   {(["road_noise", "view_corridor", "privacy_threat"] as const).map((t) => {
                     const labels: Record<string, string> = { road_noise: "🔊 Road Noise", view_corridor: "👁 View Corridor", privacy_threat: "🚫 Privacy Threat" };
-                    const colors: Record<string, string> = { road_noise: "#B85232", view_corridor: "#2A9D8F", privacy_threat: "#7C4F7E" };
+                    const colors: Record<string, string> = { road_noise: "#ef4444", view_corridor: "#22c55e", privacy_threat: "#a855f7" };
                     const active = sensoryVectorType === t;
                     return (
                       <button
@@ -4425,8 +4133,8 @@ export default function MapPage() {
                         onClick={() => setSensoryVectorType(t)}
                         className="w-full text-left text-[11px] px-2.5 py-1.5 rounded-lg font-medium transition-colors"
                         style={{
-                          background: active ? `${colors[t]}22` : "hsl(94, 22%, 11%)",
-                          border: `1px solid ${active ? colors[t] : "hsl(94, 22%, 20%)"}`,
+                          background: active ? `${colors[t]}22` : "hsl(103, 22%, 11%)",
+                          border: `1px solid ${active ? colors[t] : "hsl(103, 22%, 20%)"}`,
                           color: active ? colors[t] : "hsl(42, 15%, 55%)",
                         }}
                       >
@@ -4440,7 +4148,7 @@ export default function MapPage() {
               {/* Label */}
               <input
                 className="w-full text-[11px] px-2.5 py-1.5 rounded border outline-none"
-                style={{ background: "hsl(94, 35%, 14%)", borderColor: "hsl(94, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
+                style={{ background: "hsl(103, 35%, 14%)", borderColor: "hsl(103, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
                 placeholder="Label (optional)"
                 value={sensoryVectorLabel}
                 onChange={(e) => setSensoryVectorLabel(e.target.value)}
@@ -4453,9 +4161,9 @@ export default function MapPage() {
                     onClick={() => { setDropSensoryPointMode(true); setDrawSensoryLineMode(false); }}
                     className="flex-1 text-[11px] py-1.5 rounded font-medium transition-colors"
                     style={{
-                      background: dropSensoryPointMode ? "hsl(26, 40%, 18%)" : "hsl(94, 22%, 12%)",
-                      border: `1px solid ${dropSensoryPointMode ? "#B85232" : "hsl(94, 22%, 22%)"}`,
-                      color: dropSensoryPointMode ? "#D4845A" : "hsl(42, 15%, 55%)",
+                      background: dropSensoryPointMode ? "hsl(270, 40%, 18%)" : "hsl(103, 22%, 12%)",
+                      border: `1px solid ${dropSensoryPointMode ? "#a855f7" : "hsl(103, 22%, 22%)"}`,
+                      color: dropSensoryPointMode ? "#c084fc" : "hsl(42, 15%, 55%)",
                     }}
                   >
                     {dropSensoryPointMode ? "Click map…" : "Drop Point"}
@@ -4464,9 +4172,9 @@ export default function MapPage() {
                     onClick={() => { setDrawSensoryLineMode(true); setDropSensoryPointMode(false); }}
                     className="flex-1 text-[11px] py-1.5 rounded font-medium transition-colors"
                     style={{
-                      background: drawSensoryLineMode ? "hsl(26, 40%, 18%)" : "hsl(94, 22%, 12%)",
-                      border: `1px solid ${drawSensoryLineMode ? "#B85232" : "hsl(94, 22%, 22%)"}`,
-                      color: drawSensoryLineMode ? "#D4845A" : "hsl(42, 15%, 55%)",
+                      background: drawSensoryLineMode ? "hsl(270, 40%, 18%)" : "hsl(103, 22%, 12%)",
+                      border: `1px solid ${drawSensoryLineMode ? "#a855f7" : "hsl(103, 22%, 22%)"}`,
+                      color: drawSensoryLineMode ? "#c084fc" : "hsl(42, 15%, 55%)",
                     }}
                   >
                     {drawSensoryLineMode ? "Drawing…" : "Draw Line"}
@@ -4476,8 +4184,8 @@ export default function MapPage() {
 
               {/* Pending point confirm */}
               {pendingSensoryPoint && (
-                <div className="space-y-1.5 rounded-lg p-2" style={{ background: "hsl(26, 25%, 12%)", border: "1px solid #B8523233" }}>
-                  <p className="text-[11px]" style={{ color: "#D4845A" }}>Point placed — save?</p>
+                <div className="space-y-1.5 rounded-lg p-2" style={{ background: "hsl(270, 30%, 12%)", border: "1px solid #a855f733" }}>
+                  <p className="text-[11px]" style={{ color: "#c084fc" }}>Point placed — save?</p>
                   <div className="flex gap-1.5">
                     <button
                       disabled={createSensoryVector.isPending}
@@ -4490,7 +4198,7 @@ export default function MapPage() {
                         );
                       }}
                       className="flex-1 text-[11px] py-1 rounded font-medium"
-                      style={{ background: "hsl(26, 40%, 22%)", color: "#f0d5c0" }}
+                      style={{ background: "hsl(270, 45%, 30%)", color: "#e9d5ff" }}
                     >
                       {createSensoryVector.isPending ? "Saving…" : "Save"}
                     </button>
@@ -4505,8 +4213,8 @@ export default function MapPage() {
 
               {/* Pending line confirm */}
               {pendingSensoryLine && (
-                <div className="space-y-1.5 rounded-lg p-2" style={{ background: "hsl(26, 25%, 12%)", border: "1px solid #B8523233" }}>
-                  <p className="text-[11px]" style={{ color: "#D4845A" }}>Line drawn — save?</p>
+                <div className="space-y-1.5 rounded-lg p-2" style={{ background: "hsl(270, 30%, 12%)", border: "1px solid #a855f733" }}>
+                  <p className="text-[11px]" style={{ color: "#c084fc" }}>Line drawn — save?</p>
                   <div className="flex gap-1.5">
                     <button
                       disabled={createSensoryVector.isPending}
@@ -4518,7 +4226,7 @@ export default function MapPage() {
                         );
                       }}
                       className="flex-1 text-[11px] py-1 rounded font-medium"
-                      style={{ background: "hsl(26, 40%, 22%)", color: "#f0d5c0" }}
+                      style={{ background: "hsl(270, 45%, 30%)", color: "#e9d5ff" }}
                     >
                       {createSensoryVector.isPending ? "Saving…" : "Save"}
                     </button>
@@ -4534,20 +4242,20 @@ export default function MapPage() {
               {/* Saved vectors list */}
               {sensoryVectors.length > 0 && (
                 <div>
-                  <div className="text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: "#B85232" }}>
+                  <div className="text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: "#a855f7" }}>
                     Saved ({sensoryVectors.length})
                   </div>
                   <div className="space-y-1">
                     {sensoryVectors.map((sv) => {
                       const typeEmoji: Record<string, string> = { road_noise: "🔊", view_corridor: "👁", privacy_threat: "🚫" };
-                      const typeColor: Record<string, string> = { road_noise: "#B85232", view_corridor: "#2A9D8F", privacy_threat: "#7C4F7E" };
+                      const typeColor: Record<string, string> = { road_noise: "#ef4444", view_corridor: "#22c55e", privacy_threat: "#a855f7" };
                       let geomType = "?";
                       try { geomType = (JSON.parse(sv.geojsonGeometry) as { type: string }).type; } catch { /* */ }
                       return (
                         <div key={sv.id} className="rounded p-1.5 text-[10px] flex items-start justify-between gap-1"
-                          style={{ background: "hsl(26, 15%, 10%)", border: `1px solid ${typeColor[sv.vectorType] ?? "#B85232"}33` }}>
+                          style={{ background: "hsl(270, 20%, 10%)", border: `1px solid ${typeColor[sv.vectorType] ?? "#a855f7"}33` }}>
                           <div className="flex-1 min-w-0">
-                            <div className="font-medium truncate" style={{ color: typeColor[sv.vectorType] ?? "#D4845A" }}>
+                            <div className="font-medium truncate" style={{ color: typeColor[sv.vectorType] ?? "#c084fc" }}>
                               {typeEmoji[sv.vectorType] ?? "?"} {sv.label || sv.vectorType.replace(/_/g, " ")}
                             </div>
                             <div style={{ color: "hsl(42, 15%, 45%)" }}>{geomType.toLowerCase()}</div>
@@ -4574,164 +4282,63 @@ export default function MapPage() {
             </div>
           )}
         </SidebarSection>
-          </div>
-        )}
 
         </> /* end native-mode sections */
         )}
 
         <div className="flex-1" />
 
-        {/* ── STEP NAVIGATION ── */}
-        <div className="shrink-0 px-3 py-3 border-t" style={{ borderColor: "hsl(94, 35%, 18%)" }}>
-          {inputMode === "native" ? (
-            <div className="flex gap-2">
-              <button
-                onClick={() => setWizardStep((s) => Math.max(1, s - 1))}
-                disabled={wizardStep === 1}
-                className="flex-1 py-2 text-[11px] font-semibold rounded transition-all"
-                style={{
-                  background: wizardStep === 1 ? "transparent" : "hsl(94,25%,15%)",
-                  border: "1px solid hsl(94,28%,22%)",
-                  color: wizardStep === 1 ? "hsl(42,15%,28%)" : "hsl(42,20%,65%)",
-                  cursor: wizardStep === 1 ? "default" : "pointer",
-                }}
-              >
-                ← Back
-              </button>
-              {wizardStep < 4 ? (
-                <button
-                  onClick={() => setWizardStep((s) => s + 1)}
-                  className="flex-1 py-2 text-[11px] font-semibold rounded transition-all"
-                  style={{ background: "hsl(84,38%,35%)", color: "#fff", border: "1px solid hsl(84,38%,42%)", cursor: "pointer" }}
-                >
-                  Continue →
-                </button>
-              ) : (
-                <button
-                  onClick={() => navigate("/analysis")}
-                  className="flex-1 flex items-center justify-center gap-1.5 py-2 text-[11px] font-semibold rounded transition-all"
-                  style={{ background: "linear-gradient(135deg, hsl(94,25%,11%), hsl(94,28%,14%))", color: "hsl(94,40%,70%)", border: "1px solid hsl(94,28%,22%)" }}
-                >
-                  <span>⚡</span> Run AI Analysis →
-                </button>
-              )}
-            </div>
-          ) : (
-            <button
-              onClick={() => navigate("/analysis")}
-              className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded text-[11px] font-semibold"
-              style={{ background: "linear-gradient(135deg, hsl(94,25%,11%), hsl(94,28%,14%))", color: "hsl(94,40%,70%)", border: "1px solid hsl(94,28%,22%)" }}
-            >
-              <span>⚡</span> Next: Run AI Analysis →
-            </button>
-          )}
-        </div>
-
-        {/* ── GHOST LAYERS TOGGLE (designer only) ── */}
-        {role === "designer" && activeProperty?.spatialRecommendations && activeProperty.spatialRecommendations.length > 0 && (
-          <div className="px-3 py-2" style={{ borderTop: "1px solid hsl(94,35%,18%)", flexShrink: 0 }}>
-            <button
-              onClick={() => setShowGhostLayers((v) => !v)}
-              className="w-full flex items-center gap-2 text-[10px] font-semibold"
-              style={{
-                color: showGhostLayers ? "hsl(44,58%,62%)" : "hsl(42,15%,45%)",
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-                letterSpacing: "0.05em",
-                textTransform: "uppercase",
-                padding: 0,
-              }}
-            >
-              <span style={{ fontSize: 14 }}>◎</span>
-              {showGhostLayers ? "Hide" : "Show"} AI Suggestions ({activeProperty.spatialRecommendations.length})
-            </button>
+        {/* ── WORKFLOW NAVIGATION ── */}
+        <div className="shrink-0 px-3 py-3 border-t" style={{ borderColor: "hsl(103, 35%, 18%)" }}>
+          <div className="text-[9px] uppercase tracking-widest mb-2 px-0.5" style={{ color: "hsl(42, 15%, 35%)" }}>
+            Workflow
           </div>
-        )}
-
-        {/* ── ECOLOGICAL TAG PANEL ── */}
-        {selectedTagFeature && role === "designer" && (
-          <EcologicalTagPanel
-            featureType={selectedTagFeature.type}
-            featureId={selectedTagFeature.id}
-            featureLabel={selectedTagFeature.label}
-            currentTags={selectedTagFeature.tags}
-            onSave={handleSaveTags}
-            onClose={() => setSelectedTagFeature(null)}
-            isSaving={isSavingTags}
-          />
-        )}
+          <StepNav />
+          <button
+            onClick={() => navigate("/analysis")}
+            className="mt-2 w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-[11px] font-semibold transition-all"
+            style={{ background: "linear-gradient(135deg, hsl(103,25%,11%), hsl(103,28%,14%))", color: "hsl(103, 40%, 70%)", border: "1px solid hsl(103, 28%, 22%)" }}
+          >
+            <span>⚡</span> Next: Run AI Analysis →
+          </button>
+        </div>
       </aside>
 
-      {/* ── RIGHT PANEL (layer toolbar + map) ── */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-
-        {/* ── LAYER TOOLBAR ── */}
+      {/* ── PENDING ELEMENT BANNER ── */}
+      {pendingMapElement && (
         <div
-          className="shrink-0 flex items-center gap-2 px-3 border-b overflow-x-auto"
-          style={{ background: "hsl(94, 30%, 8%)", borderColor: "hsl(94, 28%, 14%)", height: "40px", minHeight: "40px" }}
+          className="absolute left-0 right-0 flex items-center gap-3 px-4 py-2.5 z-50"
+          style={{
+            top: 0,
+            background: "linear-gradient(90deg, #1e3a8a, #1d4ed8)",
+            borderBottom: "2px solid #3b82f6",
+            boxShadow: "0 4px 20px rgba(29,78,216,0.5)",
+          }}
         >
-          {/* Base */}
-          <div className="flex items-center gap-1.5">
-            <span className="text-[9px] uppercase tracking-widest pr-0.5 shrink-0" style={{ color: "hsl(42,15%,32%)" }}>Base</span>
-            <LayerBtn label="Satellite" color="#4a9eff" active={showSatellite} onToggle={() => setShowSatellite((v) => !v)} />
-            <LayerBtn label="Boundary" color="#2D6A1A" active={showBoundary} disabled={!activeProperty?.boundaryGeojson} onToggle={() => setShowBoundary((v) => !v)} />
-            <LayerBtn label="Contours" color="#ef4444" active={showContours} disabled={!activeProperty?.boundaryGeojson} loading={isGeneratingContours} onToggle={() => setShowContours((v) => !v)} />
+          <span style={{ fontSize: 15 }}>📌</span>
+          <div className="flex-1 min-w-0">
+            <span className="text-[11px] font-bold text-white">Add to Map: </span>
+            <span className="text-[11px] text-blue-200 font-semibold">{pendingMapElement.name}</span>
+            <span className="text-[10px] text-blue-300 ml-2 hidden sm:inline">— {pendingMapElement.placement}</span>
           </div>
-          <div className="w-px h-5 shrink-0" style={{ background: "hsl(94,28%,20%)" }} />
-          {/* Analysis */}
-          <div className="flex items-center gap-1.5">
-            <span className="text-[9px] uppercase tracking-widest pr-0.5 shrink-0" style={{ color: "hsl(42,15%,32%)" }}>Analysis</span>
-            <LayerBtn label="Sectors" color="#d4a800" active={showSectors} disabled={!activePropertyId} onToggle={() => setShowSectors((v) => !v)} />
-            <LayerBtn label="Solar Arcs" color="#FBBF24" active={showSolarArcs} disabled={!activePropertyId || !sectorCenter} onToggle={() => setShowSolarArcs((v) => !v)} />
-            <LayerBtn label="Water" color="#0ea5e9" active={showWater} disabled={!activePropertyId} onToggle={() => setShowWater((v) => !v)} />
-          </div>
-          <div className="w-px h-5 shrink-0" style={{ background: "hsl(94,28%,20%)" }} />
-          {/* Design */}
-          <div className="flex items-center gap-1.5">
-            <span className="text-[9px] uppercase tracking-widest pr-0.5 shrink-0" style={{ color: "hsl(42,15%,32%)" }}>Design</span>
-            <LayerBtn label="Structures" color="#4a7ab5" active={showStructures} disabled={!activePropertyId} onToggle={() => setShowStructures((v) => !v)} />
-            <LayerBtn label="Pathways" color="#8B6914" active={showPathways} disabled={!activePropertyId} onToggle={() => setShowPathways((v) => !v)} />
-            <LayerBtn label="Zones" color="#CA8A04" active={showZones} disabled={!activePropertyId} onToggle={() => setShowZones((v) => !v)} />
-            <LayerBtn label="Sensory" color="#a855f7" active={showSensoryVectors} disabled={!activePropertyId} onToggle={() => setShowSensoryVectors((v) => !v)} />
-          </div>
-        </div>
-
-        {/* ── PENDING ELEMENT BANNER ── */}
-        {pendingMapElement && (
-          <div
-            className="shrink-0 flex items-center gap-3 px-4 py-2.5"
-            style={{
-              background: "linear-gradient(90deg, #14524a, #1f6b7a)",
-              borderBottom: "2px solid #3b82f6",
-              boxShadow: "0 4px 20px rgba(29,78,216,0.5)",
-            }}
+          <span className="text-[9px] uppercase tracking-widest text-blue-300 hidden md:block">
+            Drop a pin or draw a structure, then dismiss
+          </span>
+          <button
+            onClick={() => setPendingMapElement(null)}
+            className="text-[10px] font-bold px-2.5 py-1 rounded transition-colors"
+            style={{ background: "rgba(255,255,255,0.15)", color: "#fff", border: "1px solid rgba(255,255,255,0.25)" }}
           >
-            <span style={{ fontSize: 15 }}>📌</span>
-            <div className="flex-1 min-w-0">
-              <span className="text-[11px] font-bold text-white">Add to Map: </span>
-              <span className="text-[11px] text-blue-200 font-semibold">{pendingMapElement.name}</span>
-              <span className="text-[10px] text-blue-300 ml-2 hidden sm:inline">— {pendingMapElement.placement}</span>
-            </div>
-            <span className="text-[9px] uppercase tracking-widest text-blue-300 hidden md:block">
-              Drop a pin or draw a structure, then dismiss
-            </span>
-            <button
-              onClick={() => setPendingMapElement(null)}
-              className="text-[10px] font-bold px-2.5 py-1 rounded transition-colors"
-              style={{ background: "rgba(255,255,255,0.15)", color: "#fff", border: "1px solid rgba(255,255,255,0.25)" }}
-            >
-              ✕ Dismiss
-            </button>
-          </div>
-        )}
+            ✕ Dismiss
+          </button>
+        </div>
+      )}
 
-        {/* ── MAP ── */}
-        <div
-          className="flex-1 relative"
-          style={{ background: "hsl(94, 18%, 5%)" }}
-        >
+      {/* ── MAP ── */}
+      <div
+        className="flex-1 relative"
+        style={{ background: "hsl(103, 18%, 5%)", marginTop: pendingMapElement ? "48px" : 0, transition: "margin-top 0.2s ease" }}
+      >
 
         {/* ── 16:9 CANVAS HOST — full-bleed in native mode, centred+locked in upload mode ── */}
         <div
@@ -4745,7 +4352,7 @@ export default function MapPage() {
             border: "1px solid rgba(255,255,255,0.12)",
             borderRadius: "6px",
             overflow: "hidden",
-            boxShadow: "0 0 0 9999px hsl(94,18%,5%)",
+            boxShadow: "0 0 0 9999px hsl(103,18%,5%)",
           } : {
             position: "absolute", inset: 0,
           }}
@@ -4840,8 +4447,8 @@ export default function MapPage() {
             className="absolute top-3 left-3 flex items-center gap-2 px-3 py-2.5 rounded-xl text-[12px] font-semibold shadow-lg"
             style={{
               zIndex: 30,
-              background: "hsl(94, 40%, 10%)",
-              border: "1px solid hsl(94, 35%, 25%)",
+              background: "hsl(103, 48%, 11%)",
+              border: "1px solid hsl(103, 35%, 25%)",
               color: "hsl(42, 28%, 85%)",
               boxShadow: "0 4px 16px rgba(0,0,0,0.5)",
             }}
@@ -4873,116 +4480,14 @@ export default function MapPage() {
           </button>
         )}
 
-        {/* ── LAYER LEGEND OVERLAY ── */}
-        {mapLoaded && ((showZones && zones.length > 0) || (showSectors && sectors.length > 0)) && (() => {
-          const activeZoneNumbers = [...new Set(zones.map((z: any) => z.zoneNumber as number))].sort((a, b) => a - b);
-          const activeZoneEntries = activeZoneNumbers
-            .map((n) => ZONE_STYLES.find((s) => s.zone === n))
-            .filter(Boolean) as typeof ZONE_STYLES;
-
-          const activeSectorTypes = [...new Set(sectors.map((s: any) => s.sectorType as string))];
-          const activeSectorEntries = activeSectorTypes
-            .map((t) => SECTOR_TYPES.find((st) => st.value === t))
-            .filter(Boolean) as typeof SECTOR_TYPES;
-
-          const hasEntries = (showZones && activeZoneEntries.length > 0) || (showSectors && activeSectorEntries.length > 0);
-          if (!hasEntries) return null;
-
-          return (
-            <div
-              style={{
-                position: "absolute",
-                bottom: 52,
-                left: 12,
-                zIndex: 500,
-                background: "rgba(10,20,10,0.88)",
-                border: "1px solid hsl(94, 35%, 22%)",
-                borderRadius: 10,
-                boxShadow: "0 4px 18px rgba(0,0,0,0.55)",
-                backdropFilter: "blur(8px)",
-                minWidth: 160,
-                maxWidth: 220,
-                overflow: "hidden",
-              }}
-            >
-              {/* Header row */}
-              <button
-                onClick={() => setLegendCollapsed((v) => !v)}
-                style={{
-                  width: "100%",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  padding: "7px 10px",
-                  background: "transparent",
-                  border: "none",
-                  cursor: "pointer",
-                  borderBottom: legendCollapsed ? "none" : "1px solid hsl(94, 30%, 18%)",
-                }}
-              >
-                <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "hsl(84, 35%, 52%)" }}>
-                  Legend
-                </span>
-                <span style={{ fontSize: 9, color: "hsl(84, 30%, 40%)", transform: legendCollapsed ? "rotate(0deg)" : "rotate(180deg)", transition: "transform 0.15s ease", display: "inline-block" }}>
-                  ▾
-                </span>
-              </button>
-
-              {/* Entries */}
-              {!legendCollapsed && (
-                <div style={{ padding: "6px 10px 8px" }}>
-                  {showZones && activeZoneEntries.length > 0 && (
-                    <>
-                      <div style={{ fontSize: 8, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", color: "hsl(84, 25%, 40%)", marginBottom: 5 }}>Zones</div>
-                      {activeZoneEntries.map((entry) => (
-                        <div key={entry.zone} style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 4 }}>
-                          <div style={{
-                            width: 12, height: 12, borderRadius: 2, flexShrink: 0,
-                            background: entry.fillColor,
-                            border: `1.5px solid ${entry.color}`,
-                            opacity: 0.9,
-                          }} />
-                          <span style={{ fontSize: 10, color: "hsl(42, 25%, 78%)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                            {entry.label}
-                          </span>
-                        </div>
-                      ))}
-                    </>
-                  )}
-
-                  {showSectors && activeSectorEntries.length > 0 && (
-                    <>
-                      <div style={{ fontSize: 8, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", color: "hsl(84, 25%, 40%)", marginTop: showZones && activeZoneEntries.length > 0 ? 7 : 0, marginBottom: 5 }}>Sectors</div>
-                      {activeSectorEntries.map((entry) => (
-                        <div key={entry.value} style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 4 }}>
-                          <div style={{
-                            width: 12, height: 12, borderRadius: 2, flexShrink: 0,
-                            background: entry.color,
-                            border: `1.5px solid ${entry.border}`,
-                            opacity: 0.9,
-                          }} />
-                          <span style={{ fontSize: 10, color: "hsl(42, 25%, 78%)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                            {entry.emoji} {entry.label}
-                          </span>
-                        </div>
-                      ))}
-                    </>
-                  )}
-                </div>
-              )}
-            </div>
-          );
-        })()}
-
         {!mapLoaded && (
-          <div className="absolute inset-0 flex items-center justify-center" style={{ background: "hsl(94, 18%, 8%)" }}>
+          <div className="absolute inset-0 flex items-center justify-center" style={{ background: "hsl(103, 18%, 8%)" }}>
             <div className="flex flex-col items-center gap-3">
               <div className="w-7 h-7 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: "hsl(84, 38%, 42%)" }} />
               <span className="text-sm" style={{ color: "hsl(42, 20%, 55%)" }}>Loading map...</span>
             </div>
           </div>
         )}
-        </div>
       </div>
 
       {/* ── KEYLINE REPORT MODAL ── */}
@@ -5507,7 +5012,7 @@ export default function MapPage() {
 function SidebarSection({ label, children, defaultOpen = false }: { label: string; children: ReactNode; defaultOpen?: boolean }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="border-b" style={{ borderColor: "hsl(94, 35%, 18%)" }}>
+    <div className="border-b" style={{ borderColor: "hsl(103, 35%, 18%)" }}>
       <button
         onClick={() => setOpen((v) => !v)}
         className="w-full px-4 py-3.5 flex items-center justify-between text-left"
@@ -5558,7 +5063,7 @@ function ClientBoundaryRequest({
   return (
     <div className="space-y-2.5">
       {hasExistingBoundary && (areaHa || areaAc) && (
-        <div className="rounded p-2.5" style={{ background: "hsl(94, 35%, 14%)", border: "1px solid hsl(94, 28%, 20%)" }}>
+        <div className="rounded p-2.5" style={{ background: "hsl(103, 35%, 14%)", border: "1px solid hsl(103, 28%, 20%)" }}>
           <div className="text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: "hsl(84, 35%, 55%)" }}>Property Area</div>
           <div className="text-sm font-bold" style={{ color: "hsl(42, 28%, 90%)" }}>{areaHa?.toFixed(2)} ha</div>
           <div className="text-xs mt-0.5" style={{ color: "hsl(42, 15%, 55%)" }}>{areaAc?.toFixed(2)} acres</div>
@@ -5571,7 +5076,7 @@ function ClientBoundaryRequest({
         <div className="text-[10px] mb-1" style={{ color: "hsl(42, 15%, 55%)" }}>Request Boundary Change</div>
         <textarea
           className="w-full text-xs px-2.5 py-2 rounded border outline-none resize-none"
-          style={{ background: "hsl(94, 35%, 17%)", borderColor: "hsl(94, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
+          style={{ background: "hsl(103, 35%, 17%)", borderColor: "hsl(103, 30%, 22%)", color: "hsl(42, 28%, 88%)" }}
           rows={2}
           placeholder="Describe the boundary change you need..."
           value={text}
@@ -5587,49 +5092,6 @@ function ClientBoundaryRequest({
         </button>
       </div>
     </div>
-  );
-}
-
-function LayerBtn({
-  label,
-  color,
-  active,
-  onToggle,
-  disabled = false,
-  loading = false,
-}: {
-  label: string;
-  color: string;
-  active: boolean;
-  onToggle: () => void;
-  disabled?: boolean;
-  loading?: boolean;
-}) {
-  return (
-    <button
-      onClick={disabled ? undefined : onToggle}
-      className="flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] font-medium whitespace-nowrap transition-all"
-      style={{
-        opacity: disabled ? 0.35 : 1,
-        cursor: disabled ? "not-allowed" : "pointer",
-        background: active ? "hsl(84,38%,20%)" : "rgba(0,0,0,0.3)",
-        border: active ? "1px solid hsl(84,42%,38%)" : "1px solid hsl(94,28%,18%)",
-        color: active ? "hsl(42,28%,90%)" : "hsl(42,15%,46%)",
-      }}
-    >
-      {loading ? (
-        <div
-          className="w-2 h-2 rounded-full border border-t-transparent animate-spin flex-shrink-0"
-          style={{ borderColor: color }}
-        />
-      ) : (
-        <div
-          className="w-2 h-2 rounded-full flex-shrink-0"
-          style={{ background: active ? color : "hsl(94,28%,24%)" }}
-        />
-      )}
-      {label}
-    </button>
   );
 }
 
@@ -5665,7 +5127,7 @@ function LayerToggle({
       </div>
       <div
         className="relative w-9 h-5 rounded-full transition-colors flex-shrink-0"
-        style={{ background: active ? "hsl(84, 38%, 42%)" : "hsl(94, 30%, 20%)" }}
+        style={{ background: active ? "hsl(84, 38%, 42%)" : "hsl(103, 30%, 20%)" }}
       >
         <span className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all" style={{ left: active ? "18px" : "2px" }} />
       </div>
