@@ -14,6 +14,7 @@ import DossierPage from "@/pages/DossierPage";
 import MasterDesignPage from "@/pages/MasterDesignPage";
 import PresentationPage from "@/pages/PresentationPage";
 import ClientPortalPage from "@/pages/ClientPortalPage";
+import AutoDesignPage from "@/pages/AutoDesignPage";
 import { useAuth } from "@workspace/replit-auth-web";
 import { useAppStore } from "@/store/useAppStore";
 import patternLogo from "@assets/pattern-logo.png";
